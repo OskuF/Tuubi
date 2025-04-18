@@ -1513,4 +1513,13 @@ class Main {
 	public static inline function getEl<T:Element>(id:String):T {
 		return cast document.querySelector(id);
 	}
+
+	function loadUserConfig():Config {
+		config.allowedFileTypes ??= ["mp4", "mp3", "webm"];
+		return config;
+	}
+
+	public function getAllowedFileTypes():Array<String> {
+		return config.allowedFileTypes;
+	}
 }

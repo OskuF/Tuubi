@@ -825,6 +825,10 @@ client_Buttons.init = function(main) {
 				name = "video";
 			}
 			name = window.encodeURIComponent(name);
+			if(main.getAllowedFileTypes().indexOf(name.split(".").pop().toLowerCase()) == -1) {
+				main.serverMessage("Uploading this file type is not supported.",true,false);
+				return;
+			}
 			var a = buffer.byteLength - 5242880;
 			var lastChunk = buffer.slice(a < 0 ? 0 : a);
 			var chunkReq = window.fetch("/upload-last-chunk",{ method : "POST", headers : { "content-name" : name}, body : lastChunk});
@@ -834,7 +838,11 @@ client_Buttons.init = function(main) {
 						main.serverMessage(data.info,true,false);
 						return;
 					}
-					window.document.querySelector("#mediaurl").value = data.url;
+					var input = window.document.querySelector("#mediaurl");
+					if(data.url == null) {
+						return;
+					}
+					input.value = data.url;
 				});
 			});
 			var request = new XMLHttpRequest();
@@ -853,7 +861,7 @@ client_Buttons.init = function(main) {
 				try {
 					data = JSON.parse(request.responseText);
 				} catch( _g ) {
-					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 316, className : "client.Buttons", methodName : "init"});
+					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 327, className : "client.Buttons", methodName : "init"});
 					return;
 				}
 				if(data.errorId == null) {
@@ -2307,7 +2315,7 @@ client_Main.prototype = {
 		var div = window.document.createElement("div");
 		var time = HxOverrides.dateStr(new Date()).split(" ")[1];
 		div.className = "server-whisper";
-		div.innerHTML = "<div class=\"head\">\n\t\t\t<div class=\"server-whisper\"></div>\n\t\t\t<span class=\"timestamp\">" + (withTimestamp ? time : "") + "</span>\n\t\t</div>";
+		div.innerHTML = "<div class=\"head\">\r\n\t\t\t<div class=\"server-whisper\"></div>\r\n\t\t\t<span class=\"timestamp\">" + (withTimestamp ? time : "") + "</span>\r\n\t\t</div>";
 		var textDiv = div.querySelector(".server-whisper");
 		if(isText) {
 			textDiv.textContent = text;
@@ -2783,6 +2791,9 @@ client_Main.prototype = {
 		var _this_r = new RegExp("([.*+?^${}()|[\\]\\\\])","g".split("u").join(""));
 		return regex.replace(_this_r,"\\$1");
 	}
+	,getAllowedFileTypes: function() {
+		return this.config.allowedFileTypes;
+	}
 };
 var client_Player = function(main) {
 	this.inUserInteraction = false;
@@ -3161,7 +3172,7 @@ client_Player.prototype = {
 	,addVideoItem: function(item,atEnd) {
 		var url = StringTools.htmlEscape(item.url,true);
 		var duration = item.playerType == "IframeType" ? "" : this.duration(item.duration);
-		var itemEl = client_Utils.nodeFromString("<li class=\"queue_entry info\" title=\"" + Lang.get("addedBy") + ": " + item.author + "\">\n\t\t\t\t<header>\n\t\t\t\t\t<span class=\"qe_time\">" + duration + "</span>\n\t\t\t\t\t<h4><a class=\"qe_title\" href=\"" + url + "\" target=\"_blank\">" + StringTools.htmlEscape(item.title) + "</a></h4>\n\t\t\t\t</header>\n\t\t\t\t<span class=\"controls\">\n\t\t\t\t\t<button class=\"qbtn-play\" title=\"" + Lang.get("play") + "\"><ion-icon name=\"play\"></ion-icon></button>\n\t\t\t\t\t<button class=\"qbtn-next\" title=\"" + Lang.get("setNext") + "\"><ion-icon name=\"arrow-up\"></ion-icon></button>\n\t\t\t\t\t<button class=\"qbtn-tmp\"><ion-icon></ion-icon></button>\n\t\t\t\t\t<button class=\"qbtn-delete\" title=\"" + Lang.get("delete") + "\"><ion-icon name=\"close\"></ion-icon></button>\n\t\t\t\t</span>\n\t\t\t</li>");
+		var itemEl = client_Utils.nodeFromString("<li class=\"queue_entry info\" title=\"" + Lang.get("addedBy") + ": " + item.author + "\">\r\n\t\t\t\t<header>\r\n\t\t\t\t\t<span class=\"qe_time\">" + duration + "</span>\r\n\t\t\t\t\t<h4><a class=\"qe_title\" href=\"" + url + "\" target=\"_blank\">" + StringTools.htmlEscape(item.title) + "</a></h4>\r\n\t\t\t\t</header>\r\n\t\t\t\t<span class=\"controls\">\r\n\t\t\t\t\t<button class=\"qbtn-play\" title=\"" + Lang.get("play") + "\"><ion-icon name=\"play\"></ion-icon></button>\r\n\t\t\t\t\t<button class=\"qbtn-next\" title=\"" + Lang.get("setNext") + "\"><ion-icon name=\"arrow-up\"></ion-icon></button>\r\n\t\t\t\t\t<button class=\"qbtn-tmp\"><ion-icon></ion-icon></button>\r\n\t\t\t\t\t<button class=\"qbtn-delete\" title=\"" + Lang.get("delete") + "\"><ion-icon name=\"close\"></ion-icon></button>\r\n\t\t\t\t</span>\r\n\t\t\t</li>");
 		this.videoList.addItem(item,atEnd);
 		this.setItemElementType(itemEl,item.isTemp);
 		if(atEnd) {
@@ -3832,7 +3843,7 @@ client_players_Iframe.prototype = {
 			var hostname = $global.location.hostname;
 			data = StringTools.replace(data,"parent=www.example.com","parent=" + hostname);
 			if(!new EReg("[A-z]","").match(hostname)) {
-				client_Main.instance.serverMessage("Twitch player blocks access from ips, please use SyncTube from any domain for it.\nYou can register some on <a href=\"https://nya.pub\" target=\"_blank\">nya.pub</a>.",false);
+				client_Main.instance.serverMessage("Twitch player blocks access from ips, please use SyncTube from any domain for it.\r\nYou can register some on <a href=\"https://nya.pub\" target=\"_blank\">nya.pub</a>.",false);
 			}
 		}
 		this.video.innerHTML = data;
@@ -4708,7 +4719,7 @@ client_players_Vk.prototype = {
 			callback({ duration : 0});
 			return;
 		}
-		var tempVideo = client_Utils.nodeFromString(StringTools.trim("<iframe class=\"temp-videoplayer\" src=\"https://vk.com/video_ext.php?oid=" + ids.oid + "&id=" + ids.id + "&hd=1&js_api=1\"\n\t\t\t\tallow=\"autoplay; encrypted-media; fullscreen; picture-in-picture;\"\n\t\t\t\tframeborder=\"0\" allowfullscreen>\n\t\t\t</iframe>"));
+		var tempVideo = client_Utils.nodeFromString(StringTools.trim("<iframe class=\"temp-videoplayer\" src=\"https://vk.com/video_ext.php?oid=" + ids.oid + "&id=" + ids.id + "&hd=1&js_api=1\"\r\n\t\t\t\tallow=\"autoplay; encrypted-media; fullscreen; picture-in-picture;\"\r\n\t\t\t\tframeborder=\"0\" allowfullscreen>\r\n\t\t\t</iframe>"));
 		this.playerEl.prepend(tempVideo);
 		var tempVkPlayer = this.createVkPlayer(tempVideo);
 		tempVkPlayer.on("inited",function() {
@@ -4732,7 +4743,7 @@ client_players_Vk.prototype = {
 		if(tmp == null) {
 			return;
 		}
-		this.video = client_Utils.nodeFromString(StringTools.trim("<iframe id=\"videoplayer\" src=\"https://vk.com/video_ext.php?oid=" + tmp.oid + "&id=" + tmp.id + "&hd=4&js_api=1\"\n\t\t\t\tallow=\"autoplay; encrypted-media; fullscreen; picture-in-picture;\"\n\t\t\t\tframeborder=\"0\" allowfullscreen>\n\t\t\t</iframe>"));
+		this.video = client_Utils.nodeFromString(StringTools.trim("<iframe id=\"videoplayer\" src=\"https://vk.com/video_ext.php?oid=" + tmp.oid + "&id=" + tmp.id + "&hd=4&js_api=1\"\r\n\t\t\t\tallow=\"autoplay; encrypted-media; fullscreen; picture-in-picture;\"\r\n\t\t\t\tframeborder=\"0\" allowfullscreen>\r\n\t\t\t</iframe>"));
 		this.playerEl.appendChild(this.video);
 		this.vkPlayer = this.createVkPlayer(this.video);
 		this.vkPlayer.on("inited",function() {
@@ -4902,7 +4913,7 @@ client_players_Youtube.prototype = {
 				var duration = _gthis.convertTime(item.contentDetails.duration);
 				if(duration == 0) {
 					var mute = _gthis.main.isAutoplayAllowed() ? "" : "&mute=1";
-					callback({ duration : 356400, title : title, url : "<iframe src=\"https://www.youtube.com/embed/" + id + "?autoplay=1" + mute + "\" frameborder=\"0\"\n\t\t\t\t\t\t\tallow=\"accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture\"\n\t\t\t\t\t\t\tallowfullscreen></iframe>", playerType : "IframeType"});
+					callback({ duration : 356400, title : title, url : "<iframe src=\"https://www.youtube.com/embed/" + id + "?autoplay=1" + mute + "\" frameborder=\"0\"\r\n\t\t\t\t\t\t\tallow=\"accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture\"\r\n\t\t\t\t\t\t\tallowfullscreen></iframe>", playerType : "IframeType"});
 					continue;
 				}
 				callback({ duration : duration, title : title, url : url});

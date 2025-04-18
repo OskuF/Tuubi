@@ -49,6 +49,7 @@ typedef Config = {
 	permissions:Permissions,
 	emotes:Array<Emote>,
 	filters:Array<Filter>,
+	allowedFileTypes:Array<String>,
 	?isVerbose:Bool,
 	?salt:String
 }

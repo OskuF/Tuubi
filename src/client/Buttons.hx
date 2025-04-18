@@ -269,6 +269,14 @@ class Buttons {
 				if (name.length == 0) name = "video";
 				name = (window : Dynamic).encodeURIComponent(name);
 
+				// Check for valid file type
+				final allowedFileTypes = main.getAllowedFileTypes();
+				final fileExtension = name.split(".").pop().toLowerCase();
+				if (!allowedFileTypes.contains(fileExtension)) {
+					main.serverMessage("Uploading this file type is not supported.", true, false);
+					return;
+				}
+
 				// send last chunk separately to allow server file streaming while uploading
 				final chunkSize = 1024 * 1024 * 5; // 5 MB
 				final bufferOffset = (buffer.byteLength - chunkSize).limitMin(0);
@@ -287,6 +295,9 @@ class Buttons {
 							return;
 						}
 						final input:InputElement = getEl("#mediaurl");
+						// If data.url is empty, it means that the file was not uploaded to the server
+						// and the URL is not valid. In this case, we should not set the input value.
+						if (data.url == null) return;
 						input.value = data.url;
 					});
 				});

@@ -65,6 +65,7 @@ class HttpServer {
 	// temp media data while file is uploading to allow instant streaming
 	final uploadingFilesSizes:Map<String, Int> = [];
 	final uploadingFilesLastChunks:Map<String, Buffer> = [];
+	final allowedFileTypes:Array<String>;
 
 	public function new(main:Main, config:HttpServerConfig):Void {
 		this.main = main;
@@ -72,6 +73,7 @@ class HttpServer {
 		customDir = config.customDir;
 		allowLocalRequests = config.allowLocalRequests;
 		cache = config.cache;
+		allowedFileTypes = main.config.allowedFileTypes;
 
 		if (customDir != null) hasCustomRes = FileSystem.exists(customDir);
 	}
@@ -166,6 +168,18 @@ class HttpServer {
 	function uploadFileLastChunk(req:IncomingMessage, res:ServerResponse) {
 		var fileName = try decodeURIComponent(req.headers["content-name"]) catch (e) "";
 		if (fileName.trim().length == 0) fileName = null;
+
+		// Restrict file types
+		final ext = Path.extension(fileName).toLowerCase();
+		// log the user and file extension.
+		trace("Trying to upload new file to the cache: " + fileName + ", extension: " + ext);
+		if (!isAllowedFileType(ext)) {
+			res.status(400)
+				.json({info: "Invalid file type. Filetype is not on the whitelist."});
+			trace("Filetype not allowed: " + ext);
+			return;
+		}
+
 		final name = cache.getFreeFileName(fileName);
 		final filePath = cache.getFilePath(name);
 		final body:Array<Any> = [];
@@ -184,6 +198,15 @@ class HttpServer {
 	function uploadFile(req:IncomingMessage, res:ServerResponse) {
 		var fileName = try decodeURIComponent(req.headers["content-name"]) catch (e) "";
 		if (fileName.trim().length == 0) fileName = null;
+
+		// Restrict file types
+		final ext = Path.extension(fileName).toLowerCase();
+		if (!isAllowedFileType(ext)) {
+			res.status(400)
+				.json({info: "Invalid file type. Only mp4, mp3, and webm are allowed."});
+			return;
+		}
+
 		final name = cache.getFreeFileName(fileName);
 		final filePath = cache.getFilePath(name);
 		final size = Std.parseInt(req.headers["content-length"]) ?? return;
@@ -236,6 +259,11 @@ class HttpServer {
 			});
 			cache.remove(name);
 		});
+	}
+
+	// Helper function to check allowed file types
+	function isAllowedFileType(ext:String):Bool {
+		return allowedFileTypes.contains(ext);
 	}
 
 	function finishSetup(req:IncomingMessage, res:ServerResponse) {
