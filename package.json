@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/RblSb/SyncTube#readme",
   "dependencies": {
+    "@distube/ytdl-core": "^4.16.8",
     "ws": "^8.17.1"
   },
   "engines": {
