@@ -1684,10 +1684,8 @@ client_Main.prototype = {
 						while(_g < _g1.length) {
 							var emote = [_g1[_g]];
 							++_g;
-							if(emote[0] != null && emote[0].urls != null) {
-								var tmp = emote[0].urls[4];
-								var tmp1 = tmp != null ? tmp : emote[0].urls[2];
-								var emoteUrl = [tmp1 != null ? tmp1 : emote[0].urls[1]];
+							if(emote[0] != null) {
+								var emoteUrl = [_gthis.getBestEmoteUrl(emote[0])];
 								if(emoteUrl[0] != null) {
 									var imgEl = window.document.createElement("img");
 									imgEl.className = "ffz-emote";
@@ -1738,6 +1736,26 @@ client_Main.prototype = {
 			}
 		};
 		xhr.send();
+	}
+	,getBestEmoteUrl: function(emote) {
+		if(emote.animated != null) {
+			var tmp = emote.animated[4];
+			var tmp1 = tmp != null ? tmp : emote.animated[2];
+			var animatedUrl = tmp1 != null ? tmp1 : emote.animated[1];
+			if(animatedUrl != null) {
+				return animatedUrl;
+			}
+		}
+		if(emote.urls != null) {
+			var tmp = emote.urls[4];
+			var tmp1 = tmp != null ? tmp : emote.urls[2];
+			if(tmp1 != null) {
+				return tmp1;
+			} else {
+				return emote.urls[1];
+			}
+		}
+		return null;
 	}
 	,hasPermission: function(permission) {
 		return this.personal.hasPermission(permission,this.config.permissions);
@@ -1918,7 +1936,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 686, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 713, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -2835,10 +2853,8 @@ client_Main.prototype = {
 					if(data.emoticons != null && data.emoticons.length > 0) {
 						var randomIndex = Math.floor(Math.random() * data.emoticons.length);
 						var emote = data.emoticons[randomIndex];
-						if(emote != null && emote.urls != null) {
-							var tmp = emote.urls[4];
-							var tmp1 = tmp != null ? tmp : emote.urls[2];
-							var emoteUrl = tmp1 != null ? tmp1 : emote.urls[1];
+						if(emote != null) {
+							var emoteUrl = _gthis.getBestEmoteUrl(emote);
 							if(emoteUrl != null) {
 								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"max-height: 128px;\" />");
 							} else {

@@ -389,8 +389,10 @@ class Main {
 
 					if (data.emoticons != null && data.emoticons.length > 0) {
 						for (emote in cast(data.emoticons, Array<Dynamic>)) {
-							if (emote != null && emote.urls != null) {
-								final emoteUrl = emote.urls[4] ?? emote.urls[2] ?? emote.urls[1];
+							if (emote != null) {
+								// Try to get the best emote URL, prioritizing animated versions
+								final emoteUrl = getBestEmoteUrl(emote);
+
 								if (emoteUrl != null) {
 									// Create emote element
 									final imgEl:js.html.ImageElement = cast document.createElement("img");
@@ -398,6 +400,10 @@ class Main {
 									imgEl.src = emoteUrl;
 									imgEl.alt = emote.name;
 									imgEl.title = emote.name;
+
+									// Add flag to indicate if emote is animated
+									final isAnimated = emote.animated != null
+										&& emoteUrl.contains("/animated/");
 
 									// Add click handler to post emote directly to chat
 									imgEl.onclick = e -> {
@@ -452,6 +458,27 @@ class Main {
 			}
 		};
 		xhr.send();
+	}
+
+	/**
+	 * Gets the best quality URL for an emote, preferring animated versions if available
+	 */
+	function getBestEmoteUrl(emote:Dynamic):Null<String> {
+		// First try to get animated version
+		if (emote.animated != null) {
+			// Try to get the highest resolution
+			final animatedUrl = emote.animated[4] ?? emote.animated[2] ?? emote.animated[1];
+			if (animatedUrl != null) {
+				return animatedUrl;
+			}
+		}
+
+		// Fall back to static version if no animated version exists
+		if (emote.urls != null) {
+			return emote.urls[4] ?? emote.urls[2] ?? emote.urls[1];
+		}
+
+		return null;
 	}
 
 	public inline function isUser():Bool {
@@ -1587,8 +1614,10 @@ class Main {
 						final randomIndex = Math.floor(Math.random() * data.emoticons.length);
 						final emote = data.emoticons[randomIndex];
 
-						if (emote != null && emote.urls != null) {
-							final emoteUrl = emote.urls[4] ?? emote.urls[2] ?? emote.urls[1];
+						if (emote != null) {
+							// Use getBestEmoteUrl to get animated version if available
+							final emoteUrl = getBestEmoteUrl(emote);
+
 							if (emoteUrl != null) {
 								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
 								// Use the new emoteMessage function to broadcast to all users
