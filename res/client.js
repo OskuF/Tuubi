@@ -52,6 +52,7 @@ Client.prototype = {
 		}
 		return flag;
 	}
+	,__class__: Client
 };
 var ClientTools = function() { };
 ClientTools.__name__ = true;
@@ -160,6 +161,7 @@ EReg.prototype = {
 		}
 		return buf_b;
 	}
+	,__class__: EReg
 };
 var HxOverrides = function() { };
 HxOverrides.__name__ = true;
@@ -557,6 +559,7 @@ VideoList.prototype = {
 			this.pos = 0;
 		}
 	}
+	,__class__: VideoList
 };
 var client_Buttons = function() { };
 client_Buttons.__name__ = true;
@@ -1144,6 +1147,12 @@ client_Buttons.initPageFullscreen = function() {
 		}
 	};
 };
+var client_IPlayer = function() { };
+client_IPlayer.__name__ = true;
+client_IPlayer.__isInterface__ = true;
+client_IPlayer.prototype = {
+	__class__: client_IPlayer
+};
 var client_InputWithHistory = function(element,history,maxItems,onEnter) {
 	this.historyId = -1;
 	this.element = element;
@@ -1216,6 +1225,7 @@ client_InputWithHistory.prototype = {
 			this.element.oninput();
 		}
 	}
+	,__class__: client_InputWithHistory
 };
 var client_JsApi = function() { };
 client_JsApi.__name__ = true;
@@ -1355,6 +1365,10 @@ client_JsApi.fireVideoRemoveEvents = function(item) {
 var client_Main = function() {
 	this.matchSimpleDate = new EReg("^-?([0-9]+d)?([0-9]+h)?([0-9]+m)?([0-9]+s?)?$","");
 	this.urlMask = new EReg("\\${([0-9]+)-([0-9]+)}","g");
+	this.hasMoreFfzEmotes = true;
+	this.isFfzLoading = false;
+	this.currentFfzQuery = "";
+	this.currentFfzPage = 1;
 	this.isPageVisible = true;
 	this.isPageUnloading = false;
 	this.msgBuf = window.document.querySelector("#messagebuffer");
@@ -1572,6 +1586,158 @@ client_Main.prototype = {
 			}
 		};
 		window.document.querySelector("#customembed-content").onkeydown = window.document.querySelector("#customembed-title").onkeydown;
+		this.initFfzPanel();
+	}
+	,initFfzPanel: function() {
+		var _gthis = this;
+		var ffzBtn = window.document.querySelector("#ffzbtn");
+		var ffzWrap = window.document.querySelector("#ffz-wrap");
+		var smilesBtnWrap = window.document.querySelector("#smilesbtn");
+		var smilesWrap = window.document.querySelector("#smiles-wrap");
+		ffzBtn.onclick = function(e) {
+			if(!ffzBtn.classList.contains("active")) {
+				if(smilesWrap.style.display != "none") {
+					smilesWrap.style.display = "none";
+					smilesBtnWrap.classList.remove("active");
+				}
+				ffzWrap.style.display = "";
+				ffzBtn.classList.add("active");
+				ffzWrap.style.height = "16rem";
+				window.document.querySelector("#ffz-search").focus();
+				_gthis.searchFFZEmotes("");
+			} else {
+				ffzWrap.style.height = "0";
+				ffzBtn.classList.remove("active");
+				ffzWrap.addEventListener("transitionend",function(e) {
+					if(e.propertyName == "height") {
+						ffzWrap.style.display = "none";
+					}
+				},{ once : true});
+			}
+		};
+		window.document.querySelector("#ffz-search-btn").onclick = function(e) {
+			var searchInput = window.document.querySelector("#ffz-search");
+			_gthis.searchFFZEmotes(searchInput.value);
+		};
+		var searchInput = window.document.querySelector("#ffz-search");
+		searchInput.onkeydown = function(e) {
+			if(e.keyCode == 13) {
+				_gthis.searchFFZEmotes(searchInput.value);
+				e.preventDefault();
+			}
+		};
+		var listEl = window.document.querySelector("#ffz-list");
+		listEl.onscroll = function(e) {
+			if(_gthis.isFfzLoading || !_gthis.hasMoreFfzEmotes) {
+				return;
+			}
+			var scrollPosition = listEl.scrollTop + listEl.clientHeight;
+			var scrollThreshold = listEl.scrollHeight * 0.8;
+			if(scrollPosition >= scrollThreshold) {
+				_gthis.loadMoreFfzEmotes();
+			}
+		};
+	}
+	,searchFFZEmotes: function(query) {
+		this.currentFfzPage = 1;
+		this.currentFfzQuery = query;
+		this.hasMoreFfzEmotes = true;
+		var loadingEl = window.document.querySelector("#ffz-loading");
+		var listEl = window.document.querySelector("#ffz-list");
+		loadingEl.style.display = "block";
+		listEl.innerHTML = "";
+		this.fetchFfzEmotes(query,1,true);
+	}
+	,loadMoreFfzEmotes: function() {
+		if(this.isFfzLoading || !this.hasMoreFfzEmotes) {
+			return;
+		}
+		this.currentFfzPage++;
+		window.document.querySelector("#ffz-loading").style.display = "block";
+		this.fetchFfzEmotes(this.currentFfzQuery,this.currentFfzPage,false);
+	}
+	,fetchFfzEmotes: function(query,page,clearList) {
+		var _gthis = this;
+		this.isFfzLoading = true;
+		var apiUrl = "https://api.frankerfacez.com/v1/emotes" + (query.length > 0 ? "?q=" + encodeURIComponent(query) : "") + (query.length > 0 ? "&" : "?") + "sensitive=false&sort=created-desc" + ("&page=" + page + "&per_page=20");
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET",apiUrl,true);
+		xhr.onload = function() {
+			var loadingEl = window.document.querySelector("#ffz-loading");
+			var listEl = window.document.querySelector("#ffz-list");
+			loadingEl.style.display = "none";
+			_gthis.isFfzLoading = false;
+			if(xhr.status == 200) {
+				try {
+					var data = JSON.parse(xhr.responseText);
+					if(data._pages != null) {
+						_gthis.hasMoreFfzEmotes = page < data._pages;
+					} else {
+						_gthis.hasMoreFfzEmotes = false;
+					}
+					if(clearList) {
+						listEl.innerHTML = "";
+					}
+					if(data.emoticons != null && data.emoticons.length > 0) {
+						var _g = 0;
+						var _g1 = js_Boot.__cast(data.emoticons , Array);
+						while(_g < _g1.length) {
+							var emote = [_g1[_g]];
+							++_g;
+							if(emote[0] != null && emote[0].urls != null) {
+								var tmp = emote[0].urls[4];
+								var tmp1 = tmp != null ? tmp : emote[0].urls[2];
+								var emoteUrl = [tmp1 != null ? tmp1 : emote[0].urls[1]];
+								if(emoteUrl[0] != null) {
+									var imgEl = window.document.createElement("img");
+									imgEl.className = "ffz-emote";
+									imgEl.src = emoteUrl[0];
+									imgEl.alt = emote[0].name;
+									imgEl.title = emote[0].name;
+									imgEl.onclick = (function(emoteUrl,emote) {
+										return function(e) {
+											return _gthis.serverMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"max-height: 128px;\" />",false);
+										};
+									})(emoteUrl,emote);
+									listEl.appendChild(imgEl);
+								}
+							}
+						}
+						if(listEl.children.length == 0 && clearList) {
+							listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
+						}
+					} else if(clearList) {
+						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
+					}
+					if(!_gthis.hasMoreFfzEmotes && listEl.children.length > 0) {
+						var endMessage = window.document.createElement("div");
+						endMessage.style.gridColumn = "1/-1";
+						endMessage.style.textAlign = "center";
+						endMessage.style.color = "var(--midground)";
+						endMessage.style.padding = "1rem";
+						endMessage.textContent = "No more emotes to load";
+						listEl.appendChild(endMessage);
+					}
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					if(clearList) {
+						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Error loading emotes: " + Std.string(_g1) + "</div>";
+					}
+				}
+			} else if(clearList) {
+				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Error: " + xhr.status + "</div>";
+			}
+		};
+		xhr.onerror = function() {
+			var loadingEl = window.document.querySelector("#ffz-loading");
+			var listEl = window.document.querySelector("#ffz-list");
+			loadingEl.style.display = "none";
+			_gthis.isFfzLoading = false;
+			if(clearList) {
+				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Network error</div>";
+			}
+		};
+		xhr.send();
 	}
 	,hasPermission: function(permission) {
 		return this.personal.hasPermission(permission,this.config.permissions);
@@ -1752,7 +1918,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 486, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 688, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -2612,6 +2778,9 @@ client_Main.prototype = {
 			this.mergeRedundantArgs(args,0,1);
 			this.send({ type : "KickClient", kickClient : { name : args[0]}});
 			return true;
+		case "random":
+			this.fetchRandomEmote();
+			return true;
 		case "removeBan":case "unban":
 			this.mergeRedundantArgs(args,0,1);
 			this.send({ type : "BanClient", banClient : { name : args[0], time : 0}});
@@ -2643,6 +2812,45 @@ client_Main.prototype = {
 			return false;
 		}
 		return false;
+	}
+	,fetchRandomEmote: function() {
+		var _gthis = this;
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET","https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=1&per_page=20",true);
+		xhr.onload = function() {
+			if(xhr.status == 200) {
+				try {
+					var data = JSON.parse(xhr.responseText);
+					if(data.emoticons != null && data.emoticons.length > 0) {
+						var randomIndex = Math.floor(Math.random() * data.emoticons.length);
+						var emote = data.emoticons[randomIndex];
+						if(emote != null && emote.urls != null) {
+							var tmp = emote.urls[4];
+							var tmp1 = tmp != null ? tmp : emote.urls[2];
+							var emoteUrl = tmp1 != null ? tmp1 : emote.urls[1];
+							if(emoteUrl != null) {
+								return _gthis.serverMessage("" + ("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"max-height: 128px;\" />"),false);
+							} else {
+								return _gthis.serverMessage("Error loading emote: No URL available");
+							}
+						} else {
+							return _gthis.serverMessage("Error loading emote data");
+						}
+					} else {
+						return _gthis.serverMessage("No emotes found");
+					}
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					return _gthis.serverMessage("Error parsing emote data: " + Std.string(_g1));
+				}
+			} else {
+				return _gthis.serverMessage("Error fetching emotes: " + xhr.status);
+			}
+		};
+		xhr.onerror = function() {
+			return _gthis.serverMessage("Network error while fetching emotes");
+		};
+		xhr.send();
 	}
 	,parseSimpleDate: function(text) {
 		if(text == null) {
@@ -2794,6 +3002,7 @@ client_Main.prototype = {
 	,getAllowedFileTypes: function() {
 		return this.config.allowedFileTypes;
 	}
+	,__class__: client_Main
 };
 var client_Player = function(main) {
 	this.inUserInteraction = false;
@@ -3549,6 +3758,7 @@ client_Player.prototype = {
 			return false;
 		}
 	}
+	,__class__: client_Player
 };
 var client_Settings = function() { };
 client_Settings.__name__ = true;
@@ -3620,6 +3830,7 @@ client_Split.prototype = {
 	,destroy: function() {
 		this.split.destroy();
 	}
+	,__class__: client_Split
 };
 var client_Utils = function() { };
 client_Utils.__name__ = true;
@@ -3809,6 +4020,7 @@ var client_players_Iframe = function(main,player) {
 	this.player = player;
 };
 client_players_Iframe.__name__ = true;
+client_players_Iframe.__interfaces__ = [client_IPlayer];
 client_players_Iframe.prototype = {
 	getPlayerType: function() {
 		return "IframeType";
@@ -3892,6 +4104,7 @@ client_players_Iframe.prototype = {
 	}
 	,unmute: function() {
 	}
+	,__class__: client_players_Iframe
 };
 var client_players_Raw = function(main,player) {
 	this.isHlsPluginLoaded = false;
@@ -3904,6 +4117,7 @@ var client_players_Raw = function(main,player) {
 	this.player = player;
 };
 client_players_Raw.__name__ = true;
+client_players_Raw.__interfaces__ = [client_IPlayer];
 client_players_Raw.prototype = {
 	getPlayerType: function() {
 		return "RawType";
@@ -4264,6 +4478,7 @@ client_players_Raw.prototype = {
 	,unmute: function() {
 		this.video.muted = false;
 	}
+	,__class__: client_players_Raw
 };
 var client_players_Peertube = function(main,player) {
 	this.matchOldPeertube = new EReg("^pt:.+/videos/watch/([-A-z0-9]+)","g");
@@ -4396,6 +4611,7 @@ client_players_Peertube.prototype = $extend(client_players_Raw.prototype,{
 		});
 		return files[0].fileDownloadUrl;
 	}
+	,__class__: client_players_Peertube
 });
 var client_players_RawSubs = function() { };
 client_players_RawSubs.__name__ = true;
@@ -4666,6 +4882,7 @@ client_players_Streamable.prototype = $extend(client_players_Raw.prototype,{
 		};
 		http.request();
 	}
+	,__class__: client_players_Streamable
 });
 var client_players_Vk = function(main,player) {
 	this.matchIds = new EReg("video(-?[0-9]+)_([0-9]+)","g");
@@ -4677,6 +4894,7 @@ var client_players_Vk = function(main,player) {
 	this.player = player;
 };
 client_players_Vk.__name__ = true;
+client_players_Vk.__interfaces__ = [client_IPlayer];
 client_players_Vk.prototype = {
 	getPlayerType: function() {
 		return "VkType";
@@ -4828,6 +5046,7 @@ client_players_Vk.prototype = {
 	,unmute: function() {
 		this.vkPlayer.unmute();
 	}
+	,__class__: client_players_Vk
 };
 var client_players_Youtube = function(main,player) {
 	this.matchSeconds = new EReg("([0-9]+)S","");
@@ -4843,6 +5062,7 @@ var client_players_Youtube = function(main,player) {
 	this.player = player;
 };
 client_players_Youtube.__name__ = true;
+client_players_Youtube.__interfaces__ = [client_IPlayer];
 client_players_Youtube.prototype = {
 	getPlayerType: function() {
 		return "YoutubeType";
@@ -5100,7 +5320,11 @@ client_players_Youtube.prototype = {
 	,unmute: function() {
 		this.youtube.unMute();
 	}
+	,__class__: client_players_Youtube
 };
+var haxe_IMap = function() { };
+haxe_IMap.__name__ = true;
+haxe_IMap.__isInterface__ = true;
 var haxe_Exception = function(message,previous,native) {
 	Error.call(this,message);
 	this.message = message;
@@ -5132,9 +5356,16 @@ haxe_Exception.prototype = $extend(Error.prototype,{
 	unwrap: function() {
 		return this.__nativeException;
 	}
+	,toString: function() {
+		return this.get_message();
+	}
+	,get_message: function() {
+		return this.message;
+	}
 	,get_native: function() {
 		return this.__nativeException;
 	}
+	,__class__: haxe_Exception
 });
 var haxe_Log = function() { };
 haxe_Log.__name__ = true;
@@ -5182,6 +5413,7 @@ haxe_Timer.prototype = {
 	}
 	,run: function() {
 	}
+	,__class__: haxe_Timer
 };
 var haxe_ValueException = function(value,previous,native) {
 	haxe_Exception.call(this,String(value),previous,native);
@@ -5193,6 +5425,7 @@ haxe_ValueException.prototype = $extend(haxe_Exception.prototype,{
 	unwrap: function() {
 		return this.value;
 	}
+	,__class__: haxe_ValueException
 });
 var haxe_io_Bytes = function(data) {
 	this.length = data.byteLength;
@@ -5292,6 +5525,7 @@ haxe_io_Bytes.prototype = {
 	,toString: function() {
 		return this.getString(0,this.length);
 	}
+	,__class__: haxe_io_Bytes
 };
 var haxe_io_Encoding = $hxEnums["haxe.io.Encoding"] = { __ename__:true,__constructs__:null
 	,UTF8: {_hx_name:"UTF8",_hx_index:0,__enum__:"haxe.io.Encoding",toString:$estr}
@@ -5354,6 +5588,7 @@ haxe_crypto_BaseCode.prototype = {
 		}
 		return out;
 	}
+	,__class__: haxe_crypto_BaseCode
 };
 var haxe_crypto_Sha256 = function() {
 };
@@ -5488,11 +5723,16 @@ haxe_crypto_Sha256.prototype = {
 		while(_g < a.length) str += StringTools.hex(a[_g++],8);
 		return str.toLowerCase();
 	}
+	,__class__: haxe_crypto_Sha256
 };
 var haxe_ds_StringMap = function() {
 	this.h = Object.create(null);
 };
 haxe_ds_StringMap.__name__ = true;
+haxe_ds_StringMap.__interfaces__ = [haxe_IMap];
+haxe_ds_StringMap.prototype = {
+	__class__: haxe_ds_StringMap
+};
 var haxe_http_HttpBase = function(url) {
 	this.url = url;
 	this.headers = [];
@@ -5526,6 +5766,7 @@ haxe_http_HttpBase.prototype = {
 		}
 		return this.responseAsString;
 	}
+	,__class__: haxe_http_HttpBase
 };
 var haxe_http_HttpJs = function(url) {
 	this.async = true;
@@ -5672,6 +5913,7 @@ haxe_http_HttpJs.prototype = $extend(haxe_http_HttpBase.prototype,{
 			onreadystatechange(null);
 		}
 	}
+	,__class__: haxe_http_HttpJs
 });
 var haxe_io_Error = $hxEnums["haxe.io.Error"] = { __ename__:true,__constructs__:null
 	,Blocked: {_hx_name:"Blocked",_hx_index:0,__enum__:"haxe.io.Error",toString:$estr}
@@ -5725,6 +5967,7 @@ haxe_io_Path.prototype = {
 	toString: function() {
 		return (this.dir == null ? "" : this.dir + (this.backslash ? "\\" : "/")) + this.file + (this.ext == null ? "" : "." + this.ext);
 	}
+	,__class__: haxe_io_Path
 };
 var haxe_iterators_ArrayIterator = function(array) {
 	this.current = 0;
@@ -5738,9 +5981,27 @@ haxe_iterators_ArrayIterator.prototype = {
 	,next: function() {
 		return this.array[this.current++];
 	}
+	,__class__: haxe_iterators_ArrayIterator
 };
 var js_Boot = function() { };
 js_Boot.__name__ = true;
+js_Boot.getClass = function(o) {
+	if(o == null) {
+		return null;
+	} else if(((o) instanceof Array)) {
+		return Array;
+	} else {
+		var cl = o.__class__;
+		if(cl != null) {
+			return cl;
+		}
+		var name = js_Boot.__nativeClassName(o);
+		if(name != null) {
+			return js_Boot.__resolveNativeClass(name);
+		}
+		return null;
+	}
+};
 js_Boot.__string_rec = function(o,s) {
 	if(o == null) {
 		return "null";
@@ -5832,6 +6093,104 @@ js_Boot.__string_rec = function(o,s) {
 	default:
 		return String(o);
 	}
+};
+js_Boot.__interfLoop = function(cc,cl) {
+	while(true) {
+		if(cc == null) {
+			return false;
+		}
+		if(cc == cl) {
+			return true;
+		}
+		var intf = cc.__interfaces__;
+		if(intf != null) {
+			var _g = 0;
+			var _g1 = intf.length;
+			while(_g < _g1) {
+				var i = intf[_g++];
+				if(i == cl || js_Boot.__interfLoop(i,cl)) {
+					return true;
+				}
+			}
+		}
+		cc = cc.__super__;
+	}
+};
+js_Boot.__instanceof = function(o,cl) {
+	if(cl == null) {
+		return false;
+	}
+	switch(cl) {
+	case Array:
+		return ((o) instanceof Array);
+	case Bool:
+		return typeof(o) == "boolean";
+	case Dynamic:
+		return o != null;
+	case Float:
+		return typeof(o) == "number";
+	case Int:
+		if(typeof(o) == "number") {
+			return ((o | 0) === o);
+		} else {
+			return false;
+		}
+		break;
+	case String:
+		return typeof(o) == "string";
+	default:
+		if(o != null) {
+			if(typeof(cl) == "function") {
+				if(js_Boot.__downcastCheck(o,cl)) {
+					return true;
+				}
+			} else if(typeof(cl) == "object" && js_Boot.__isNativeObj(cl)) {
+				if(((o) instanceof cl)) {
+					return true;
+				}
+			}
+		} else {
+			return false;
+		}
+		if(cl == Class ? o.__name__ != null : false) {
+			return true;
+		}
+		if(cl == Enum ? o.__ename__ != null : false) {
+			return true;
+		}
+		return o.__enum__ != null ? $hxEnums[o.__enum__] == cl : false;
+	}
+};
+js_Boot.__downcastCheck = function(o,cl) {
+	if(!((o) instanceof cl)) {
+		if(cl.__isInterface__) {
+			return js_Boot.__interfLoop(js_Boot.getClass(o),cl);
+		} else {
+			return false;
+		}
+	} else {
+		return true;
+	}
+};
+js_Boot.__cast = function(o,t) {
+	if(o == null || js_Boot.__instanceof(o,t)) {
+		return o;
+	} else {
+		throw haxe_Exception.thrown("Cannot cast " + Std.string(o) + " to " + Std.string(t));
+	}
+};
+js_Boot.__nativeClassName = function(o) {
+	var name = js_Boot.__toStr.call(o).slice(8,-1);
+	if(name == "Object" || name == "Function" || name == "Math" || name == "JSON") {
+		return null;
+	}
+	return name;
+};
+js_Boot.__isNativeObj = function(o) {
+	return js_Boot.__nativeClassName(o) != null;
+};
+js_Boot.__resolveNativeClass = function(name) {
+	return $global[name];
 };
 var js_Browser = function() { };
 js_Browser.__name__ = true;
@@ -5931,9 +6290,17 @@ if(typeof(performance) != "undefined" ? typeof(performance.now) == "function" : 
 	HxOverrides.now = performance.now.bind(performance);
 }
 if( String.fromCodePoint == null ) String.fromCodePoint = function(c) { return c < 0x10000 ? String.fromCharCode(c) : String.fromCharCode((c>>10)+0xD7C0)+String.fromCharCode((c&0x3FF)+0xDC00); }
+Object.defineProperty(String.prototype,"__class__",{ value : String, enumerable : false, writable : true});
 String.__name__ = true;
 Array.__name__ = true;
+Date.prototype.__class__ = Date;
 Date.__name__ = "Date";
+var Int = { };
+var Dynamic = { };
+var Float = Number;
+var Bool = Boolean;
+var Class = { };
+var Enum = { };
 js_Boot.__toStr = ({ }).toString;
 if(ArrayBuffer.prototype.slice == null) {
 	ArrayBuffer.prototype.slice = js_lib__$ArrayBuffer_ArrayBufferCompat.sliceImpl;

@@ -214,9 +214,24 @@
         <button id="smilesbtn" title="${emotes}">
           <ion-icon name="happy"></ion-icon>
         </button>
+        <button id="ffzbtn" title="FrankerFaceZ Emotes">
+          <ion-icon name="search"></ion-icon>
+        </button>
       </div>
       <div id="smiles-wrap" class="collapsible" style="display: none;">
         <div id="smiles-list"></div>
+      </div>
+      <div id="ffz-wrap" class="collapsible" style="display: none;">
+        <div id="ffz-search-container">
+          <input id="ffz-search" type="text" placeholder="Search FrankerFaceZ emotes...">
+          <button id="ffz-search-btn">
+            <ion-icon name="search-circle-outline"></ion-icon>
+          </button>
+        </div>
+        <div id="ffz-list"></div>
+        <div id="ffz-loading" style="display: none;">
+          <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+        </div>
       </div>
       <!-- Guest login -->
       <div id="guestlogin" style="display: none;">

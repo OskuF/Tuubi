@@ -901,6 +901,66 @@ footer#footer {
   gap: .5rem;
 }
 
+/* FrankerFaceZ Emotes Panel */
+#ffz-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 1rem;
+  overflow-y: hidden;
+}
+
+#ffz-search-container {
+  display: flex;
+  padding: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+#ffz-search {
+  flex-grow: 1;
+  margin-right: 0.5rem;
+}
+
+#ffz-list {
+  display: grid;
+  width: 100%;
+  height: 12rem;
+  padding: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(4rem, 1fr));
+  grid-gap: .5rem;
+  gap: .5rem;
+  overflow-y: auto;
+}
+
+#ffz-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--midground);
+}
+
+.ffz-emote {
+  height: 4rem;
+  width: 4rem;
+  object-fit: scale-down;
+  cursor: pointer;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .smile-preview {
   height: 4rem;
   width: 4rem;

@@ -68,6 +68,11 @@ class Main {
 	var isPageUnloading = false;
 	var isPageVisible = true;
 
+	var currentFfzPage = 1;
+	var currentFfzQuery = "";
+	var isFfzLoading = false;
+	var hasMoreFfzEmotes = true;
+
 	static function main():Void {
 		new Main();
 	}
@@ -252,6 +257,203 @@ class Main {
 			}
 		}
 		getEl("#customembed-content").onkeydown = getEl("#customembed-title").onkeydown;
+
+		// FrankerFaceZ panel initialization
+		initFfzPanel();
+	}
+
+	function initFfzPanel():Void {
+		final ffzBtn = getEl("#ffzbtn");
+		final ffzWrap = getEl("#ffz-wrap");
+		final smilesBtnWrap = getEl("#smilesbtn");
+		final smilesWrap = getEl("#smiles-wrap");
+
+		ffzBtn.onclick = e -> {
+			if (!ffzBtn.classList.contains("active")) {
+				// Hide smiles panel if it's visible
+				if (smilesWrap.style.display != "none") {
+					smilesWrap.style.display = "none";
+					smilesBtnWrap.classList.remove("active");
+				}
+
+				// Show FFZ panel
+				ffzWrap.style.display = "";
+				ffzBtn.classList.add("active");
+				ffzWrap.style.height = "16rem";
+
+				// Focus on the search input
+				final searchInput:InputElement = getEl("#ffz-search");
+				searchInput.focus();
+
+				// Initial search with empty query to show recent emotes
+				searchFFZEmotes("");
+			} else {
+				ffzWrap.style.height = "0";
+				ffzBtn.classList.remove("active");
+				ffzWrap.addEventListener("transitionend", e -> {
+					if (e.propertyName == "height") ffzWrap.style.display = "none";
+				}, {once: true});
+			}
+		};
+
+		// Search button functionality
+		final searchBtn = getEl("#ffz-search-btn");
+		searchBtn.onclick = e -> {
+			final searchInput:InputElement = getEl("#ffz-search");
+			searchFFZEmotes(searchInput.value);
+		};
+
+		// Search input on enter key
+		final searchInput:InputElement = getEl("#ffz-search");
+		searchInput.onkeydown = (e:KeyboardEvent) -> {
+			if (e.keyCode == KeyCode.Return) {
+				searchFFZEmotes(searchInput.value);
+				e.preventDefault();
+			}
+		};
+
+		// Add scroll event listener for infinite scroll
+		final listEl = getEl("#ffz-list");
+		listEl.onscroll = (e:Event) -> {
+			if (isFfzLoading || !hasMoreFfzEmotes) return;
+
+			final scrollPosition = listEl.scrollTop + listEl.clientHeight;
+			final scrollThreshold = listEl.scrollHeight * 0.8; // Load more when 80% scrolled
+
+			if (scrollPosition >= scrollThreshold) {
+				loadMoreFfzEmotes();
+			}
+		};
+	}
+
+	function searchFFZEmotes(query:String):Void {
+		// Reset pagination variables on new search
+		currentFfzPage = 1;
+		currentFfzQuery = query;
+		hasMoreFfzEmotes = true;
+
+		// Show loading indicator
+		final loadingEl = getEl("#ffz-loading");
+		final listEl = getEl("#ffz-list");
+		loadingEl.style.display = "block";
+		listEl.innerHTML = "";
+
+		// Fetch first page of emotes
+		fetchFfzEmotes(query, 1, true);
+	}
+
+	function loadMoreFfzEmotes():Void {
+		if (isFfzLoading || !hasMoreFfzEmotes) return;
+
+		currentFfzPage++;
+		final loadingEl = getEl("#ffz-loading");
+		loadingEl.style.display = "block";
+
+		fetchFfzEmotes(currentFfzQuery, currentFfzPage, false);
+	}
+
+	function fetchFfzEmotes(query:String, page:Int, clearList:Bool):Void {
+		isFfzLoading = true;
+
+		// Build the API URL
+		final apiUrl = "https://api.frankerfacez.com/v1/emotes"
+			+ (query.length > 0 ? '?q=${StringTools.urlEncode(query)}' : "")
+			+ (query.length > 0 ? "&" : "?")
+			+ "sensitive=false&sort=created-desc"
+			+ '&page=${page}&per_page=20';
+
+		// Fetch data from the API
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("GET", apiUrl, true);
+		xhr.onload = () -> {
+			final loadingEl = getEl("#ffz-loading");
+			final listEl = getEl("#ffz-list");
+			loadingEl.style.display = "none";
+			isFfzLoading = false;
+
+			if (xhr.status == 200) {
+				try {
+					final data = haxe.Json.parse(xhr.responseText);
+
+					// Check if there are more pages
+					if (data._pages != null) {
+						hasMoreFfzEmotes = page < data._pages;
+					} else {
+						hasMoreFfzEmotes = false;
+					}
+
+					// Clear list if this is a new search
+					if (clearList) {
+						listEl.innerHTML = "";
+					}
+
+					if (data.emoticons != null && data.emoticons.length > 0) {
+						for (emote in cast(data.emoticons, Array<Dynamic>)) {
+							if (emote != null && emote.urls != null) {
+								final emoteUrl = emote.urls[4] ?? emote.urls[2] ?? emote.urls[1];
+								if (emoteUrl != null) {
+									// Create emote element
+									final imgEl:js.html.ImageElement = cast document.createElement("img");
+									imgEl.className = "ffz-emote";
+									imgEl.src = emoteUrl;
+									imgEl.alt = emote.name;
+									imgEl.title = emote.name;
+
+									// Add click handler to post emote directly to chat
+									imgEl.onclick = e -> {
+										// Create emote HTML to display in chat
+										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+
+										// Post emote directly to chat
+										serverMessage(emoteHtml, false);
+
+										// No need to close the panel, allow users to post multiple emotes
+									};
+
+									listEl.appendChild(imgEl);
+								}
+							}
+						}
+
+						if (listEl.children.length == 0 && clearList) {
+							listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
+						}
+					} else if (clearList) {
+						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
+					}
+
+					// Add "no more emotes" message when we reach the end
+					if (!hasMoreFfzEmotes && listEl.children.length > 0) {
+						final endMessage = document.createDivElement();
+						endMessage.style.gridColumn = "1/-1";
+						endMessage.style.textAlign = "center";
+						endMessage.style.color = "var(--midground)";
+						endMessage.style.padding = "1rem";
+						endMessage.textContent = "No more emotes to load";
+						listEl.appendChild(endMessage);
+					}
+				} catch (e) {
+					if (clearList) {
+						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error loading emotes: ${e}</div>';
+					}
+				}
+			} else {
+				if (clearList) {
+					listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error: ${xhr.status}</div>';
+				}
+			}
+		};
+		xhr.onerror = () -> {
+			final loadingEl = getEl("#ffz-loading");
+			final listEl = getEl("#ffz-list");
+			loadingEl.style.display = "none";
+			isFfzLoading = false;
+
+			if (clearList) {
+				listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Network error</div>';
+			}
+		};
+		xhr.send();
 	}
 
 	public inline function isUser():Bool {
@@ -1323,6 +1525,9 @@ class Main {
 			case "ad":
 				player.skipAd();
 				return false;
+			case "random":
+				fetchRandomEmote();
+				return true;
 			case "volume":
 				var v = Std.parseFloat(args[0]);
 				if (Math.isNaN(v)) v = 1;
@@ -1352,6 +1557,44 @@ class Main {
 			return false;
 		}
 		return false;
+	}
+
+	function fetchRandomEmote():Void {
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("GET", "https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=1&per_page=20", true);
+		xhr.onload = () -> {
+			if (xhr.status == 200) {
+				try {
+					final data = haxe.Json.parse(xhr.responseText);
+					if (data.emoticons != null && data.emoticons.length > 0) {
+						final randomIndex = Math.floor(Math.random() * data.emoticons.length);
+						final emote = data.emoticons[randomIndex];
+
+						if (emote != null && emote.urls != null) {
+							final emoteUrl = emote.urls[4] ?? emote.urls[2] ?? emote.urls[1];
+							if (emoteUrl != null) {
+								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+								serverMessage('${emoteHtml}', false);
+							} else {
+								serverMessage('Error loading emote: No URL available');
+							}
+						} else {
+							serverMessage('Error loading emote data');
+						}
+					} else {
+						serverMessage('No emotes found');
+					}
+				} catch (e) {
+					serverMessage('Error parsing emote data: ${e}');
+				}
+			} else {
+				serverMessage('Error fetching emotes: ${xhr.status}');
+			}
+		};
+		xhr.onerror = () -> {
+			serverMessage('Network error while fetching emotes');
+		};
+		xhr.send();
 	}
 
 	final matchSimpleDate = ~/^-?([0-9]+d)?([0-9]+h)?([0-9]+m)?([0-9]+s?)?$/;
