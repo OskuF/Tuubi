@@ -404,10 +404,8 @@ class Main {
 										// Create emote HTML to display in chat
 										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
 
-										// Post emote directly to chat
-										serverMessage(emoteHtml, false);
-
-										// No need to close the panel, allow users to post multiple emotes
+										// Send emote to all users in chat
+										emoteMessage(emoteHtml);
 									};
 
 									listEl.appendChild(imgEl);
@@ -728,6 +726,9 @@ class Main {
 				ws.close();
 			case Message:
 				addMessage(data.message.clientName, data.message.text);
+
+			case EmoteMessage:
+				addMessage(data.emoteMessage.clientName, data.emoteMessage.html, null, true);
 
 			case ServerMessage:
 				final id = data.serverMessage.textId;
@@ -1216,6 +1217,17 @@ class Main {
 		return div;
 	}
 
+	// Sends an emote message to all users in the chat
+	public function emoteMessage(html:String):Void {
+		send({
+			type: EmoteMessage,
+			emoteMessage: {
+				clientName: "", // Server will fill this in
+				html: html
+			}
+		});
+	}
+
 	public function serverHtmlMessage(el:Element):Void {
 		final div = document.createDivElement();
 		final time = Date.now().toString().split(" ")[1];
@@ -1261,7 +1273,7 @@ class Main {
 		return Date.fromTime(localTime).toString();
 	}
 
-	function addMessage(name:String, text:String, ?date:String):Void {
+	function addMessage(name:String, text:String, ?date:String, isEmoteMessage:Bool = false):Void {
 		final userDiv = document.createDivElement();
 		userDiv.className = 'chat-msg-$name';
 
@@ -1282,11 +1294,16 @@ class Main {
 
 		final textDiv = document.createDivElement();
 		textDiv.className = "text";
-		text = text.htmlEscape();
 
-		for (filter in filters) {
-			text = filter.regex.replace(text, filter.replace);
+		// Don't escape HTML for emote messages
+		if (!isEmoteMessage) {
+			text = text.htmlEscape();
+
+			for (filter in filters) {
+				text = filter.regex.replace(text, filter.replace);
+			}
 		}
+
 		textDiv.innerHTML = text;
 		final inChatEnd = isInChatEnd();
 
@@ -1574,7 +1591,8 @@ class Main {
 							final emoteUrl = emote.urls[4] ?? emote.urls[2] ?? emote.urls[1];
 							if (emoteUrl != null) {
 								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
-								serverMessage('${emoteHtml}', false);
+								// Use the new emoteMessage function to broadcast to all users
+								emoteMessage(emoteHtml);
 							} else {
 								serverMessage('Error loading emote: No URL available');
 							}

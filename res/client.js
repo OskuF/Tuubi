@@ -1696,7 +1696,7 @@ client_Main.prototype = {
 									imgEl.title = emote[0].name;
 									imgEl.onclick = (function(emoteUrl,emote) {
 										return function(e) {
-											return _gthis.serverMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"max-height: 128px;\" />",false);
+											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"max-height: 128px;\" />");
 										};
 									})(emoteUrl,emote);
 									listEl.appendChild(imgEl);
@@ -1918,7 +1918,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 688, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 686, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -1947,6 +1947,9 @@ client_Main.prototype = {
 			break;
 		case "Dump":
 			client_Utils.saveFile("dump.json","application/json",data.dump.data);
+			break;
+		case "EmoteMessage":
+			this.addMessage(data.emoteMessage.clientName,data.emoteMessage.html,null,true);
 			break;
 		case "Flashback":
 			break;
@@ -2492,6 +2495,9 @@ client_Main.prototype = {
 		this.scrollChatToEnd();
 		return div;
 	}
+	,emoteMessage: function(html) {
+		this.send({ type : "EmoteMessage", emoteMessage : { clientName : "", html : html}});
+	}
 	,updateUserList: function() {
 		window.document.querySelector("#usercount").textContent = this.clients.length + " " + Lang.get("online");
 		window.document.title = this.getPageTitle();
@@ -2523,7 +2529,10 @@ client_Main.prototype = {
 		var date = HxOverrides.strDate(utcDate);
 		return HxOverrides.dateStr(new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000));
 	}
-	,addMessage: function(name,text,date) {
+	,addMessage: function(name,text,date,isEmoteMessage) {
+		if(isEmoteMessage == null) {
+			isEmoteMessage = false;
+		}
 		var userDiv = window.document.createElement("div");
 		userDiv.className = "chat-msg-" + name;
 		var headDiv = window.document.createElement("div");
@@ -2543,13 +2552,15 @@ client_Main.prototype = {
 		nameDiv.textContent = name;
 		var textDiv = window.document.createElement("div");
 		textDiv.className = "text";
-		text = StringTools.htmlEscape(text);
-		var _g = 0;
-		var _g1 = this.filters;
-		while(_g < _g1.length) {
-			var filter = _g1[_g];
-			++_g;
-			text = text.replace(filter.regex.r,filter.replace);
+		if(!isEmoteMessage) {
+			text = StringTools.htmlEscape(text);
+			var _g = 0;
+			var _g1 = this.filters;
+			while(_g < _g1.length) {
+				var filter = _g1[_g];
+				++_g;
+				text = text.replace(filter.regex.r,filter.replace);
+			}
 		}
 		textDiv.innerHTML = text;
 		var inChatEnd = this.isInChatEnd();
@@ -2829,22 +2840,22 @@ client_Main.prototype = {
 							var tmp1 = tmp != null ? tmp : emote.urls[2];
 							var emoteUrl = tmp1 != null ? tmp1 : emote.urls[1];
 							if(emoteUrl != null) {
-								return _gthis.serverMessage("" + ("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"max-height: 128px;\" />"),false);
+								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"max-height: 128px;\" />");
 							} else {
-								return _gthis.serverMessage("Error loading emote: No URL available");
+								_gthis.serverMessage("Error loading emote: No URL available");
 							}
 						} else {
-							return _gthis.serverMessage("Error loading emote data");
+							_gthis.serverMessage("Error loading emote data");
 						}
 					} else {
-						return _gthis.serverMessage("No emotes found");
+						_gthis.serverMessage("No emotes found");
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g);
-					return _gthis.serverMessage("Error parsing emote data: " + Std.string(_g1));
+					_gthis.serverMessage("Error parsing emote data: " + Std.string(_g1));
 				}
 			} else {
-				return _gthis.serverMessage("Error fetching emotes: " + xhr.status);
+				_gthis.serverMessage("Error fetching emotes: " + xhr.status);
 			}
 		};
 		xhr.onerror = function() {

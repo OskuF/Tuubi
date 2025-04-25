@@ -194,6 +194,10 @@ typedef WsEvent = {
 		clientName:String,
 		text:String
 	},
+	?emoteMessage:{
+		clientName:String,
+		html:String
+	},
 	?serverMessage:{
 		textId:String
 	},
@@ -270,6 +274,7 @@ enum abstract WsEventType(String) {
 	var Logout;
 	var Message;
 	var ServerMessage;
+	var EmoteMessage; // Add the new event type
 	var Progress;
 	var UpdateClients;
 	var BanClient;

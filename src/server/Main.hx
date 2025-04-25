@@ -653,6 +653,11 @@ class Main {
 				if (messages.length > config.serverChatHistory) messages.shift();
 				broadcast(data);
 
+			case EmoteMessage:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				data.emoteMessage.clientName = client.name;
+				broadcast(data);
+
 			case ServerMessage:
 			case Progress:
 			case AddVideo:
