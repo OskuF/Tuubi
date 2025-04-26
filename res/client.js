@@ -1092,6 +1092,8 @@ client_Buttons.initChatInputs = function(main) {
 		});
 		client_Buttons.onViewportResize();
 	}
+	var fastForwardInput = window.document.createElement("div");
+	fastForwardInput.style.display = "none";
 	new client_InputWithHistory(chatline,null,50,function(value) {
 		if(main.handleCommands(value)) {
 			return true;
@@ -1154,6 +1156,7 @@ client_IPlayer.prototype = {
 	__class__: client_IPlayer
 };
 var client_InputWithHistory = function(element,history,maxItems,onEnter) {
+	this.maxItems = 100;
 	this.historyId = -1;
 	this.element = element;
 	if(history != null) {
@@ -1162,67 +1165,74 @@ var client_InputWithHistory = function(element,history,maxItems,onEnter) {
 		this.history = [];
 	}
 	this.maxItems = maxItems;
-	this.onEnter = onEnter;
-	element.onkeydown = $bind(this,this.onKeyDown);
+	this.onEnterCallback = onEnter;
+	this.init();
 };
 client_InputWithHistory.__name__ = true;
-client_InputWithHistory.pushIfNotLast = function(arr,item) {
-	var len = arr.length;
-	if(len == 0 || arr[len - 1] != item) {
-		arr.push(item);
+client_InputWithHistory.pushIfNotLast = function(a,v) {
+	if(a.length == 0 || a[0] != v) {
+		a.unshift(v);
 	}
 };
 client_InputWithHistory.prototype = {
-	onKeyDown: function(e) {
-		var key = e.keyCode;
-		switch(key) {
+	init: function() {
+		this.element.onkeydown = $bind(this,this.onKeyDown);
+	}
+	,onKeyDown: function(e) {
+		switch(e.keyCode) {
 		case 13:
 			var value = StringTools.trim(this.element.value);
 			if(value.length == 0) {
 				return;
 			}
-			if(this.onEnter(value)) {
+			if(this.history.length == 0 || this.history[0] != value) {
 				client_InputWithHistory.pushIfNotLast(this.history,value);
-			}
-			if(this.history.length > this.maxItems) {
-				this.history.shift();
+				while(this.history.length > this.maxItems) this.history.pop();
 			}
 			this.historyId = -1;
-			this.element.value = "";
-			this.onInput();
-			break;
-		case 38:
-			this.historyId--;
-			if(this.historyId == -2) {
-				this.historyId = this.history.length - 1;
-				if(this.historyId == -1) {
-					return;
-				}
-			} else if(this.historyId == -1) {
-				this.historyId++;
+			var sendAsDanmaku = false;
+			var danmakuCheckbox = window.document.querySelector("#send-as-danmaku");
+			if(danmakuCheckbox != null) {
+				sendAsDanmaku = danmakuCheckbox.checked;
 			}
-			this.element.value = this.history[this.historyId];
-			this.onInput();
-			break;
-		case 40:
-			if(this.historyId == -1) {
+			this.element.value = "";
+			if(sendAsDanmaku && client_Main.instance.isDanmakuEnabled) {
+				client_Main.instance.sendDanmakuComment(value);
+				e.preventDefault();
 				return;
 			}
-			this.historyId++;
-			if(this.historyId > this.history.length - 1) {
-				this.historyId = -1;
-				this.element.value = "";
-			} else {
-				this.element.value = this.history[this.historyId];
+			if(this.onEnterCallback(value)) {
+				e.preventDefault();
 			}
-			this.onInput();
 			break;
-		default:
+		case 38:
+			this.prevItem();
+			break;
+		case 40:
+			this.nextItem();
+			break;
 		}
 	}
-	,onInput: function() {
-		if(this.element.oninput != null) {
-			this.element.oninput();
+	,prevItem: function() {
+		if(this.history.length == 0) {
+			return;
+		}
+		if(this.historyId == -1) {
+			this.historyId = 0;
+		} else if(this.historyId < this.history.length - 1) {
+			this.historyId++;
+		} else {
+			return;
+		}
+		this.element.value = this.history[this.historyId];
+	}
+	,nextItem: function() {
+		if(this.historyId <= 0) {
+			this.historyId = -1;
+			this.element.value = "";
+		} else if(this.historyId > 0) {
+			this.historyId--;
+			this.element.value = this.history[this.historyId];
 		}
 	}
 	,__class__: client_InputWithHistory
@@ -1365,6 +1375,10 @@ client_JsApi.fireVideoRemoveEvents = function(item) {
 var client_Main = function() {
 	this.matchSimpleDate = new EReg("^-?([0-9]+d)?([0-9]+h)?([0-9]+m)?([0-9]+s?)?$","");
 	this.urlMask = new EReg("\\${([0-9]+)-([0-9]+)}","g");
+	this.DANMAKU_SPEED = 8;
+	this.DANMAKU_LANES = 12;
+	this.danmakuLanes = [];
+	this.isDanmakuEnabled = true;
 	this.hasMoreFfzEmotes = true;
 	this.isFfzLoading = false;
 	this.currentFfzQuery = "";
@@ -1554,6 +1568,23 @@ client_Main.prototype = {
 			var pos = _gthis.player.getItemPos();
 			_gthis.send({ type : "SkipVideo", skipVideo : { url : items[pos].url}});
 		};
+		var toggleDanmakuBtn = window.document.querySelector("#toggledanmaku");
+		toggleDanmakuBtn.onclick = function(e) {
+			return _gthis.toggleDanmaku();
+		};
+		this.danmakuContainer = window.document.querySelector("#danmaku-container");
+		if(this.isDanmakuEnabled) {
+			this.danmakuContainer.style.display = "block";
+			var _g = [];
+			var _g1 = 0;
+			var _g2 = this.DANMAKU_LANES;
+			while(_g1 < _g2) {
+				++_g1;
+				_g.push(0);
+			}
+			this.danmakuLanes = _g;
+			toggleDanmakuBtn.classList.toggle("active",true);
+		}
 		window.document.querySelector("#queue_next").onclick = function(e) {
 			_gthis.addVideoUrl(false);
 		};
@@ -1757,6 +1788,40 @@ client_Main.prototype = {
 		}
 		return null;
 	}
+	,toggleDanmaku: function() {
+		this.isDanmakuEnabled = !this.isDanmakuEnabled;
+		this.danmakuContainer = window.document.querySelector("#danmaku-container");
+		if(this.isDanmakuEnabled) {
+			this.danmakuContainer.style.display = "block";
+			if(this.danmakuLanes.length == 0) {
+				var _g = [];
+				var _g1 = 0;
+				var _g2 = this.DANMAKU_LANES;
+				while(_g1 < _g2) {
+					++_g1;
+					_g.push(0);
+				}
+				this.danmakuLanes = _g;
+			}
+		} else {
+			this.danmakuContainer.style.display = "none";
+			this.danmakuContainer.innerHTML = "";
+		}
+		window.document.querySelector("#toggledanmaku").classList.toggle("active",this.isDanmakuEnabled);
+		return this.isDanmakuEnabled;
+	}
+	,sendDanmakuComment: function(text,color,isHtml) {
+		if(isHtml == null) {
+			isHtml = false;
+		}
+		if(color == null) {
+			color = "#FFFFFF";
+		}
+		if(!this.isDanmakuEnabled) {
+			return;
+		}
+		this.send({ type : "DanmakuMessage", danmakuMessage : { clientName : "", text : text, color : color, isHtml : isHtml}});
+	}
 	,hasPermission: function(permission) {
 		return this.personal.hasPermission(permission,this.config.permissions);
 	}
@@ -1933,10 +1998,11 @@ client_Main.prototype = {
 		}
 	}
 	,onMessage: function(e) {
+		var _gthis = this;
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 713, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 770, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -1960,6 +2026,48 @@ client_Main.prototype = {
 		case "Connected":
 			this.onConnected(data);
 			this.onTimeGet.run();
+			break;
+		case "DanmakuMessage":
+			if(!this.isDanmakuEnabled) {
+				return;
+			}
+			var playerRect = window.document.querySelector("#ytapiplayer").getBoundingClientRect();
+			var laneHeight = Math.floor(playerRect.height / this.DANMAKU_LANES);
+			var bestLane = 0;
+			var lowestTime = new Date().getTime();
+			var _g = 0;
+			var _g1 = this.danmakuLanes.length;
+			while(_g < _g1) {
+				var i = _g++;
+				if(this.danmakuLanes[i] < lowestTime) {
+					lowestTime = this.danmakuLanes[i];
+					bestLane = i;
+				}
+			}
+			var comment = window.document.createElement("div");
+			comment.className = "danmaku-comment";
+			if(data.danmakuMessage.isHtml == true) {
+				comment.innerHTML = data.danmakuMessage.text;
+				comment.classList.add("danmaku-emote-container");
+			} else if(data.danmakuMessage.text.indexOf("<img") >= 0 || data.danmakuMessage.text.indexOf("<video") >= 0) {
+				comment.innerHTML = data.danmakuMessage.text;
+				comment.classList.add("danmaku-emote-container");
+			} else {
+				comment.textContent = data.danmakuMessage.text;
+			}
+			comment.style.color = data.danmakuMessage.color;
+			comment.style.top = bestLane * laneHeight + laneHeight / 2 + "px";
+			this.danmakuLanes[bestLane] = new Date().getTime() | 0;
+			this.danmakuContainer = window.document.querySelector("#danmaku-container");
+			this.danmakuContainer.appendChild(comment);
+			var playerWidth = playerRect.width;
+			var viewportWidth = window.innerWidth;
+			comment.style.animationDuration = Math.max(5,(playerWidth + viewportWidth) / 350 * this.DANMAKU_SPEED) + "s";
+			comment.addEventListener("animationend",function() {
+				if(_gthis.danmakuContainer.contains(comment)) {
+					_gthis.danmakuContainer.removeChild(comment);
+				}
+			});
 			break;
 		case "Disconnected":
 			break;
@@ -2108,7 +2216,11 @@ client_Main.prototype = {
 			} else if(StringTools.startsWith(id,"accessError")) {
 				var args = id.split("|");
 				var err = Lang.get(args[0]);
-				text = args[1] == null ? "" + err + "." : "" + err + ": " + StringTools.replace(Lang.get("noPermission"),"$PERMISSION",args[1]);
+				if(args.length < 2 || args[1] == null) {
+					text = "" + err + ".";
+				} else {
+					text = "" + err + ": " + StringTools.replace(Lang.get("noPermission"),"$PERMISSION",args[1]);
+				}
 			} else {
 				text = Lang.get(id);
 			}
@@ -2514,7 +2626,16 @@ client_Main.prototype = {
 		return div;
 	}
 	,emoteMessage: function(html) {
-		this.send({ type : "EmoteMessage", emoteMessage : { clientName : "", html : html}});
+		var sendAsDanmaku = false;
+		var danmakuCheckbox = window.document.querySelector("#send-as-danmaku");
+		if(danmakuCheckbox != null) {
+			sendAsDanmaku = danmakuCheckbox.checked;
+		}
+		if(sendAsDanmaku && this.isDanmakuEnabled) {
+			this.send({ type : "DanmakuMessage", danmakuMessage : { clientName : "", text : html, color : "#FFFFFF", isHtml : true}});
+		} else {
+			this.send({ type : "EmoteMessage", emoteMessage : { clientName : "", html : html}});
+		}
 	}
 	,updateUserList: function() {
 		window.document.querySelector("#usercount").textContent = this.clients.length + " " + Lang.get("online");

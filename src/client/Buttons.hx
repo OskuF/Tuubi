@@ -531,18 +531,28 @@ class Buttons {
 			viewport.addEventListener("resize", e -> onViewportResize());
 			onViewportResize();
 		}
-		new InputWithHistory(chatline, 50, value -> {
-			if (main.handleCommands(value)) return true;
-			main.send({
-				type: Message,
-				message: {
-					clientName: "",
-					text: value
-				}
-			});
-			if (Utils.isTouch()) chatline.blur();
-			return true;
-		});
+		
+		// Fix the constructor parameters
+		final fastForwardInput = document.createElement("div");
+		fastForwardInput.style.display = "none";
+		new InputWithHistory(
+			chatline,
+			null, // Pass null for history
+			50, 
+			value -> {
+				if (main.handleCommands(value)) return true;
+				main.send({
+					type: Message,
+					message: {
+						clientName: "",
+						text: value
+					}
+				});
+				if (Utils.isTouch()) chatline.blur();
+				return true;
+			}
+		);
+		
 		final checkboxes:Array<InputElement> = [
 			getEl("#add-temp"),
 		];

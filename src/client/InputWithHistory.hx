@@ -1,69 +1,106 @@
 package client;
 
+import js.html.Event;
 import js.html.InputElement;
 import js.html.KeyboardEvent;
 
 class InputWithHistory {
-	final element:InputElement;
-	final maxItems:Int;
-	final history:Array<String>;
-	final onEnter:(value:String) -> Bool;
+	var element:InputElement;
+	var history:Array<String>;
 	var historyId = -1;
+	var maxItems = 100;
+	var onEnterCallback:(value:String) -> Bool;
 
 	public function new(
 		element:InputElement,
-		?history:Array<String>,
+		history:Null<Array<String>>,
 		maxItems:Int,
 		onEnter:(value:String) -> Bool
 	) {
 		this.element = element;
-		if (history != null) this.history = history;
-		else this.history = [];
+		if (history != null) {
+			this.history = history;
+		} else {
+			this.history = [];
+		}
 		this.maxItems = maxItems;
-		this.onEnter = onEnter;
+		this.onEnterCallback = onEnter;
+		init();
+	}
+
+	public function init():Void {
 		element.onkeydown = onKeyDown;
 	}
 
-	public static function pushIfNotLast(arr:Array<String>, item:String):Void {
-		final len = arr.length;
-		if (len == 0 || arr[len - 1] != item) arr.push(item);
-	}
-
-	function onKeyDown(e:KeyboardEvent) {
-		final key:KeyCode = cast e.keyCode;
-		switch (key) {
-			case Return:
-				final value = element.value.trim();
-				if (value.length == 0) return;
-				final isAdd = onEnter(value);
-				if (isAdd) pushIfNotLast(history, value);
-				if (history.length > maxItems) history.shift();
-				historyId = -1;
-				element.value = "";
-				onInput();
-			case Up:
-				historyId--;
-				if (historyId == -2) {
-					historyId = history.length - 1;
-					if (historyId == -1) return;
-				} else if (historyId == -1) historyId++;
-				element.value = history[historyId];
-				onInput();
-			case Down:
-				if (historyId == -1) return;
-				historyId++;
-				if (historyId > history.length - 1) {
-					historyId = -1;
-					element.value = "";
-				} else {
-					element.value = history[historyId];
+	function onKeyDown(e:KeyboardEvent):Void {
+		switch (e.keyCode) {
+			case KeyCode.Up:
+				prevItem();
+			case KeyCode.Down:
+				nextItem();
+			case KeyCode.Return:
+				var value = StringTools.trim(element.value);
+				if (value.length == 0) {
+					return;
 				}
-				onInput();
-			default:
+				if (history.length == 0 || history[0] != value) {
+					pushIfNotLast(history, value);
+					while (history.length > maxItems) {
+						history.pop();
+					}
+				}
+				historyId = -1;
+				
+				// Check if the danmaku checkbox is checked
+				var sendAsDanmaku = false;
+				final danmakuCheckbox:InputElement = Main.getEl("#send-as-danmaku");
+				if (danmakuCheckbox != null) {
+					sendAsDanmaku = danmakuCheckbox.checked;
+				}
+				
+				element.value = "";
+				
+				// If sending as danmaku and danmaku is enabled, process it
+				if (sendAsDanmaku && Main.instance.isDanmakuEnabled) {
+					Main.instance.sendDanmakuComment(value);
+					e.preventDefault();
+					return; // Skip sending to regular chat
+				}
+				
+				// Otherwise process as normal chat message
+				if (onEnterCallback(value)) {
+					e.preventDefault();
+				}
 		}
 	}
 
-	function onInput():Void {
-		if (element.oninput != null) element.oninput();
+	function prevItem():Void {
+		if (history.length == 0) {
+			return;
+		}
+		if (historyId == -1) {
+			historyId = 0;
+		} else if (historyId < history.length - 1) {
+			historyId++;
+		} else {
+			return;
+		}
+		element.value = history[historyId];
+	}
+
+	function nextItem():Void {
+		if (historyId <= 0) {
+			historyId = -1;
+			element.value = "";
+		} else if (historyId > 0) {
+			historyId--;
+			element.value = history[historyId];
+		}
+	}
+
+	public static function pushIfNotLast<T>(a:Array<T>, v:T):Void {
+		if (a.length == 0 || a[0] != v) {
+			a.unshift(v);
+		}
 	}
 }

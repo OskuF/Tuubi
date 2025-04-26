@@ -234,6 +234,18 @@ class Main {
 			});
 		}
 
+		final toggleDanmakuBtn = getEl("#toggledanmaku");
+		toggleDanmakuBtn.onclick = e -> {
+			toggleDanmaku();
+		}
+		// Initialize danmaku container
+		danmakuContainer = getEl("#danmaku-container");
+		if (isDanmakuEnabled) {
+			danmakuContainer.style.display = "block";
+			danmakuLanes = [for (i in 0...DANMAKU_LANES) 0];
+			toggleDanmakuBtn.classList.toggle("active", true);
+		}
+
 		getEl("#queue_next").onclick = e -> addVideoUrl(false);
 		getEl("#queue_end").onclick = e -> addVideoUrl(true);
 		new InputWithHistory(getEl("#mediaurl"), settings.latestLinks, 10, value -> {
@@ -497,6 +509,51 @@ class Main {
 		return personal.name;
 	}
 
+	// Danmaku (scrolling comments) functionality
+	public var isDanmakuEnabled = true; // Changed from false to true to enable by default
+
+	private var danmakuContainer:Element;
+	private var danmakuLanes:Array<Int> = [];
+	private final DANMAKU_LANES = 12; // Number of lanes for comments
+	private final DANMAKU_SPEED = 8; // Base speed in seconds to cross the screen
+
+	public function toggleDanmaku():Bool {
+		isDanmakuEnabled = !isDanmakuEnabled;
+		danmakuContainer = getEl("#danmaku-container");
+
+		if (isDanmakuEnabled) {
+			danmakuContainer.style.display = "block";
+
+			if (danmakuLanes.length == 0) {
+				// Initialize lanes
+				danmakuLanes = [for (i in 0...DANMAKU_LANES) 0];
+			}
+		} else {
+			danmakuContainer.style.display = "none";
+			// Clear existing danmaku messages when disabled
+			danmakuContainer.innerHTML = "";
+		}
+
+		getEl("#toggledanmaku").classList.toggle("active", isDanmakuEnabled);
+		return isDanmakuEnabled;
+	}
+
+	public function sendDanmakuComment(text:String, color:String = "#FFFFFF", isHtml:Bool = false):Void {
+		if (!isDanmakuEnabled) return;
+		
+		// Send danmaku message to all clients via server
+		// The server will broadcast it back to all clients including the sender
+		send({
+			type: DanmakuMessage,
+			danmakuMessage: {
+				clientName: "", // Server will fill this in
+				text: text,
+				color: color,
+				isHtml: isHtml
+			}
+		});
+	}
+
 	public function hasPermission(permission:Permission):Bool {
 		return personal.hasPermission(permission, config.permissions);
 	}
@@ -757,22 +814,84 @@ class Main {
 			case EmoteMessage:
 				addMessage(data.emoteMessage.clientName, data.emoteMessage.html, null, true);
 
+			case DanmakuMessage:
+				if (!isDanmakuEnabled) return;
+
+				// Create a danmaku comment with the received text and color
+				final playerEl = getEl("#ytapiplayer");
+				final playerRect = playerEl.getBoundingClientRect();
+				final laneHeight = Math.floor(playerRect.height / DANMAKU_LANES);
+
+				// Find the best lane (least recently used)
+				var bestLane = 0;
+				var lowestTime = Date.now().getTime();
+				for (i in 0...danmakuLanes.length) {
+					if (danmakuLanes[i] < lowestTime) {
+						lowestTime = danmakuLanes[i];
+						bestLane = i;
+					}
+				}
+
+				// Create the comment element
+				final comment = document.createElement("div");
+				comment.className = "danmaku-comment";
+				
+				// Check if the message should be rendered as HTML (for emotes)
+				if (data.danmakuMessage.isHtml == true) {
+					// Handle as HTML content (emote)
+					comment.innerHTML = data.danmakuMessage.text;
+					comment.classList.add("danmaku-emote-container");
+				} else if (data.danmakuMessage.text.indexOf("<img") >= 0 || data.danmakuMessage.text.indexOf("<video") >= 0) {
+					// For backwards compatibility with older clients
+					comment.innerHTML = data.danmakuMessage.text;
+					comment.classList.add("danmaku-emote-container");
+				} else {
+					// Handle as plain text
+					comment.textContent = data.danmakuMessage.text;
+				}
+				
+				comment.style.color = data.danmakuMessage.color;
+				comment.style.top = (bestLane * laneHeight + laneHeight / 2) + "px";
+
+				// Mark this lane as used now
+				danmakuLanes[bestLane] = Std.int(Date.now().getTime());
+
+				// Add to container
+				danmakuContainer = getEl("#danmaku-container");
+				danmakuContainer.appendChild(comment);
+
+				// Calculate animation duration based on comment length and/or content type
+				final playerWidth = playerRect.width;
+				final viewportWidth = js.Browser.window.innerWidth;
+				final totalDistance = playerWidth + viewportWidth; // Distance to travel across screen
+				final duration = Math.max(5, (totalDistance / 350) * DANMAKU_SPEED); // Base the speed on pixel travel distance
+
+				// Set animation
+				comment.style.animationDuration = duration + "s";
+
+				// Remove after animation completes
+				comment.addEventListener("animationend", () -> {
+					if (danmakuContainer.contains(comment)) {
+						danmakuContainer.removeChild(comment);
+					}
+				});
+
 			case ServerMessage:
 				final id = data.serverMessage.textId;
-				final text = switch (id) {
-					case "usernameError":
-						Lang.get(id).replace("$MAX", '${config.maxLoginLength}');
-					case id if (id.startsWith("accessError")):
-						final args = id.split("|");
-						final err = Lang.get(args[0]);
-						if (args[1] == null) {
-							'$err.';
-						} else {
-							final permErr = Lang.get("noPermission").replace("$PERMISSION", args[1]);
-							'$err: $permErr';
-						}
-					default:
-						Lang.get(id);
+				var text:String;
+				if (id == "usernameError") {
+					text = Lang.get(id).replace("$MAX", '${config.maxLoginLength}');
+				} else if (id.startsWith("accessError")) {
+					final args = id.split("|");
+					final err = Lang.get(args[0]);
+					if (args.length < 2 || args[1] == null) {
+						text = '$err.';
+					} else {
+						final permText = Lang.get("noPermission").replace("$PERMISSION", args[1]);
+						text = '$err: $permText';
+					}
+				} else {
+					text = Lang.get(id);
 				}
 				serverMessage(text);
 
@@ -1246,13 +1365,35 @@ class Main {
 
 	// Sends an emote message to all users in the chat
 	public function emoteMessage(html:String):Void {
-		send({
-			type: EmoteMessage,
-			emoteMessage: {
-				clientName: "", // Server will fill this in
-				html: html
-			}
-		});
+		// Check if the danmaku checkbox is checked
+		var sendAsDanmaku = false;
+		final danmakuCheckbox:InputElement = getEl("#send-as-danmaku");
+		if (danmakuCheckbox != null) {
+			sendAsDanmaku = danmakuCheckbox.checked;
+		}
+		
+		// If sending as danmaku and danmaku is enabled, send as danmaku instead of regular emote
+		if (sendAsDanmaku && isDanmakuEnabled) {
+			// Send the HTML directly as danmaku with isHtml flag
+			send({
+				type: DanmakuMessage,
+				danmakuMessage: {
+					clientName: "", // Server will fill this in
+					text: html,
+					color: "#FFFFFF",
+					isHtml: true
+				}
+			});
+		} else {
+			// Send as regular emote message
+			send({
+				type: EmoteMessage,
+				emoteMessage: {
+					clientName: "", // Server will fill this in
+					html: html
+				}
+			});
+		}
 	}
 
 	public function serverHtmlMessage(el:Element):Void {
@@ -1611,11 +1752,11 @@ class Main {
 				try {
 					final data = haxe.Json.parse(xhr.responseText);
 					if (data.emoticons != null && data.emoticons.length > 0) {
+						// Pick a random emote from the response
 						final randomIndex = Math.floor(Math.random() * data.emoticons.length);
 						final emote = data.emoticons[randomIndex];
 
 						if (emote != null) {
-							// Use getBestEmoteUrl to get animated version if available
 							final emoteUrl = getBestEmoteUrl(emote);
 
 							if (emoteUrl != null) {

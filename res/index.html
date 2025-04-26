@@ -22,6 +22,7 @@
     <!-- Player -->
     <section id="player">
       <div id="ytapiplayer" class="embed-responsive"></div>
+      <div id="danmaku-container" style="display: none;"></div>
       <!-- Video info -->
       <div class="info video-info">
         <header>
@@ -34,6 +35,9 @@
           </button>
           <button id="mediarefresh" title="${refreshPlayer}">
             <ion-icon name="refresh"></ion-icon>
+          </button>
+          <button id="toggledanmaku" title="Toggle Danmaku">
+            <ion-icon name="chatbubble-outline"></ion-icon>
           </button>
           <button id="fullscreenbtn" title="${fullscreenPlayer}">
             <ion-icon name="expand"></ion-icon>
@@ -211,6 +215,9 @@
       <!-- Message input -->
       <div id="chatbox">
         <input id="chatline" type="text" placeholder="${chatlinePlaceholder}">
+        <label id="danmaku-label" title="Send as danmaku comment">
+          <input id="send-as-danmaku" type="checkbox">
+        </label>
         <button id="smilesbtn" title="${emotes}">
           <ion-icon name="happy"></ion-icon>
         </button>

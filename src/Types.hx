@@ -198,6 +198,7 @@ typedef WsEvent = {
 		clientName:String,
 		html:String
 	},
+	?danmakuMessage:DanmakuMessageEvent,
 	?serverMessage:{
 		textId:String
 	},
@@ -274,7 +275,8 @@ enum abstract WsEventType(String) {
 	var Logout;
 	var Message;
 	var ServerMessage;
-	var EmoteMessage; // Add the new event type
+	var EmoteMessage;
+	var DanmakuMessage;
 	var Progress;
 	var UpdateClients;
 	var BanClient;
@@ -300,4 +302,11 @@ enum abstract WsEventType(String) {
 	var UpdatePlaylist;
 	var TogglePlaylistLock;
 	var Dump;
+}
+
+typedef DanmakuMessageEvent = {
+	clientName:String,
+	text:String,
+	color:String,
+	?isHtml:Bool
 }

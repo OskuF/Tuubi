@@ -658,6 +658,11 @@ class Main {
 				data.emoteMessage.clientName = client.name;
 				broadcast(data);
 
+			case DanmakuMessage:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				data.danmakuMessage.clientName = client.name;
+				broadcast(data);
+
 			case ServerMessage:
 			case Progress:
 			case AddVideo:
