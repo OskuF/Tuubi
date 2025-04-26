@@ -509,6 +509,38 @@ class Main {
 		return personal.name;
 	}
 
+	// Animation types for danmaku emotes with their respective class names
+	private final danmakuEmoteAnimations:Array<String> = [
+		"danmaku-emote-glow", 
+		"danmaku-emote-shake", 
+		"danmaku-emote-spin",
+		"danmaku-emote-pulse",
+		"danmaku-emote-bounce",
+		"danmaku-emote-rainbow",
+		"danmaku-emote-flip",
+		"danmaku-emote-hover",
+		"danmaku-emote-heartbeat",
+		"danmaku-emote-wobble",
+		"danmaku-emote-blur",
+		"danmaku-emote-glitch",
+		"danmaku-emote-swing",
+		"danmaku-emote-trampoline",
+		"danmaku-emote-neon",
+		"danmaku-emote-fade"
+	];
+
+	/**
+	 * Gets a random animation class for danmaku emotes
+	 */
+	private function getRandomEmoteAnimation():String {
+		// 20% chance of no animation
+		if (Math.random() < 0.2) return "";
+
+		// Select a random animation from the list
+		final index = Math.floor(Math.random() * danmakuEmoteAnimations.length);
+		return danmakuEmoteAnimations[index];
+	}
+
 	// Danmaku (scrolling comments) functionality
 	public var isDanmakuEnabled = true; // Changed from false to true to enable by default
 
@@ -540,7 +572,7 @@ class Main {
 
 	public function sendDanmakuComment(text:String, color:String = "#FFFFFF", isHtml:Bool = false):Void {
 		if (!isDanmakuEnabled) return;
-		
+
 		// Send danmaku message to all clients via server
 		// The server will broadcast it back to all clients including the sender
 		send({
@@ -835,13 +867,14 @@ class Main {
 				// Create the comment element
 				final comment = document.createElement("div");
 				comment.className = "danmaku-comment";
-				
+
 				// Check if the message should be rendered as HTML (for emotes)
 				if (data.danmakuMessage.isHtml == true) {
 					// Handle as HTML content (emote)
 					comment.innerHTML = data.danmakuMessage.text;
 					comment.classList.add("danmaku-emote-container");
-				} else if (data.danmakuMessage.text.indexOf("<img") >= 0 || data.danmakuMessage.text.indexOf("<video") >= 0) {
+				} else if (data.danmakuMessage.text.indexOf("<img") >= 0
+					|| data.danmakuMessage.text.indexOf("<video") >= 0) {
 					// For backwards compatibility with older clients
 					comment.innerHTML = data.danmakuMessage.text;
 					comment.classList.add("danmaku-emote-container");
@@ -849,12 +882,18 @@ class Main {
 					// Handle as plain text
 					comment.textContent = data.danmakuMessage.text;
 				}
-				
+
 				comment.style.color = data.danmakuMessage.color;
 				comment.style.top = (bestLane * laneHeight + laneHeight / 2) + "px";
 
 				// Mark this lane as used now
 				danmakuLanes[bestLane] = Std.int(Date.now().getTime());
+
+				// Add animation if available
+				final animationClass = getRandomEmoteAnimation();
+				if (animationClass.length > 0) {
+					comment.classList.add(animationClass);
+				}
 
 				// Add to container
 				danmakuContainer = getEl("#danmaku-container");
@@ -863,7 +902,8 @@ class Main {
 				// Calculate animation duration based on comment length and/or content type
 				final playerWidth = playerRect.width;
 				final viewportWidth = js.Browser.window.innerWidth;
-				final totalDistance = playerWidth + viewportWidth; // Distance to travel across screen
+				final totalDistance = playerWidth
+					+ viewportWidth; // Distance to travel across screen
 				final duration = Math.max(5, (totalDistance / 350) * DANMAKU_SPEED); // Base the speed on pixel travel distance
 
 				// Set animation
@@ -1371,7 +1411,7 @@ class Main {
 		if (danmakuCheckbox != null) {
 			sendAsDanmaku = danmakuCheckbox.checked;
 		}
-		
+
 		// If sending as danmaku and danmaku is enabled, send as danmaku instead of regular emote
 		if (sendAsDanmaku && isDanmakuEnabled) {
 			// Send the HTML directly as danmaku with isHtml flag

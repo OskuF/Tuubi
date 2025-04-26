@@ -1379,6 +1379,7 @@ var client_Main = function() {
 	this.DANMAKU_LANES = 12;
 	this.danmakuLanes = [];
 	this.isDanmakuEnabled = true;
+	this.danmakuEmoteAnimations = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
 	this.hasMoreFfzEmotes = true;
 	this.isFfzLoading = false;
 	this.currentFfzQuery = "";
@@ -1788,6 +1789,13 @@ client_Main.prototype = {
 		}
 		return null;
 	}
+	,getRandomEmoteAnimation: function() {
+		if(Math.random() < 0.2) {
+			return "";
+		}
+		var index = Math.floor(Math.random() * this.danmakuEmoteAnimations.length);
+		return this.danmakuEmoteAnimations[index];
+	}
 	,toggleDanmaku: function() {
 		this.isDanmakuEnabled = !this.isDanmakuEnabled;
 		this.danmakuContainer = window.document.querySelector("#danmaku-container");
@@ -2002,7 +2010,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 770, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 802, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -2058,6 +2066,10 @@ client_Main.prototype = {
 			comment.style.color = data.danmakuMessage.color;
 			comment.style.top = bestLane * laneHeight + laneHeight / 2 + "px";
 			this.danmakuLanes[bestLane] = new Date().getTime() | 0;
+			var animationClass = this.getRandomEmoteAnimation();
+			if(animationClass.length > 0) {
+				comment.classList.add(animationClass);
+			}
 			this.danmakuContainer = window.document.querySelector("#danmaku-container");
 			this.danmakuContainer.appendChild(comment);
 			var playerWidth = playerRect.width;
