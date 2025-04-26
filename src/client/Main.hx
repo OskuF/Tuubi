@@ -511,8 +511,8 @@ class Main {
 
 	// Animation types for danmaku emotes with their respective class names
 	private final danmakuEmoteAnimations:Array<String> = [
-		"danmaku-emote-glow", 
-		"danmaku-emote-shake", 
+		"danmaku-emote-glow",
+		"danmaku-emote-shake",
 		"danmaku-emote-spin",
 		"danmaku-emote-pulse",
 		"danmaku-emote-bounce",
@@ -547,7 +547,7 @@ class Main {
 	private var danmakuContainer:Element;
 	private var danmakuLanes:Array<Int> = [];
 	private final DANMAKU_LANES = 12; // Number of lanes for comments
-	private final DANMAKU_SPEED = 8; // Base speed in seconds to cross the screen
+	private final DANMAKU_SPEED = -5; // Base speed in seconds to cross the screen
 
 	public function toggleDanmaku():Bool {
 		isDanmakuEnabled = !isDanmakuEnabled;
