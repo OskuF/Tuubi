@@ -854,13 +854,19 @@ class Main {
 				final playerRect = playerEl.getBoundingClientRect();
 				final laneHeight = Math.floor(playerRect.height / DANMAKU_LANES);
 
-				// Find the best lane (least recently used)
+				// Use the lane provided by the sender, or find the best lane if not provided
 				var bestLane = 0;
-				var lowestTime = Date.now().getTime();
-				for (i in 0...danmakuLanes.length) {
-					if (danmakuLanes[i] < lowestTime) {
-						lowestTime = danmakuLanes[i];
-						bestLane = i;
+				if (data.danmakuMessage.lane != null) {
+					// Use the pre-selected lane from the server for consistent positioning
+					bestLane = data.danmakuMessage.lane;
+				} else {
+					// For backwards compatibility, find the least recently used lane
+					var lowestTime = Date.now().getTime();
+					for (i in 0...danmakuLanes.length) {
+						if (danmakuLanes[i] < lowestTime) {
+							lowestTime = danmakuLanes[i];
+							bestLane = i;
+						}
 					}
 				}
 
@@ -889,10 +895,11 @@ class Main {
 				// Mark this lane as used now
 				danmakuLanes[bestLane] = Std.int(Date.now().getTime());
 
-				// Add animation if available
-				final animationClass = getRandomEmoteAnimation();
-				if (animationClass.length > 0) {
-					comment.classList.add(animationClass);
+				// Add animation if available from the server
+				if (data.danmakuMessage.animationClass != null
+					&& data.danmakuMessage.animationClass.length > 0) {
+					// Use the animation class provided by the server
+					comment.classList.add(data.danmakuMessage.animationClass);
 				}
 
 				// Add to container
@@ -1414,14 +1421,29 @@ class Main {
 
 		// If sending as danmaku and danmaku is enabled, send as danmaku instead of regular emote
 		if (sendAsDanmaku && isDanmakuEnabled) {
-			// Send the HTML directly as danmaku with isHtml flag
+			// Pre-select an animation class using the same logic as the server
+			// This ensures all clients will use the same animation
+			final random = Math.random();
+			final animationClass = random < 0.2 ? "" : danmakuEmoteAnimations[Math.floor(Math.random() * danmakuEmoteAnimations.length)];
+			
+			// Pre-select a lane to ensure consistent positioning across clients
+			final playerEl = getEl("#ytapiplayer");
+			final playerRect = playerEl.getBoundingClientRect();
+			final laneHeight = Math.floor(playerRect.height / DANMAKU_LANES);
+			
+			// Calculate the lane at random to ensure consistent placement
+			final bestLane = Math.floor(Math.random() * DANMAKU_LANES);
+			
+			// Send the HTML directly as danmaku with isHtml flag, pre-selected animation class, and lane
 			send({
 				type: DanmakuMessage,
 				danmakuMessage: {
 					clientName: "", // Server will fill this in
 					text: html,
 					color: "#FFFFFF",
-					isHtml: true
+					isHtml: true,
+					animationClass: animationClass,
+					lane: bestLane
 				}
 			});
 		} else {

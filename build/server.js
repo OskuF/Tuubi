@@ -2092,7 +2092,7 @@ JsonParser_$f378d50044c8c87339ebd29901892072.__name__ = true;
 JsonParser_$f378d50044c8c87339ebd29901892072.__super__ = json2object_reader_BaseParser;
 JsonParser_$f378d50044c8c87339ebd29901892072.prototype = $extend(json2object_reader_BaseParser.prototype,{
 	onIncorrectType: function(pos,variable) {
-		this.errors.push(json2object_Error.IncorrectType(variable,"{ text : String, ?isHtml : Null<Bool>, color : String, clientName : String }",pos));
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ text : String, ?lane : Null<Int>, ?isHtml : Null<Bool>, color : String, clientName : String, ?animationClass : Null<String> }",pos));
 		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
 	}
 	,loadJsonNull: function(pos,variable) {
@@ -2100,13 +2100,16 @@ JsonParser_$f378d50044c8c87339ebd29901892072.prototype = $extend(json2object_rea
 	}
 	,loadJsonObject: function(o,pos,variable) {
 		var assigned = new haxe_ds_StringMap();
-		this.objectSetupAssign(assigned,["clientName","color","isHtml","text"],[false,false,true,false]);
+		this.objectSetupAssign(assigned,["animationClass","clientName","color","isHtml","lane","text"],[true,false,false,true,true,false]);
 		this.value = this.getAuto();
 		var _g = 0;
 		while(_g < o.length) {
 			var field = o[_g];
 			++_g;
 			switch(field.name) {
+			case "animationClass":
+				this.value.animationClass = this.loadObjectField(($_=new JsonParser_$ddce6d3de223cb2759be5c48797abca5(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"animationClass",assigned,this.value.animationClass,pos);
+				break;
 			case "clientName":
 				this.value.clientName = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"clientName",assigned,this.value.clientName,pos);
 				break;
@@ -2115,6 +2118,9 @@ JsonParser_$f378d50044c8c87339ebd29901892072.prototype = $extend(json2object_rea
 				break;
 			case "isHtml":
 				this.value.isHtml = this.loadObjectField(($_=new JsonParser_$f55acea3678203c700715b781ad1ef0c(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"isHtml",assigned,this.value.isHtml,pos);
+				break;
+			case "lane":
+				this.value.lane = this.loadObjectField(($_=new JsonParser_$fce7124f52c7d8d1f8ed39d333573e17(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"lane",assigned,this.value.lane,pos);
 				break;
 			case "text":
 				this.value.text = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"text",assigned,this.value.text,pos);
@@ -2126,7 +2132,7 @@ JsonParser_$f378d50044c8c87339ebd29901892072.prototype = $extend(json2object_rea
 		this.objectErrors(assigned,pos);
 	}
 	,getAuto: function() {
-		return { clientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), color : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), isHtml : new JsonParser_$f55acea3678203c700715b781ad1ef0c([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), text : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+		return { animationClass : new JsonParser_$ddce6d3de223cb2759be5c48797abca5([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), color : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), isHtml : new JsonParser_$f55acea3678203c700715b781ad1ef0c([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), lane : new JsonParser_$fce7124f52c7d8d1f8ed39d333573e17([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), text : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
 	,__class__: JsonParser_$f378d50044c8c87339ebd29901892072
 });
@@ -2318,6 +2324,27 @@ JsonParser_$fae276e53583ba7855144d0eb60db288.prototype = $extend(json2object_rea
 		this.value = this.loadJsonArrayValue(a,($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,2),$bind($_,$_.loadJson)),variable);
 	}
 	,__class__: JsonParser_$fae276e53583ba7855144d0eb60db288
+});
+var JsonParser_$fce7124f52c7d8d1f8ed39d333573e17 = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$fce7124f52c7d8d1f8ed39d333573e17.__name__ = true;
+JsonParser_$fce7124f52c7d8d1f8ed39d333573e17.__super__ = json2object_reader_BaseParser;
+JsonParser_$fce7124f52c7d8d1f8ed39d333573e17.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"Int",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonNumber: function(f,pos,variable) {
+		this.value = this.loadJsonInt(f,pos,variable,this.value);
+	}
+	,__class__: JsonParser_$fce7124f52c7d8d1f8ed39d333573e17
 });
 var JsonParser_$feded5bdb427eb48f39e60029d5dca4a = function(errors,putils,errorType) {
 	if(errorType == null) {
@@ -5164,6 +5191,18 @@ server_Main.prototype = {
 			if(!this.checkPermission(client,"writeChat")) {
 				return;
 			}
+			if(data.danmakuMessage.isHtml == true) {
+				if(data.danmakuMessage.animationClass == null || data.danmakuMessage.animationClass == "") {
+					var random = Math.random();
+					if(random < 0.2) {
+						data.danmakuMessage.animationClass = "";
+					} else {
+						var animations = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
+						var index = Math.floor(Math.random() * animations.length);
+						data.danmakuMessage.animationClass = animations[index];
+					}
+				}
+			}
 			data.danmakuMessage.clientName = client.name;
 			this.broadcast(data);
 			break;
@@ -5661,7 +5700,7 @@ server_Main.prototype = {
 			client.setGroupFlag(ClientGroup.Banned,!isOutdated);
 			if(isOutdated) {
 				HxOverrides.remove(this.userList.bans,ban);
-				haxe_Log.trace("" + client.name + " ban removed",{ fileName : "src/server/Main.hx", lineNumber : 1080, className : "server.Main", methodName : "checkBan"});
+				haxe_Log.trace("" + client.name + " ban removed",{ fileName : "src/server/Main.hx", lineNumber : 1107, className : "server.Main", methodName : "checkBan"});
 				this.sendClientList();
 			}
 			break;

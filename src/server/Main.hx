@@ -660,6 +660,33 @@ class Main {
 
 			case DanmakuMessage:
 				if (!checkPermission(client, WriteChatPerm)) return;
+
+				// Always generate an animation class for HTML content if one isn't provided
+				if (data.danmakuMessage.isHtml == true) {
+					if (data.danmakuMessage.animationClass == null || data.danmakuMessage.animationClass == "") {
+						// Generate a random value between 0 and 1
+						final random = Math.random();
+						// 20% chance of no animation (empty string)
+						if (random < 0.2) {
+							data.danmakuMessage.animationClass = "";
+						} else {
+							// Select from available animation classes - same as in client's getRandomEmoteAnimation function
+							final animations = [
+								"danmaku-emote-glow", "danmaku-emote-shake", 
+								"danmaku-emote-spin", "danmaku-emote-pulse", 
+								"danmaku-emote-bounce", "danmaku-emote-rainbow", 
+								"danmaku-emote-flip", "danmaku-emote-hover", 
+								"danmaku-emote-heartbeat", "danmaku-emote-wobble", 
+								"danmaku-emote-blur", "danmaku-emote-glitch", 
+								"danmaku-emote-swing", "danmaku-emote-trampoline", 
+								"danmaku-emote-neon", "danmaku-emote-fade"
+							];
+							final index = Math.floor(Math.random() * animations.length);
+							data.danmakuMessage.animationClass = animations[index];
+						}
+					}
+				}
+				
 				data.danmakuMessage.clientName = client.name;
 				broadcast(data);
 

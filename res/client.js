@@ -1789,13 +1789,6 @@ client_Main.prototype = {
 		}
 		return null;
 	}
-	,getRandomEmoteAnimation: function() {
-		if(Math.random() < 0.2) {
-			return "";
-		}
-		var index = Math.floor(Math.random() * this.danmakuEmoteAnimations.length);
-		return this.danmakuEmoteAnimations[index];
-	}
 	,toggleDanmaku: function() {
 		this.isDanmakuEnabled = !this.isDanmakuEnabled;
 		this.danmakuContainer = window.document.querySelector("#danmaku-container");
@@ -2042,14 +2035,18 @@ client_Main.prototype = {
 			var playerRect = window.document.querySelector("#ytapiplayer").getBoundingClientRect();
 			var laneHeight = Math.floor(playerRect.height / this.DANMAKU_LANES);
 			var bestLane = 0;
-			var lowestTime = new Date().getTime();
-			var _g = 0;
-			var _g1 = this.danmakuLanes.length;
-			while(_g < _g1) {
-				var i = _g++;
-				if(this.danmakuLanes[i] < lowestTime) {
-					lowestTime = this.danmakuLanes[i];
-					bestLane = i;
+			if(data.danmakuMessage.lane != null) {
+				bestLane = data.danmakuMessage.lane;
+			} else {
+				var lowestTime = new Date().getTime();
+				var _g = 0;
+				var _g1 = this.danmakuLanes.length;
+				while(_g < _g1) {
+					var i = _g++;
+					if(this.danmakuLanes[i] < lowestTime) {
+						lowestTime = this.danmakuLanes[i];
+						bestLane = i;
+					}
 				}
 			}
 			var comment = window.document.createElement("div");
@@ -2066,9 +2063,8 @@ client_Main.prototype = {
 			comment.style.color = data.danmakuMessage.color;
 			comment.style.top = bestLane * laneHeight + laneHeight / 2 + "px";
 			this.danmakuLanes[bestLane] = new Date().getTime() | 0;
-			var animationClass = this.getRandomEmoteAnimation();
-			if(animationClass.length > 0) {
-				comment.classList.add(animationClass);
+			if(data.danmakuMessage.animationClass != null && data.danmakuMessage.animationClass.length > 0) {
+				comment.classList.add(data.danmakuMessage.animationClass);
 			}
 			this.danmakuContainer = window.document.querySelector("#danmaku-container");
 			this.danmakuContainer.appendChild(comment);
@@ -2644,7 +2640,11 @@ client_Main.prototype = {
 			sendAsDanmaku = danmakuCheckbox.checked;
 		}
 		if(sendAsDanmaku && this.isDanmakuEnabled) {
-			this.send({ type : "DanmakuMessage", danmakuMessage : { clientName : "", text : html, color : "#FFFFFF", isHtml : true}});
+			var random = Math.random();
+			var animationClass = random < 0.2 ? "" : this.danmakuEmoteAnimations[Math.floor(Math.random() * this.danmakuEmoteAnimations.length)];
+			window.document.querySelector("#ytapiplayer").getBoundingClientRect();
+			var bestLane = Math.floor(Math.random() * this.DANMAKU_LANES);
+			this.send({ type : "DanmakuMessage", danmakuMessage : { clientName : "", text : html, color : "#FFFFFF", isHtml : true, animationClass : animationClass, lane : bestLane}});
 		} else {
 			this.send({ type : "EmoteMessage", emoteMessage : { clientName : "", html : html}});
 		}

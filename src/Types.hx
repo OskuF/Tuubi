@@ -308,5 +308,7 @@ typedef DanmakuMessageEvent = {
 	clientName:String,
 	text:String,
 	color:String,
-	?isHtml:Bool
+	?isHtml:Bool,
+	?animationClass:String,
+	?lane:Int
 }
