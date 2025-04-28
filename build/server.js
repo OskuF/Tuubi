@@ -4037,6 +4037,7 @@ var server_HttpServer = function(main,config) {
 	this.allowLocalRequests = config.allowLocalRequests;
 	this.cache = config.cache;
 	this.allowedFileTypes = main.config.allowedFileTypes;
+	this.emotesAPI = new server_EmotesAPI();
 	if(this.customDir != null) {
 		this.hasCustomRes = sys_FileSystem.exists(this.customDir);
 	}
@@ -4055,6 +4056,10 @@ server_HttpServer.prototype = {
 		var ext = haxe_io_Path.extension(filePath).toLowerCase();
 		res.setHeader("accept-ranges","bytes");
 		res.setHeader("content-type",this.getMimeType(ext));
+		if(StringTools.startsWith(url.pathname,"/api/emotes")) {
+			this.handleEmoteApiRequest(req,res,url);
+			return;
+		}
 		if(this.cache != null && req.method == "POST") {
 			switch(url.pathname) {
 			case "/setup":
@@ -4142,10 +4147,10 @@ server_HttpServer.prototype = {
 			fileName = null;
 		}
 		var ext = haxe_io_Path.extension(fileName).toLowerCase();
-		haxe_Log.trace("Trying to upload new file to the cache: " + fileName + ", extension: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 175, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
+		haxe_Log.trace("Trying to upload new file to the cache: " + fileName + ", extension: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 201, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
 		if(!this.isAllowedFileType(ext)) {
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,400),{ info : "Invalid file type. Filetype is not on the whitelist."});
-			haxe_Log.trace("Filetype not allowed: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 179, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
+			haxe_Log.trace("Filetype not allowed: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 205, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
 			return;
 		}
 		var name = this.cache.getFreeFileName(fileName);
@@ -4221,7 +4226,7 @@ server_HttpServer.prototype = {
 			}
 		});
 		stream.on("error",function(err) {
-			haxe_Log.trace(err,{ fileName : "src/server/HttpServer.hx", lineNumber : 248, className : "server.HttpServer", methodName : "uploadFile"});
+			haxe_Log.trace(err,{ fileName : "src/server/HttpServer.hx", lineNumber : 274, className : "server.HttpServer", methodName : "uploadFile"});
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,500),{ info : "File write stream error."});
 			var _this = _gthis.uploadingFilesSizes;
 			if(Object.prototype.hasOwnProperty.call(_this.h,filePath)) {
@@ -4234,7 +4239,7 @@ server_HttpServer.prototype = {
 			_gthis.cache.remove(name);
 		});
 		req.on("error",function(err) {
-			haxe_Log.trace("Request Error:",{ fileName : "src/server/HttpServer.hx", lineNumber : 255, className : "server.HttpServer", methodName : "uploadFile", customParams : [err]});
+			haxe_Log.trace("Request Error:",{ fileName : "src/server/HttpServer.hx", lineNumber : 281, className : "server.HttpServer", methodName : "uploadFile", customParams : [err]});
 			stream.destroy();
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,500),{ info : "File request error."});
 			var _this = _gthis.uploadingFilesSizes;
@@ -4266,7 +4271,7 @@ server_HttpServer.prototype = {
 			var jsonParser = new JsonParser_$f3c29c0813c93ee49a61ccf072b8a177();
 			var jsonData = jsonParser.fromJson(body);
 			if(jsonParser.errors.length > 0) {
-				haxe_Log.trace(json2object_ErrorUtils.convertErrorArray(jsonParser.errors),{ fileName : "src/server/HttpServer.hx", lineNumber : 286, className : "server.HttpServer", methodName : "finishSetup"});
+				haxe_Log.trace(json2object_ErrorUtils.convertErrorArray(jsonParser.errors),{ fileName : "src/server/HttpServer.hx", lineNumber : 312, className : "server.HttpServer", methodName : "finishSetup"});
 				tools_HttpServerTools.json(tools_HttpServerTools.status(res,400),{ success : false, errors : []});
 				return;
 			}
@@ -4466,7 +4471,303 @@ server_HttpServer.prototype = {
 		data = data.replace(this.ctrlCharacters.r,"");
 		return data;
 	}
+	,handleEmoteApiRequest: function(req,res,url) {
+		res.setHeader("Content-Type","application/json");
+		res.setHeader("Access-Control-Allow-Origin","*");
+		res.setHeader("Access-Control-Allow-Methods","GET");
+		res.setHeader("Access-Control-Allow-Headers","Content-Type");
+		res.setHeader("Cache-Control","max-age=300");
+		var _this = url.pathname.split("/");
+		var _g = [];
+		var _g1 = 0;
+		while(_g1 < _this.length) {
+			var v = _this[_g1];
+			++_g1;
+			if(v.length > 0) {
+				_g.push(v);
+			}
+		}
+		if(_g.length < 4 || _g[0] != "api" || _g[1] != "emotes") {
+			if(_g.length == 2 && _g[0] == "api" && _g[1] == "emotes") {
+				res.end(JSON.stringify({ "global" : "/api/emotes/global/<provider>", "channel" : "/api/emotes/channel/<username>/<provider>", "providers" : ["twitch","7tv","bttv","ffz","all"]}));
+				return;
+			}
+			res.statusCode = 404;
+			res.end(JSON.stringify({ status_code : 404, message : "Page not found. Valid routes are /api/emotes/global/<provider> and /api/emotes/channel/<username>/<provider>"}));
+			return;
+		}
+		var requestType = _g[2];
+		if(requestType == "global") {
+			var provider = _g[3];
+			if(["twitch","7tv","bttv","ffz","all"].indexOf(provider) == -1) {
+				res.statusCode = 404;
+				res.end(JSON.stringify({ status_code : 404, message : "Invalid provider. Valid providers are: twitch, 7tv, bttv, ffz, all"}));
+				return;
+			}
+			this.handleGlobalEmotesRequest(res,provider);
+			return;
+		}
+		if(requestType == "channel" && _g.length >= 5) {
+			var username = _g[3];
+			var provider = _g[4];
+			if(["twitch","7tv","bttv","ffz","all"].indexOf(provider) == -1) {
+				res.statusCode = 404;
+				res.end(JSON.stringify({ status_code : 404, message : "Invalid provider. Valid providers are: twitch, 7tv, bttv, ffz, all"}));
+				return;
+			}
+			this.handleChannelEmotesRequest(res,username,provider);
+			return;
+		}
+		res.statusCode = 404;
+		res.end(JSON.stringify({ status_code : 404, message : "Invalid request"}));
+	}
+	,handleGlobalEmotesRequest: function(res,provider) {
+		this.emotesAPI.getEmotes("_global",provider).then(function(emotes) {
+			res.end(JSON.stringify(emotes));
+		}).catch(function(err) {
+			res.statusCode = 500;
+			res.end(JSON.stringify({ status_code : 500, message : "Failed to fetch emotes: " + err}));
+		});
+	}
+	,handleChannelEmotesRequest: function(res,username,provider) {
+		this.emotesAPI.getEmotes(username,provider).then(function(emotes) {
+			res.end(JSON.stringify(emotes));
+		}).catch(function(err) {
+			res.statusCode = 500;
+			res.end(JSON.stringify({ status_code : 500, message : "Failed to fetch emotes: " + err}));
+		});
+	}
 	,__class__: server_HttpServer
+};
+var server_EmotesAPI = function() {
+	this.emoteCache = new haxe_ds_StringMap();
+};
+server_EmotesAPI.__name__ = true;
+server_EmotesAPI.prototype = {
+	getEmotes: function(login,provider) {
+		var cachedData = this.emoteCache.h["" + login + "_" + provider];
+		if(cachedData != null && new Date().getTime() - cachedData.timestamp < server_EmotesAPI.CACHE_TIMEOUT * 1000) {
+			return Promise.resolve(cachedData.data);
+		}
+		switch(provider) {
+		case "7tv":
+			return this.get7TVEmotes(login);
+		case "all":
+			return this.getAllEmotes(login);
+		case "bttv":
+			return this.getBTTVEmotes(login);
+		case "ffz":
+			return this.getFFZEmotes(login);
+		case "twitch":
+			return this.getTwitchEmotes(login);
+		default:
+			return Promise.resolve([]);
+		}
+	}
+	,getTwitchEmotes: function(login) {
+		var _gthis = this;
+		return new Promise(function(resolve,reject) {
+			_gthis.makeHttpRequest(login == "_global" ? "https://api.twitchemotes.com/api/v4/channels/0" : "https://api.twitchemotes.com/api/v4/channels/" + login).then(function(data) {
+				try {
+					var parsed = JSON.parse(data);
+					var emotes = [];
+					if(parsed.emotes != null) {
+						var emoteList = parsed.emotes;
+						var _g = 0;
+						while(_g < emoteList.length) {
+							var emoteData = emoteList[_g];
+							++_g;
+							var id = emoteData.id;
+							emotes.push({ code : emoteData.code, provider : 0, zero_width : false, animated : false, urls : [{ size : "1x", url : "https://static-cdn.jtvnw.net/emoticons/v1/" + id + "/1.0"},{ size : "2x", url : "https://static-cdn.jtvnw.net/emoticons/v1/" + id + "/2.0"},{ size : "3x", url : "https://static-cdn.jtvnw.net/emoticons/v1/" + id + "/3.0"}]});
+						}
+					}
+					_gthis.cacheEmotes(login + "_twitch",emotes);
+					resolve(emotes);
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					reject("Error parsing Twitch emotes: " + Std.string(_g1));
+				}
+			}).catch(function(err) {
+				reject("Failed to fetch Twitch emotes: " + err);
+			});
+		});
+	}
+	,get7TVEmotes: function(login) {
+		var _gthis = this;
+		return new Promise(function(resolve,reject) {
+			_gthis.makeHttpRequest(login == "_global" ? "https://api.7tv.app/v2/emotes/global" : "https://api.7tv.app/v2/users/" + login + "/emotes").then(function(data) {
+				try {
+					var parsed = JSON.parse(data);
+					var emotes = [];
+					var _g = 0;
+					while(_g < parsed.length) {
+						var emoteData = parsed[_g];
+						++_g;
+						var code = emoteData.name;
+						var id = emoteData.id;
+						var animated = emoteData.animated != null && emoteData.animated;
+						var urls = [];
+						var sizes = ["1x","2x","3x","4x"];
+						var _g1 = 0;
+						while(_g1 < sizes.length) {
+							var size = sizes[_g1];
+							++_g1;
+							urls.push({ size : size, url : "https://cdn.7tv.app/emote/" + id + "/" + size});
+						}
+						emotes.push({ code : code, provider : 1, zero_width : emoteData.visibility_simple != null && emoteData.visibility_simple.contains("ZERO_WIDTH"), animated : animated, urls : urls});
+					}
+					_gthis.cacheEmotes(login + "_7tv",emotes);
+					resolve(emotes);
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					reject("Error parsing 7TV emotes: " + Std.string(_g1));
+				}
+			}).catch(function(err) {
+				reject("Failed to fetch 7TV emotes: " + err);
+			});
+		});
+	}
+	,getBTTVEmotes: function(login) {
+		var _gthis = this;
+		return new Promise(function(resolve,reject) {
+			_gthis.makeHttpRequest(login == "_global" ? "https://api.betterttv.net/3/cached/emotes/global" : "https://api.betterttv.net/3/cached/users/twitch/" + login).then(function(data) {
+				try {
+					var emotes = [];
+					var parsed = JSON.parse(data);
+					var emoteList = [];
+					if(login == "_global") {
+						if(((parsed) instanceof Array)) {
+							var parsedArray = parsed;
+							var _g = 0;
+							while(_g < parsedArray.length) emoteList.push(parsedArray[_g++]);
+						}
+					} else {
+						if(parsed.channelEmotes != null && ((parsed.channelEmotes) instanceof Array)) {
+							var channelEmotes = parsed.channelEmotes;
+							var _g = 0;
+							while(_g < channelEmotes.length) emoteList.push(channelEmotes[_g++]);
+						}
+						if(parsed.sharedEmotes != null && ((parsed.sharedEmotes) instanceof Array)) {
+							var sharedEmotes = parsed.sharedEmotes;
+							var _g = 0;
+							while(_g < sharedEmotes.length) emoteList.push(sharedEmotes[_g++]);
+						}
+					}
+					var _g = 0;
+					var _g1 = emoteList.length;
+					while(_g < _g1) {
+						var emoteData = emoteList[_g++];
+						if(emoteData == null) {
+							continue;
+						}
+						var code = emoteData.code;
+						var id = emoteData.id;
+						if(code == null || id == null) {
+							continue;
+						}
+						emotes.push({ code : code, provider : 2, zero_width : code.charAt(0) == "&", animated : emoteData.imageType == "gif", urls : [{ size : "1x", url : "https://cdn.betterttv.net/emote/" + id + "/1x"},{ size : "2x", url : "https://cdn.betterttv.net/emote/" + id + "/2x"},{ size : "3x", url : "https://cdn.betterttv.net/emote/" + id + "/3x"}]});
+					}
+					_gthis.cacheEmotes(login + "_bttv",emotes);
+					resolve(emotes);
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					reject("Error parsing BTTV emotes: " + Std.string(_g1));
+				}
+			}).catch(function(err) {
+				reject("Failed to fetch BTTV emotes: " + err);
+			});
+		});
+	}
+	,getFFZEmotes: function(login) {
+		var _gthis = this;
+		return new Promise(function(resolve,reject) {
+			_gthis.makeHttpRequest(login == "_global" ? "https://api.frankerfacez.com/v1/set/global" : "https://api.frankerfacez.com/v1/room/" + login).then(function(data) {
+				try {
+					var emotes = [];
+					var parsed = JSON.parse(data);
+					var setIds = login == "_global" ? Reflect.fields(parsed.sets) : [Std.string(parsed.room.set)];
+					var _g = 0;
+					while(_g < setIds.length) {
+						var emoteList = Reflect.field(parsed.sets,setIds[_g++]).emoticons;
+						if(((emoteList) instanceof Array)) {
+							var typedEmoteList = emoteList;
+							var _g1 = 0;
+							var _g2 = typedEmoteList.length;
+							while(_g1 < _g2) {
+								var emoteData = typedEmoteList[_g1++];
+								if(emoteData == null) {
+									continue;
+								}
+								var code = emoteData.name;
+								var urls = [];
+								var scales = Reflect.fields(emoteData.urls);
+								var _g3 = 0;
+								while(_g3 < scales.length) {
+									var scale = scales[_g3];
+									++_g3;
+									urls.push({ size : scale + "x", url : "https://" + Reflect.field(emoteData.urls,scale).replace("//","")});
+								}
+								emotes.push({ code : code, provider : 3, zero_width : false, animated : false, urls : urls});
+							}
+						}
+					}
+					_gthis.cacheEmotes(login + "_ffz",emotes);
+					resolve(emotes);
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					reject("Error parsing FFZ emotes: " + Std.string(_g1));
+				}
+			}).catch(function(err) {
+				reject("Failed to fetch FFZ emotes: " + err);
+			});
+		});
+	}
+	,getAllEmotes: function(login) {
+		var _gthis = this;
+		return Promise.all([this.getTwitchEmotes(login),this.get7TVEmotes(login),this.getBTTVEmotes(login),this.getFFZEmotes(login)]).then(function(results) {
+			var allEmotes = [];
+			var _g = 0;
+			while(_g < results.length) {
+				var emoteList = results[_g];
+				++_g;
+				var _g1 = 0;
+				while(_g1 < emoteList.length) allEmotes.push(emoteList[_g1++]);
+			}
+			_gthis.cacheEmotes(login + "_all",allEmotes);
+			return allEmotes;
+		});
+	}
+	,makeHttpRequest: function(url) {
+		return new Promise(function(resolve,reject) {
+			var parsedUrl = new js_node_url_URL(url);
+			var options = { hostname : parsedUrl.hostname, path : parsedUrl.pathname + parsedUrl.search, headers : { "User-Agent" : "TuubiPlayer/1.0"}};
+			var request = parsedUrl.protocol == "https:" ? js_node_Https.request : js_node_Http.request;
+			var req = request(options,function(res) {
+				if(res.statusCode >= 400) {
+					reject("HTTP Error: " + res.statusCode);
+					return;
+				}
+				var chunks = [];
+				res.on("data",function(chunk) {
+					return chunks.push(chunk);
+				});
+				res.on("end",function() {
+					var responseBody = js_node_buffer_Buffer.concat(chunks).toString();
+					resolve(responseBody);
+				});
+			});
+			req.on("error",function(error) {
+				reject("Request Error: " + error);
+			});
+			req.end();
+		});
+	}
+	,cacheEmotes: function(key,emotes) {
+		var this1 = this.emoteCache;
+		var value = { data : emotes, timestamp : new Date().getTime()};
+		this1.h[key] = value;
+	}
+	,__class__: server_EmotesAPI
 };
 var server_Logger = function(folder,maxCount,verbose) {
 	this.matchFileFormat = new EReg("[0-9_-]+\\.json$","");
@@ -6807,6 +7108,7 @@ server_HttpServer.mimeTypes = (function($this) {
 	$r = _g;
 	return $r;
 }(this));
+server_EmotesAPI.CACHE_TIMEOUT = 300;
 utils_YoutubeUtils.matchId = new EReg("youtube\\.com.*v=([A-z0-9_-]+)","");
 utils_YoutubeUtils.matchShort = new EReg("youtu\\.be/([A-z0-9_-]+)","");
 utils_YoutubeUtils.matchShorts = new EReg("youtube\\.com/shorts/([A-z0-9_-]+)","");
