@@ -750,10 +750,55 @@ class Main {
 	}
 
 	public function removeVideoItem(url:String) {
+		// Make sure we're using the actual URL stored in the videoList for this item
+		// This is crucial for iframe embedded YouTube livestreams
+		final items = player.getItems();
+		// First try to find the exact matching URL
+		var matchingItem = items.find(item -> item.url == url);
+		
+		// If not found and it's a YouTube URL, try to find by video ID
+		if (matchingItem == null && (url.indexOf("youtube.com") > -1 || url.indexOf("youtu.be") > -1)) {
+			final videoId = player.extractYoutubeVideoId(url);
+			if (videoId != "") {
+				matchingItem = items.find(item -> {
+					if (item.url.indexOf("youtube.com") > -1 || item.url.indexOf("youtu.be") > -1) {
+						return player.extractYoutubeVideoId(item.url) == videoId;
+					}
+					if (item.playerType == IframeType && 
+						item.url.indexOf("<iframe") > -1 && 
+						item.url.indexOf("youtube.com/embed/") > -1) {
+						return item.url.indexOf(videoId) > -1;
+					}
+					return false;
+				});
+			}
+		}
+		// If not found and it's an iframe embed, try to match by iframe content
+		else if (matchingItem == null && url.indexOf("<iframe") > -1 && url.indexOf("youtube.com/embed/") > -1) {
+			final embedMatch = ~/youtube\.com\/embed\/([A-z0-9_-]+)/g;
+			if (embedMatch.match(url)) {
+				final videoId = embedMatch.matched(1);
+				matchingItem = items.find(item -> {
+					if (item.url.indexOf("youtube.com") > -1 || item.url.indexOf("youtu.be") > -1) {
+						return player.extractYoutubeVideoId(item.url) == videoId;
+					}
+					if (item.playerType == IframeType && 
+						item.url.indexOf("<iframe") > -1 && 
+						item.url.indexOf("youtube.com/embed/") > -1) {
+						return item.url.indexOf(videoId) > -1;
+					}
+					return false;
+				});
+			}
+		}
+		
+		// Use the actual stored URL if we found a match, otherwise use the original URL
+		final actualUrl = matchingItem != null ? matchingItem.url : url;
+		
 		send({
 			type: RemoveVideo,
 			removeVideo: {
-				url: url
+				url: actualUrl
 			}
 		});
 	}

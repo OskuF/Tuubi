@@ -448,10 +448,44 @@ class Player {
 
 	public function removeItem(url:String):Void {
 		removeElementItem(url);
+		// Try to find by exact URL match first
 		var index = videoList.findIndex(item -> item.url == url);
+		
+		// If not found and it's a YouTube URL or iframe HTML with YouTube embed, try to match by video ID
+		if (index == -1) {
+			var videoId = "";
+			// Handle case where url is regular YouTube URL
+			if (url.indexOf("youtube.com") > -1 || url.indexOf("youtu.be") > -1) {
+				videoId = youtube.extractVideoId(url);
+			}
+			// Handle case where url is an iframe HTML string
+			else if (url.indexOf("<iframe") > -1 && url.indexOf("youtube.com/embed/") > -1) {
+				final embedMatch = ~/youtube\.com\/embed\/([A-z0-9_-]+)/g;
+				if (embedMatch.match(url)) {
+					videoId = embedMatch.matched(1);
+				}
+			}
+			
+			if (videoId != "") {
+				index = videoList.findIndex(item -> {
+					// Check if this is a regular YouTube URL
+					if (item.url.indexOf("youtube.com") > -1 || item.url.indexOf("youtu.be") > -1) {
+						return youtube.extractVideoId(item.url) == videoId;
+					}
+					// Check if this is an iframe embedded YouTube live stream
+					else if (item.playerType == IframeType && 
+						item.url.indexOf("<iframe") > -1 && 
+						item.url.indexOf("youtube.com/embed/") > -1) {
+						return item.url.indexOf(videoId) > -1;
+					}
+					return false;
+				});
+			}
+		}
+		
 		if (index == -1) return;
 
-		final isCurrent = videoList.currentItem.url == url;
+		final isCurrent = videoList.currentItem.url == videoList.getItem(index).url;
 		videoList.removeItem(index);
 		updateCounters();
 
@@ -461,10 +495,45 @@ class Player {
 	}
 
 	function removeElementItem(url:String):Void {
+		var videoId = "";
+		// Extract video ID if it's a YouTube URL
+		if (url.indexOf("youtube.com") > -1 || url.indexOf("youtu.be") > -1) {
+			videoId = youtube.extractVideoId(url);
+		}
+		// Extract video ID if it's an iframe HTML string
+		else if (url.indexOf("<iframe") > -1 && url.indexOf("youtube.com/embed/") > -1) {
+			final embedMatch = ~/youtube\.com\/embed\/([A-z0-9_-]+)/g;
+			if (embedMatch.match(url)) {
+				videoId = embedMatch.matched(1);
+			}
+		}
+		
 		for (child in videoItemsEl.children) {
-			if (child.querySelector(".qe_title").getAttribute("href") == url) {
+			final href = child.querySelector(".qe_title").getAttribute("href");
+			
+			// Check if regular URL matches
+			if (href == url) {
 				videoItemsEl.removeChild(child);
 				break;
+			}
+			
+			// If we have a valid YouTube video ID, try to match by that
+			if (videoId != "") {
+				// Check if href is a YouTube URL
+				if (href.indexOf("youtube.com") > -1 || href.indexOf("youtu.be") > -1) {
+					final hrefVideoId = youtube.extractVideoId(href);
+					if (hrefVideoId == videoId) {
+						videoItemsEl.removeChild(child);
+						break;
+					}
+				}
+				// Check if href is an iframe embed
+				else if (href.indexOf("<iframe") > -1 && href.indexOf("youtube.com/embed/") > -1) {
+					if (href.indexOf(videoId) > -1) {
+						videoItemsEl.removeChild(child);
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -705,5 +774,13 @@ class Player {
 
 	function almostEq(a:Float, b:Float, diff:Float):Bool {
 		return a > b - diff && a < b + diff;
+	}
+
+	/**
+	 * Public method to extract YouTube video ID from URL
+	 * This prevents direct access to the private youtube property
+	 */
+	public function extractYoutubeVideoId(url:String):String {
+		return youtube.extractVideoId(url);
 	}
 }
