@@ -168,9 +168,15 @@ class Buttons {
 				Utils.requestFullscreen(document.documentElement);
 			} else {
 				Utils.requestFullscreen(getEl("#ytapiplayer"));
-			}
-		}
+			}		}
 		initPageFullscreen();
+		
+		// TTS Button
+		final ttsBtn = getEl("#tts-btn");
+		ttsBtn.onclick = e -> {
+			main.toggleTts();
+		}
+		
 		final getPlaylist = getEl("#getplaylist");
 		getPlaylist.onclick = e -> {
 			final text = main.getPlaylistLinks().join(",");

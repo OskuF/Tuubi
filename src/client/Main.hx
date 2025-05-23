@@ -72,6 +72,11 @@ class Main {
 	var currentFfzQuery = "";
 	var isFfzLoading = false;
 	var hasMoreFfzEmotes = true;
+	// TTS variables
+	var isTtsEnabled = true;
+	var ttsVolume = 1.0;
+	var speechSynthesis:Dynamic;
+	var finnishVoice:Dynamic;
 
 	static function main():Void {
 		new Main();
@@ -116,6 +121,7 @@ class Main {
 		Lang.init("langs", () -> {
 			Buttons.initTextButtons(this);
 			Buttons.initHotkeys(this, player);
+			initTts();
 			openWebSocket();
 		});
 		JsApi.init(this, player);
@@ -755,18 +761,18 @@ class Main {
 		final items = player.getItems();
 		// First try to find the exact matching URL
 		var matchingItem = items.find(item -> item.url == url);
-		
+
 		// If not found and it's a YouTube URL, try to find by video ID
-		if (matchingItem == null && (url.indexOf("youtube.com") > -1 || url.indexOf("youtu.be") > -1)) {
+		if (matchingItem == null
+			&& (url.indexOf("youtube.com") > -1 || url.indexOf("youtu.be") > -1)) {
 			final videoId = player.extractYoutubeVideoId(url);
 			if (videoId != "") {
 				matchingItem = items.find(item -> {
 					if (item.url.indexOf("youtube.com") > -1 || item.url.indexOf("youtu.be") > -1) {
 						return player.extractYoutubeVideoId(item.url) == videoId;
 					}
-					if (item.playerType == IframeType && 
-						item.url.indexOf("<iframe") > -1 && 
-						item.url.indexOf("youtube.com/embed/") > -1) {
+					if (item.playerType == IframeType && item.url.indexOf("<iframe") > -1
+						&& item.url.indexOf("youtube.com/embed/") > -1) {
 						return item.url.indexOf(videoId) > -1;
 					}
 					return false;
@@ -774,7 +780,8 @@ class Main {
 			}
 		}
 		// If not found and it's an iframe embed, try to match by iframe content
-		else if (matchingItem == null && url.indexOf("<iframe") > -1 && url.indexOf("youtube.com/embed/") > -1) {
+		else if (matchingItem == null && url.indexOf("<iframe") > -1
+			&& url.indexOf("youtube.com/embed/") > -1) {
 			final embedMatch = ~/youtube\.com\/embed\/([A-z0-9_-]+)/g;
 			if (embedMatch.match(url)) {
 				final videoId = embedMatch.matched(1);
@@ -782,19 +789,18 @@ class Main {
 					if (item.url.indexOf("youtube.com") > -1 || item.url.indexOf("youtu.be") > -1) {
 						return player.extractYoutubeVideoId(item.url) == videoId;
 					}
-					if (item.playerType == IframeType && 
-						item.url.indexOf("<iframe") > -1 && 
-						item.url.indexOf("youtube.com/embed/") > -1) {
+					if (item.playerType == IframeType && item.url.indexOf("<iframe") > -1
+						&& item.url.indexOf("youtube.com/embed/") > -1) {
 						return item.url.indexOf(videoId) > -1;
 					}
 					return false;
 				});
 			}
 		}
-		
+
 		// Use the actual stored URL if we found a match, otherwise use the original URL
 		final actualUrl = matchingItem != null ? matchingItem.url : url;
-		
+
 		send({
 			type: RemoveVideo,
 			removeVideo: {
@@ -950,6 +956,9 @@ class Main {
 				// Add to container
 				danmakuContainer = getEl("#danmaku-container");
 				danmakuContainer.appendChild(comment);
+
+				// Speak the danmaku message if TTS is enabled
+				speakText(data.danmakuMessage.text);
 
 				// Calculate animation duration based on comment length and/or content type
 				final playerWidth = playerRect.width;
@@ -1470,15 +1479,15 @@ class Main {
 			// This ensures all clients will use the same animation
 			final random = Math.random();
 			final animationClass = random < 0.2 ? "" : danmakuEmoteAnimations[Math.floor(Math.random() * danmakuEmoteAnimations.length)];
-			
+
 			// Pre-select a lane to ensure consistent positioning across clients
 			final playerEl = getEl("#ytapiplayer");
 			final playerRect = playerEl.getBoundingClientRect();
 			final laneHeight = Math.floor(playerRect.height / DANMAKU_LANES);
-			
+
 			// Calculate the lane at random to ensure consistent placement
 			final bestLane = Math.floor(Math.random() * DANMAKU_LANES);
-			
+
 			// Send the HTML directly as danmaku with isHtml flag, pre-selected animation class, and lane
 			send({
 				type: DanmakuMessage,
@@ -1607,6 +1616,10 @@ class Main {
 		} else {
 			showScrollToChatEndBtn();
 		}
+
+		// Speak the message if TTS is enabled
+		speakText(text);
+
 		if (onBlinkTab == null) blinkTabWithTitle('*${Lang.get("chat")}*');
 	}
 
@@ -2041,6 +2054,169 @@ class Main {
 
 	public function isVerbose():Bool {
 		return config.isVerbose;
+	}
+
+	// TTS methods
+	function initTts():Void {
+		speechSynthesis = (window : Dynamic).speechSynthesis;
+		if (speechSynthesis == null) return;
+		// Load Finnish voice when voices are available
+		function loadFinnishVoice():Void {
+			final voices:Array<Dynamic> = speechSynthesis.getVoices();
+			for (voice in voices) {
+				if (voice.lang.indexOf("fi") == 0) {
+					finnishVoice = voice;
+					break;
+				}
+			}
+		}
+
+		// Try to load voices immediately
+		loadFinnishVoice();
+		// Also listen for voice changes (some browsers load voices asynchronously)
+		speechSynthesis.onvoiceschanged = loadFinnishVoice; // Load TTS state from settings
+		for (item in settings.checkboxes) {
+			if (item.id == "tts-enabled") {
+				isTtsEnabled = item.checked == true;
+			} else if (item.id == "tts-volume") {
+				ttsVolume = cast item.checked;
+			}
+		}
+
+		// Load TTS volume from settings
+		loadTtsVolume();
+
+		// Initialize volume slider
+		initTtsVolumeSlider();
+
+		// Always update button state after initialization
+		updateTtsButton();
+	}
+
+	public function toggleTts():Void {
+		isTtsEnabled = !isTtsEnabled;
+		updateTtsButton();
+		saveTtsState();
+	}
+
+	function updateTtsButton():Void {
+		final ttsBtn = getEl("#tts-btn");
+		if (ttsBtn == null) return;
+
+		if (isTtsEnabled) {
+			ttsBtn.classList.add("active");
+		} else {
+			ttsBtn.classList.remove("active");
+		}
+	}
+
+	function saveTtsState():Void {
+		// Find existing TTS setting or create new one
+		var found = false;
+		for (item in settings.checkboxes) {
+			if (item.id == "tts-enabled") {
+				item.checked = isTtsEnabled;
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			settings.checkboxes.push({id: "tts-enabled", checked: isTtsEnabled});
+		}
+		Settings.write(settings);
+	}
+
+	function loadTtsVolume():Void {
+		// Default TTS volume if not found in settings
+		ttsVolume = 1.0;
+
+		// Look for TTS volume setting in checkboxes
+		for (item in settings.checkboxes) {
+			if (item.id == "tts-volume") {
+				ttsVolume = cast item.checked;
+				break;
+			}
+		}
+	}
+
+	function initTtsVolumeSlider():Void {
+		final volumeInput = getEl("#tts-volume-input");
+		final volumeLabel = getEl(".volume-label");
+		if (volumeInput == null) return;
+
+		// Set the volume input value from current ttsVolume
+		(cast volumeInput).value = Std.string(ttsVolume);
+
+		// Update volume label to show current value
+		if (volumeLabel != null) {
+			var volumeText = "Volume: "
+				+ (ttsVolume > 1 ? "<strong>" + ttsVolume + "x</strong>" : ttsVolume + "x");
+			volumeLabel.innerHTML = volumeText;
+		}
+
+		// Add event listener for volume changes
+		volumeInput.addEventListener("input", function(e) {
+			final input = cast(e.target, js.html.InputElement);
+			ttsVolume = Std.parseFloat(input.value);
+
+			// Update volume label when slider changes
+			if (volumeLabel != null) {
+				var volumeText = "Volume: "
+					+ (ttsVolume > 1 ? "<strong>" + ttsVolume + "x</strong>" : ttsVolume + "x");
+				volumeLabel.innerHTML = volumeText;
+			}
+
+			saveTtsVolume();
+		});
+	}
+
+	function saveTtsVolume():Void {
+		// Find existing TTS volume setting or create new one
+		var found = false;
+		for (item in settings.checkboxes) {
+			if (item.id == "tts-volume") {
+				item.checked = cast ttsVolume;
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			settings.checkboxes.push({id: "tts-volume", checked: cast ttsVolume});
+		}
+		Settings.write(settings);
+	}
+
+	function speakText(text:String):Void {
+		if (!isTtsEnabled || speechSynthesis == null || text.trim() == "") return;
+
+		// Extract text from HTML if needed
+		final cleanText = extractTextFromHtml(text);
+		if (cleanText.trim() == "") return;
+		// Create speech utterance
+		final utterance = js.Syntax.construct("SpeechSynthesisUtterance", cleanText);
+
+		// Set Finnish voice if available
+		if (finnishVoice != null) {
+			utterance.voice = finnishVoice;
+		} else {
+			utterance.lang = "fi-FI";
+		}
+		// Configure speech parameters
+		utterance.rate = 0.9;
+		utterance.pitch = 1.0;
+		utterance.volume = ttsVolume;
+
+		// Speak the text
+		speechSynthesis.speak(utterance);
+	}
+
+	function extractTextFromHtml(html:String):String {
+		if (html.indexOf("<") == -1) return html;
+
+		// Create temporary element to extract text
+		final tempDiv = document.createElement("div");
+		tempDiv.innerHTML = html;
+		return tempDiv.textContent ?? tempDiv.innerText ?? "";
 	}
 
 	function escapeRegExp(regex:String):String {

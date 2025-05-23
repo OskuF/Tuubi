@@ -35,10 +35,18 @@
           </button>
           <button id="mediarefresh" title="${refreshPlayer}">
             <ion-icon name="refresh"></ion-icon>
-          </button>
-          <button id="toggledanmaku" title="Toggle Danmaku">
+          </button> <button id="toggledanmaku" title="Toggle Danmaku">
             <ion-icon name="chatbubble-outline"></ion-icon>
           </button>
+          <div id="tts-container" class="tts-container"> <button id="tts-btn"
+              title="Toggle Text-to-Speech (Finnish accent)">
+              <ion-icon name="volume-high"></ion-icon>
+            </button>
+            <div id="tts-volume-slider" class="tts-volume-slider">
+              <input type="range" id="tts-volume-input" min="0" max="2" step="0.1" value="1">
+              <div class="volume-label">Volume</div>
+            </div>
+          </div>
           <button id="fullscreenbtn" title="${fullscreenPlayer}">
             <ion-icon name="expand"></ion-icon>
           </button>

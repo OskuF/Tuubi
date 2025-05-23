@@ -729,6 +729,9 @@ client_Buttons.init = function(main) {
 		}
 	};
 	client_Buttons.initPageFullscreen();
+	window.document.querySelector("#tts-btn").onclick = function(e) {
+		main.toggleTts();
+	};
 	var getPlaylist = window.document.querySelector("#getplaylist");
 	getPlaylist.onclick = function(e) {
 		client_Utils.copyToClipboard(main.getPlaylistLinks().join(","));
@@ -864,7 +867,7 @@ client_Buttons.init = function(main) {
 				try {
 					data = JSON.parse(request.responseText);
 				} catch( _g ) {
-					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 327, className : "client.Buttons", methodName : "init"});
+					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 333, className : "client.Buttons", methodName : "init"});
 					return;
 				}
 				if(data.errorId == null) {
@@ -1380,6 +1383,8 @@ var client_Main = function() {
 	this.danmakuLanes = [];
 	this.isDanmakuEnabled = true;
 	this.danmakuEmoteAnimations = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
+	this.ttsVolume = 1.0;
+	this.isTtsEnabled = true;
 	this.hasMoreFfzEmotes = true;
 	this.isFfzLoading = false;
 	this.currentFfzQuery = "";
@@ -1428,6 +1433,7 @@ var client_Main = function() {
 	Lang.init("langs",function() {
 		client_Buttons.initTextButtons(_gthis);
 		client_Buttons.initHotkeys(_gthis,_gthis.player);
+		_gthis.initTts();
 		_gthis.openWebSocket();
 	});
 	client_JsApi.init(this,this.player);
@@ -2036,7 +2042,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 847, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 853, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -2101,6 +2107,7 @@ client_Main.prototype = {
 			}
 			this.danmakuContainer = window.document.querySelector("#danmaku-container");
 			this.danmakuContainer.appendChild(comment);
+			this.speakText(data.danmakuMessage.text);
 			var playerWidth = playerRect.width;
 			var viewportWidth = window.innerWidth;
 			comment.style.animationDuration = Math.max(5,(playerWidth + viewportWidth) / 350 * this.DANMAKU_SPEED) + "s";
@@ -2769,6 +2776,7 @@ client_Main.prototype = {
 		} else {
 			this.showScrollToChatEndBtn();
 		}
+		this.speakText(text);
 		if(this.onBlinkTab == null) {
 			this.blinkTabWithTitle("*" + Lang.get("chat") + "*");
 		}
@@ -3187,6 +3195,159 @@ client_Main.prototype = {
 	}
 	,isVerbose: function() {
 		return this.config.isVerbose;
+	}
+	,initTts: function() {
+		var _gthis = this;
+		this.speechSynthesis = window.speechSynthesis;
+		if(this.speechSynthesis == null) {
+			return;
+		}
+		var loadFinnishVoice = function() {
+			var voices = _gthis.speechSynthesis.getVoices();
+			var _g = 0;
+			while(_g < voices.length) {
+				var voice = voices[_g];
+				++_g;
+				if(voice.lang.indexOf("fi") == 0) {
+					_gthis.finnishVoice = voice;
+					break;
+				}
+			}
+		};
+		loadFinnishVoice();
+		this.speechSynthesis.onvoiceschanged = loadFinnishVoice;
+		var _g = 0;
+		var _g1 = this.settings.checkboxes;
+		while(_g < _g1.length) {
+			var item = _g1[_g];
+			++_g;
+			if(item.id == "tts-enabled") {
+				this.isTtsEnabled = item.checked == true;
+			} else if(item.id == "tts-volume") {
+				this.ttsVolume = item.checked;
+			}
+		}
+		this.loadTtsVolume();
+		this.initTtsVolumeSlider();
+		this.updateTtsButton();
+	}
+	,toggleTts: function() {
+		this.isTtsEnabled = !this.isTtsEnabled;
+		this.updateTtsButton();
+		this.saveTtsState();
+	}
+	,updateTtsButton: function() {
+		var ttsBtn = window.document.querySelector("#tts-btn");
+		if(ttsBtn == null) {
+			return;
+		}
+		if(this.isTtsEnabled) {
+			ttsBtn.classList.add("active");
+		} else {
+			ttsBtn.classList.remove("active");
+		}
+	}
+	,saveTtsState: function() {
+		var found = false;
+		var _g = 0;
+		var _g1 = this.settings.checkboxes;
+		while(_g < _g1.length) {
+			var item = _g1[_g];
+			++_g;
+			if(item.id == "tts-enabled") {
+				item.checked = this.isTtsEnabled;
+				found = true;
+				break;
+			}
+		}
+		if(!found) {
+			this.settings.checkboxes.push({ id : "tts-enabled", checked : this.isTtsEnabled});
+		}
+		client_Settings.write(this.settings);
+	}
+	,loadTtsVolume: function() {
+		this.ttsVolume = 1.0;
+		var _g = 0;
+		var _g1 = this.settings.checkboxes;
+		while(_g < _g1.length) {
+			var item = _g1[_g];
+			++_g;
+			if(item.id == "tts-volume") {
+				this.ttsVolume = item.checked;
+				break;
+			}
+		}
+	}
+	,initTtsVolumeSlider: function() {
+		var _gthis = this;
+		var volumeInput = window.document.querySelector("#tts-volume-input");
+		var volumeLabel = window.document.querySelector(".volume-label");
+		if(volumeInput == null) {
+			return;
+		}
+		volumeInput.value = Std.string(this.ttsVolume);
+		if(volumeLabel != null) {
+			volumeLabel.innerHTML = "Volume: " + (this.ttsVolume > 1 ? "<strong>" + this.ttsVolume + "x</strong>" : this.ttsVolume + "x");
+		}
+		volumeInput.addEventListener("input",function(e) {
+			var tmp = parseFloat((js_Boot.__cast(e.target , HTMLInputElement)).value);
+			_gthis.ttsVolume = tmp;
+			if(volumeLabel != null) {
+				volumeLabel.innerHTML = "Volume: " + (_gthis.ttsVolume > 1 ? "<strong>" + _gthis.ttsVolume + "x</strong>" : _gthis.ttsVolume + "x");
+			}
+			_gthis.saveTtsVolume();
+		});
+	}
+	,saveTtsVolume: function() {
+		var found = false;
+		var _g = 0;
+		var _g1 = this.settings.checkboxes;
+		while(_g < _g1.length) {
+			var item = _g1[_g];
+			++_g;
+			if(item.id == "tts-volume") {
+				item.checked = this.ttsVolume;
+				found = true;
+				break;
+			}
+		}
+		if(!found) {
+			this.settings.checkboxes.push({ id : "tts-volume", checked : this.ttsVolume});
+		}
+		client_Settings.write(this.settings);
+	}
+	,speakText: function(text) {
+		if(!this.isTtsEnabled || this.speechSynthesis == null || StringTools.trim(text) == "") {
+			return;
+		}
+		var cleanText = this.extractTextFromHtml(text);
+		if(StringTools.trim(cleanText) == "") {
+			return;
+		}
+		var utterance = new SpeechSynthesisUtterance(cleanText);
+		if(this.finnishVoice != null) {
+			utterance.voice = this.finnishVoice;
+		} else {
+			utterance.lang = "fi-FI";
+		}
+		utterance.rate = 0.9;
+		utterance.pitch = 1.0;
+		utterance.volume = this.ttsVolume;
+		this.speechSynthesis.speak(utterance);
+	}
+	,extractTextFromHtml: function(html) {
+		if(html.indexOf("<") == -1) {
+			return html;
+		}
+		var tempDiv = window.document.createElement("div");
+		tempDiv.innerHTML = html;
+		var tmp = tempDiv.textContent;
+		var tmp1 = tmp != null ? tmp : tempDiv.innerText;
+		if(tmp1 != null) {
+			return tmp1;
+		} else {
+			return "";
+		}
 	}
 	,escapeRegExp: function(regex) {
 		var _this_r = new RegExp("([.*+?^${}()|[\\]\\\\])","g".split("u").join(""));
