@@ -1237,14 +1237,31 @@ client_Drawing.resizeCanvas = function() {
 	}
 };
 client_Drawing.setupEventListeners = function() {
-	client_Drawing.canvas.addEventListener("mousedown",client_Drawing.onMouseDown);
-	client_Drawing.canvas.addEventListener("mousemove",client_Drawing.onMouseMove);
-	client_Drawing.canvas.addEventListener("mouseup",client_Drawing.onMouseUp);
-	client_Drawing.canvas.addEventListener("mouseout",client_Drawing.onMouseUp);
-	client_Drawing.canvas.addEventListener("touchstart",client_Drawing.onTouchStart);
-	client_Drawing.canvas.addEventListener("touchmove",client_Drawing.onTouchMove);
-	client_Drawing.canvas.addEventListener("touchend",client_Drawing.onTouchEnd);
+	client_Drawing.setupCanvasStyleForStylus();
+	if(window.PointerEvent != null) {
+		client_Drawing.canvas.addEventListener("pointerdown",client_Drawing.onPointerDown,{ passive : false});
+		client_Drawing.canvas.addEventListener("pointermove",client_Drawing.onPointerMove,{ passive : false});
+		client_Drawing.canvas.addEventListener("pointerup",client_Drawing.onPointerUp,{ passive : false});
+		client_Drawing.canvas.addEventListener("pointercancel",client_Drawing.onPointerUp,{ passive : false});
+		client_Drawing.canvas.addEventListener("pointerout",client_Drawing.onPointerUp,{ passive : false});
+		client_Drawing.canvas.addEventListener("pointerleave",client_Drawing.onPointerUp,{ passive : false});
+		client_Drawing.canvas.addEventListener("contextmenu",client_Drawing.preventDefaultEvent,{ passive : false});
+		client_Drawing.canvas.addEventListener("gesturestart",client_Drawing.preventDefaultEvent,{ passive : false});
+		client_Drawing.canvas.addEventListener("gesturechange",client_Drawing.preventDefaultEvent,{ passive : false});
+		client_Drawing.canvas.addEventListener("gestureend",client_Drawing.preventDefaultEvent,{ passive : false});
+		client_Drawing.supportsPressure = true;
+	} else {
+		client_Drawing.canvas.addEventListener("mousedown",client_Drawing.onMouseDown,{ passive : false});
+		client_Drawing.canvas.addEventListener("mousemove",client_Drawing.onMouseMove,{ passive : false});
+		client_Drawing.canvas.addEventListener("mouseup",client_Drawing.onMouseUp,{ passive : false});
+		client_Drawing.canvas.addEventListener("mouseout",client_Drawing.onMouseUp,{ passive : false});
+		client_Drawing.canvas.addEventListener("contextmenu",client_Drawing.preventDefaultEvent,{ passive : false});
+		client_Drawing.canvas.addEventListener("touchstart",client_Drawing.onTouchStart,{ passive : false});
+		client_Drawing.canvas.addEventListener("touchmove",client_Drawing.onTouchMove,{ passive : false});
+		client_Drawing.canvas.addEventListener("touchend",client_Drawing.onTouchEnd,{ passive : false});
+	}
 	window.addEventListener("resize",client_Drawing.resizeCanvas);
+	window.document.addEventListener("keydown",client_Drawing.preventBrowserShortcuts,{ passive : false});
 	haxe_Timer.delay(function() {
 		var lastWidth = 0.0;
 		var lastHeight = 0.0;
@@ -1285,6 +1302,7 @@ client_Drawing.onMouseDown = function(e) {
 		return;
 	}
 	e.preventDefault();
+	e.stopPropagation();
 	var pos = client_Drawing.getMousePos(e);
 	client_Drawing.startDrawing(pos.x,pos.y);
 };
@@ -1293,6 +1311,7 @@ client_Drawing.onMouseMove = function(e) {
 		return;
 	}
 	e.preventDefault();
+	e.stopPropagation();
 	var pos = client_Drawing.getMousePos(e);
 	if(client_Drawing.isDrawing) {
 		client_Drawing.continueDrawing(pos.x,pos.y);
@@ -1306,6 +1325,7 @@ client_Drawing.onMouseUp = function(e) {
 		return;
 	}
 	e.preventDefault();
+	e.stopPropagation();
 	client_Drawing.stopDrawing();
 };
 client_Drawing.sendCursorPosition = function(x,y) {
@@ -1321,6 +1341,7 @@ client_Drawing.onTouchStart = function(e) {
 		return;
 	}
 	e.preventDefault();
+	e.stopPropagation();
 	var pos = client_Drawing.getTouchPos(e);
 	client_Drawing.startDrawing(pos.x,pos.y);
 };
@@ -1329,6 +1350,7 @@ client_Drawing.onTouchMove = function(e) {
 		return;
 	}
 	e.preventDefault();
+	e.stopPropagation();
 	var pos = client_Drawing.getTouchPos(e);
 	if(client_Drawing.isDrawing) {
 		client_Drawing.continueDrawing(pos.x,pos.y);
@@ -1342,6 +1364,7 @@ client_Drawing.onTouchEnd = function(e) {
 		return;
 	}
 	e.preventDefault();
+	e.stopPropagation();
 	client_Drawing.stopDrawing();
 };
 client_Drawing.startDrawing = function(x,y) {
@@ -1392,22 +1415,43 @@ client_Drawing.saveDrawingInBackground = function() {
 	client_Drawing.hasUnsavedChanges = false;
 };
 client_Drawing.drawLine = function(x1,y1,x2,y2,color,size,tool) {
+	client_Drawing.drawLineWithPressure(x1,y1,x2,y2,color,size,client_Drawing.currentPressure,tool);
+};
+client_Drawing.drawLineWithPressure = function(x1,y1,x2,y2,color,size,pressure,tool) {
 	var pixelX1 = x1 * client_Drawing.canvas.width;
 	var pixelY1 = y1 * client_Drawing.canvas.height;
 	var pixelX2 = x2 * client_Drawing.canvas.width;
 	var pixelY2 = y2 * client_Drawing.canvas.height;
+	var effectiveSize = size;
+	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+		var minSize = size * 0.2;
+		effectiveSize = minSize + (size * 1.5 - minSize) * pressure;
+	}
 	if(tool == "eraser") {
 		client_Drawing.ctx.globalCompositeOperation = "destination-out";
 		client_Drawing.ctx.strokeStyle = "rgba(0,0,0,1)";
 	} else {
 		client_Drawing.ctx.globalCompositeOperation = "source-over";
 		client_Drawing.ctx.strokeStyle = color;
+		if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+			var alpha = Math.max(0.3,Math.min(1.0,pressure + 0.3));
+			var rgbColor = client_Drawing.hexToRgb(color);
+			client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + alpha + ")";
+		}
 	}
-	client_Drawing.ctx.lineWidth = size;
+	client_Drawing.ctx.lineWidth = effectiveSize;
 	client_Drawing.ctx.beginPath();
 	client_Drawing.ctx.moveTo(pixelX1,pixelY1);
 	client_Drawing.ctx.lineTo(pixelX2,pixelY2);
 	client_Drawing.ctx.stroke();
+};
+client_Drawing.hexToRgb = function(hex) {
+	var regex = new EReg("^#?([a-f\\d]{2})([a-f\\d]{2})([a-f\\d]{2})$","i");
+	if(regex.match(hex)) {
+		return { r : Std.parseInt("0x" + regex.matched(1)), g : Std.parseInt("0x" + regex.matched(2)), b : Std.parseInt("0x" + regex.matched(3))};
+	} else {
+		return { r : 0, g : 0, b : 0};
+	}
 };
 client_Drawing.clearCanvas = function() {
 	client_Drawing.ctx.clearRect(0,0,client_Drawing.canvas.width,client_Drawing.canvas.height);
@@ -1645,6 +1689,7 @@ client_Drawing.setupDrawingTools = function() {
 	window.document.querySelector("#download-drawing").onclick = function(e) {
 		client_Drawing.downloadDrawing();
 	};
+	client_Drawing.setupTabletControls();
 };
 client_Drawing.updateCanvasStyle = function() {
 	if(client_Drawing.currentTool == "eraser") {
@@ -1823,6 +1868,192 @@ client_Drawing.onSetBackground = function(isTransparent,color) {
 	client_Drawing.currentBackgroundColor = color;
 	window.document.querySelector("#drawing-background-color").value = client_Drawing.currentBackgroundColor;
 	client_Drawing.updateBackgroundStyle(false);
+};
+client_Drawing.onPointerDown = function(e) {
+	if(!client_Drawing.isDrawingEnabled) {
+		return;
+	}
+	e.preventDefault();
+	e.stopPropagation();
+	e.stopImmediatePropagation();
+	client_Drawing.updatePointerProperties(e);
+	if(client_Drawing.palmRejection && e.pointerType == "touch" && client_Drawing.isPenActive) {
+		return;
+	}
+	if(e.pointerType == "pen") {
+		client_Drawing.isPenActive = true;
+		if(client_Drawing.canvas.setPointerCapture != null) {
+			client_Drawing.canvas.setPointerCapture(e.pointerId);
+		}
+	}
+	var pos = client_Drawing.getPointerPos(e);
+	client_Drawing.startDrawing(pos.x,pos.y);
+};
+client_Drawing.onPointerMove = function(e) {
+	if(!client_Drawing.isDrawingEnabled) {
+		return;
+	}
+	e.preventDefault();
+	e.stopPropagation();
+	e.stopImmediatePropagation();
+	client_Drawing.updatePointerProperties(e);
+	if(client_Drawing.palmRejection && e.pointerType == "touch" && client_Drawing.isPenActive) {
+		return;
+	}
+	var pos = client_Drawing.getPointerPos(e);
+	if(client_Drawing.isDrawing) {
+		client_Drawing.continueDrawing(pos.x,pos.y);
+	}
+	if(client_Drawing.isDrawingUIVisible) {
+		client_Drawing.sendCursorPosition(pos.x,pos.y);
+	}
+};
+client_Drawing.onPointerUp = function(e) {
+	if(!client_Drawing.isDrawingEnabled) {
+		return;
+	}
+	e.preventDefault();
+	e.stopPropagation();
+	e.stopImmediatePropagation();
+	client_Drawing.updatePointerProperties(e);
+	if(e.pointerType == "pen") {
+		client_Drawing.isPenActive = false;
+		if(client_Drawing.canvas.releasePointerCapture != null) {
+			client_Drawing.canvas.releasePointerCapture(e.pointerId);
+		}
+	}
+	if(client_Drawing.palmRejection && e.pointerType == "touch" && client_Drawing.isPenActive) {
+		return;
+	}
+	if(client_Drawing.isDrawing) {
+		client_Drawing.stopDrawing();
+	}
+};
+client_Drawing.getPointerPos = function(e) {
+	return client_Drawing.getVideoNormalizedCoords(e.clientX,e.clientY);
+};
+client_Drawing.updatePointerProperties = function(e) {
+	client_Drawing.currentPointerType = e.pointerType;
+	if(e.pressure != null && e.pressure > 0) {
+		client_Drawing.currentPressure = e.pressure;
+		client_Drawing.supportsPressure = true;
+	} else {
+		client_Drawing.currentPressure = 0.5;
+	}
+	if(e.tiltX != null) {
+		client_Drawing.currentTiltX = e.tiltX;
+	}
+	if(e.tiltY != null) {
+		client_Drawing.currentTiltY = e.tiltY;
+	}
+	client_Drawing.updatePressureDisplay();
+};
+client_Drawing.setupTabletControls = function() {
+	var tabletSettings = window.document.querySelector("#tablet-settings");
+	var pressureToggle = window.document.querySelector("#pressure-toggle");
+	var palmRejectionToggle = window.document.querySelector("#palm-rejection-toggle");
+	var pressureDisplay = window.document.querySelector("#pressure-display");
+	var pressureValue = window.document.querySelector("#pressure-value");
+	var pressureBar = window.document.querySelector("#pressure-bar");
+	var pointerType = window.document.querySelector("#pointer-type");
+	if(window.PointerEvent != null) {
+		tabletSettings.style.display = "block";
+	}
+	pressureToggle.onclick = function(e) {
+		client_Drawing.pressureSensitivity = !client_Drawing.pressureSensitivity;
+		client_Drawing.updateTabletButtonState(pressureToggle,client_Drawing.pressureSensitivity);
+	};
+	palmRejectionToggle.onclick = function(e) {
+		client_Drawing.palmRejection = !client_Drawing.palmRejection;
+		client_Drawing.updateTabletButtonState(palmRejectionToggle,client_Drawing.palmRejection);
+	};
+	if(window.PointerEvent != null) {
+		haxe_Timer.delay(function() {
+			client_Drawing.updatePressureDisplay();
+		},100);
+	}
+};
+client_Drawing.updateTabletButtonState = function(button,enabled) {
+	if(enabled) {
+		button.style.background = "#2196F3";
+		button.innerText = "ON";
+		button.setAttribute("data-enabled","true");
+	} else {
+		button.style.background = "#555";
+		button.innerText = "OFF";
+		button.setAttribute("data-enabled","false");
+	}
+};
+client_Drawing.updatePressureDisplay = function() {
+	var pressureDisplay = window.document.querySelector("#pressure-display");
+	var pressureValue = window.document.querySelector("#pressure-value");
+	var pressureBar = window.document.querySelector("#pressure-bar");
+	var pointerType = window.document.querySelector("#pointer-type");
+	if(client_Drawing.currentPointerType == "pen" || client_Drawing.supportsPressure) {
+		pressureDisplay.style.display = "block";
+		pressureValue.innerText = Math.round(client_Drawing.currentPressure * 100) + "%";
+		pressureBar.style.width = client_Drawing.currentPressure * 100 + "%";
+		pointerType.innerText = client_Drawing.currentPointerType;
+		if(client_Drawing.currentPressure < 0.3) {
+			pressureBar.style.background = "#ff9800";
+		} else if(client_Drawing.currentPressure < 0.7) {
+			pressureBar.style.background = "#2196F3";
+		} else {
+			pressureBar.style.background = "#4caf50";
+		}
+	} else {
+		pressureDisplay.style.display = "none";
+	}
+};
+client_Drawing.preventDefaultEvent = function(e) {
+	e.preventDefault();
+	e.stopPropagation();
+};
+client_Drawing.setupCanvasStyleForStylus = function() {
+	client_Drawing.canvas.style.touchAction = "none";
+	client_Drawing.canvas.style.userSelect = "none";
+	client_Drawing.canvas.style.webkitUserSelect = "none";
+	client_Drawing.canvas.style.msUserSelect = "none";
+	client_Drawing.canvas.style.mozUserSelect = "none";
+	client_Drawing.canvas.draggable = false;
+	client_Drawing.canvas.ondragstart = function(e) {
+		e.preventDefault();
+		return false;
+	};
+	client_Drawing.canvas.oncontextmenu = function(e) {
+		e.preventDefault();
+		return false;
+	};
+	client_Drawing.canvas.style.cursor = "crosshair";
+};
+client_Drawing.preventBrowserShortcuts = function(e) {
+	if(!client_Drawing.isDrawingUIVisible) {
+		return;
+	}
+	var activeElement = window.document.activeElement;
+	if(!(activeElement == client_Drawing.canvas || client_Drawing.canvas.contains(activeElement))) {
+		return;
+	}
+	var key = e.key != null ? e.key.toLowerCase() : "";
+	var ctrl = e.ctrlKey;
+	var alt = e.altKey;
+	var shift = e.shiftKey;
+	if(ctrl && shift && key == "n") {
+		e.preventDefault();
+		e.stopPropagation();
+	}
+	if(ctrl && (key == "t" || key == "w" || key == "n" || key == "r")) {
+		e.preventDefault();
+		e.stopPropagation();
+	}
+	if(key == "f11") {
+		e.preventDefault();
+		e.stopPropagation();
+	}
+	if(alt && key == "tab") {
+		e.preventDefault();
+		e.stopPropagation();
+	}
 };
 var client_IPlayer = function() { };
 client_IPlayer.__name__ = true;
@@ -7419,6 +7650,14 @@ client_Drawing.currentSize = 3.0;
 client_Drawing.currentTool = "pen";
 client_Drawing.currentBackgroundMode = "transparent";
 client_Drawing.currentBackgroundColor = "#FFFFFF";
+client_Drawing.supportsPressure = false;
+client_Drawing.currentPressure = 1.0;
+client_Drawing.currentTiltX = 0.0;
+client_Drawing.currentTiltY = 0.0;
+client_Drawing.currentPointerType = "mouse";
+client_Drawing.pressureSensitivity = true;
+client_Drawing.palmRejection = true;
+client_Drawing.isPenActive = false;
 client_Drawing.userCursors = new haxe_ds_StringMap();
 client_Drawing.lastCursorSendTime = 0;
 client_Drawing.cursorThrottleInterval = 33;

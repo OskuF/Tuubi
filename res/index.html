@@ -73,6 +73,45 @@
             <input id="drawing-background-color" type="color" value="#FFFFFF"
               style="width: 100%; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
           </div>
+        </div>
+
+        <!-- Tablet/Stylus Settings -->
+        <div id="tablet-settings" style="margin-bottom: 10px; display: none;">
+          <label style="color: white; display: block; margin-bottom: 5px;">Tablet Settings:</label>
+
+          <!-- Pressure Sensitivity Toggle -->
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <label style="color: white; flex: 1; font-size: 12px;">Pressure Sensitivity:</label>
+            <button id="pressure-toggle" class="tablet-option active" data-enabled="true"
+              style="padding: 4px 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              ON
+            </button>
+          </div>
+
+          <!-- Palm Rejection Toggle -->
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <label style="color: white; flex: 1; font-size: 12px;">Palm Rejection:</label>
+            <button id="palm-rejection-toggle" class="tablet-option active" data-enabled="true"
+              style="padding: 4px 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              ON
+            </button>
+          </div>
+
+          <!-- Pressure Status Display -->
+          <div id="pressure-display" style="display: none; margin-top: 8px;">
+            <div
+              style="color: white; font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 2px;">
+              <span>Pressure:</span>
+              <span id="pressure-value">0.5</span>
+            </div>
+            <div style="background: #333; border-radius: 2px; height: 4px; overflow: hidden;">
+              <div id="pressure-bar" style="background: #2196F3; height: 100%; width: 50%; transition: width 0.1s;">
+              </div>
+            </div>
+            <div style="color: #999; font-size: 10px; margin-top: 2px;">
+              <span id="pointer-type">mouse</span>
+            </div>
+          </div>
         </div><!-- Action Buttons -->
         <div style="display: flex; gap: 8px;">
           <button id="clear-drawing"

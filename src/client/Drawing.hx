@@ -30,10 +30,19 @@ class Drawing {
 	static var lastY = 0.0;
 	static var currentColor = "#FF0000";
 	static var currentSize = 3.0;
-	static var currentTool = "pen";
-	// Background variables
+	static var currentTool = "pen"; // Background variables
 	static var currentBackgroundMode = "transparent"; // "transparent" or "color"
 	static var currentBackgroundColor = "#FFFFFF";
+
+	// Tablet/stylus support variables
+	static var supportsPressure = false;
+	static var currentPressure = 1.0;
+	static var currentTiltX = 0.0;
+	static var currentTiltY = 0.0;
+	static var currentPointerType = "mouse"; // "mouse", "pen", "touch"
+	static var pressureSensitivity = true; // Can be toggled by user
+	static var palmRejection = true; // Reject touch when pen is being used
+	static var isPenActive = false; // Track if pen is currently being used
 	// Map to store other users' cursor positions
 	static var userCursors:Map<String, UserCursor> = new Map<String, UserCursor>();
 	static var cursorCheckTimer:Timer;
@@ -51,7 +60,6 @@ class Drawing {
 	static var isDragging = false;
 	static var dragOffsetX = 0.0;
 	static var dragOffsetY = 0.0;
-
 	// Auto-save variables
 	static var hasUnsavedChanges = false;
 	static var autoSaveTimer:Timer;
@@ -145,7 +153,6 @@ class Drawing {
 		ctx.lineJoin = "round";
 		ctx.strokeStyle = currentColor;
 		ctx.lineWidth = currentSize;
-
 		// Redraw any existing content by reloading the drawing
 		if (isDrawingUIVisible) {
 			loadDrawing();
@@ -153,19 +160,48 @@ class Drawing {
 	}
 
 	static function setupEventListeners():Void {
-		// Mouse events
-		canvas.addEventListener("mousedown", onMouseDown);
-		canvas.addEventListener("mousemove", onMouseMove);
-		canvas.addEventListener("mouseup", onMouseUp);
-		canvas.addEventListener("mouseout", onMouseUp);
+		// Prevent default browser behaviors on canvas for better stylus support
+		setupCanvasStyleForStylus();
 
-		// Touch events for mobile
-		canvas.addEventListener("touchstart", onTouchStart);
-		canvas.addEventListener("touchmove", onTouchMove);
-		canvas.addEventListener("touchend", onTouchEnd);
+		// Check for pointer events support (better for tablets)
+		if (untyped window.PointerEvent != null) {
+			// Modern pointer events (preferred for tablet support)
+			canvas.addEventListener("pointerdown", onPointerDown, {passive: false});
+			canvas.addEventListener("pointermove", onPointerMove, {passive: false});
+			canvas.addEventListener("pointerup", onPointerUp, {passive: false});
+			canvas.addEventListener("pointercancel", onPointerUp, {passive: false});
+			canvas.addEventListener("pointerout", onPointerUp, {passive: false});
+			canvas.addEventListener("pointerleave", onPointerUp, {passive: false});
+
+			// Prevent context menu on long press/right click
+			canvas.addEventListener("contextmenu", preventDefaultEvent, {passive: false});
+
+			// Prevent browser gestures and shortcuts
+			canvas.addEventListener("gesturestart", preventDefaultEvent, {passive: false});
+			canvas.addEventListener("gesturechange", preventDefaultEvent, {passive: false});
+			canvas.addEventListener("gestureend", preventDefaultEvent, {passive: false});
+
+			// Check if pressure is supported
+			supportsPressure = true; // Will be verified on first pointer event
+		} else {
+			// Fallback to mouse and touch events
+			canvas.addEventListener("mousedown", onMouseDown, {passive: false});
+			canvas.addEventListener("mousemove", onMouseMove, {passive: false});
+			canvas.addEventListener("mouseup", onMouseUp, {passive: false});
+			canvas.addEventListener("mouseout", onMouseUp, {passive: false});
+			canvas.addEventListener("contextmenu", preventDefaultEvent, {passive: false});
+
+			// Touch events for mobile
+			canvas.addEventListener("touchstart", onTouchStart, {passive: false});
+			canvas.addEventListener("touchmove", onTouchMove, {passive: false});
+			canvas.addEventListener("touchend", onTouchEnd, {passive: false});
+		}
 
 		// Resize observer to keep canvas in sync with player
 		window.addEventListener("resize", resizeCanvas);
+
+		// Prevent browser shortcuts when drawing area is focused
+		document.addEventListener("keydown", preventBrowserShortcuts, {passive: false});
 
 		// Also listen for video player size changes (e.g., fullscreen, theater mode)
 		Timer.delay(() -> {
@@ -224,6 +260,7 @@ class Drawing {
 	static function onMouseDown(e:MouseEvent):Void {
 		if (!isDrawingEnabled) return;
 		e.preventDefault();
+		e.stopPropagation();
 
 		final pos = getMousePos(e);
 		startDrawing(pos.x, pos.y);
@@ -232,6 +269,7 @@ class Drawing {
 	static function onMouseMove(e:MouseEvent):Void {
 		if (!isDrawingEnabled) return;
 		e.preventDefault();
+		e.stopPropagation();
 
 		// Get normalized cursor position
 		final pos = getMousePos(e);
@@ -250,6 +288,7 @@ class Drawing {
 	static function onMouseUp(e:MouseEvent):Void {
 		if (!isDrawingEnabled || !isDrawing) return;
 		e.preventDefault();
+		e.stopPropagation();
 
 		stopDrawing();
 	}
@@ -277,6 +316,7 @@ class Drawing {
 	static function onTouchStart(e:TouchEvent):Void {
 		if (!isDrawingEnabled) return;
 		e.preventDefault();
+		e.stopPropagation();
 
 		final pos = getTouchPos(e);
 		startDrawing(pos.x, pos.y);
@@ -285,6 +325,7 @@ class Drawing {
 	static function onTouchMove(e:TouchEvent):Void {
 		if (!isDrawingEnabled) return;
 		e.preventDefault();
+		e.stopPropagation();
 
 		// Get normalized cursor position
 		final pos = getTouchPos(e);
@@ -303,6 +344,7 @@ class Drawing {
 	static function onTouchEnd(e:TouchEvent):Void {
 		if (!isDrawingEnabled || !isDrawing) return;
 		e.preventDefault();
+		e.stopPropagation();
 
 		stopDrawing();
 	}
@@ -397,12 +439,25 @@ class Drawing {
 	}
 
 	public static function drawLine(x1:Float, y1:Float, x2:Float, y2:Float, color:String, size:Float, ?tool:String):Void {
+		drawLineWithPressure(x1, y1, x2, y2, color, size, currentPressure, tool);
+	}
+
+	public static function drawLineWithPressure(x1:Float, y1:Float, x2:Float, y2:Float, color:String, size:Float, pressure:Float, ?tool:String):Void {
 		// Convert normalized coordinates (0.0-1.0) back to canvas pixels
 		// Using the same video-relative coordinate system for consistency
 		final pixelX1 = x1 * canvas.width;
 		final pixelY1 = y1 * canvas.height;
 		final pixelX2 = x2 * canvas.width;
 		final pixelY2 = y2 * canvas.height;
+
+		// Calculate pressure-sensitive line width
+		var effectiveSize = size;
+		if (pressureSensitivity && supportsPressure && currentPointerType == "pen") {
+			// Apply pressure curve: minimum 20% of size, maximum 150% of size
+			final minSize = size * 0.2;
+			final maxSize = size * 1.5;
+			effectiveSize = minSize + (maxSize - minSize) * pressure;
+		}
 
 		// Set drawing mode based on tool
 		if (tool == "eraser") {
@@ -411,13 +466,29 @@ class Drawing {
 		} else {
 			ctx.globalCompositeOperation = "source-over";
 			ctx.strokeStyle = color;
+
+			// Apply pressure-sensitive opacity for more natural pen feel
+			if (pressureSensitivity && supportsPressure && currentPointerType == "pen") {
+				final alpha = Math.max(0.3, Math.min(1.0, pressure + 0.3));
+				final rgbColor = hexToRgb(color);
+				ctx.strokeStyle = 'rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, ${alpha})';
+			}
 		}
 
-		ctx.lineWidth = size;
+		ctx.lineWidth = effectiveSize;
 		ctx.beginPath();
 		ctx.moveTo(pixelX1, pixelY1);
 		ctx.lineTo(pixelX2, pixelY2);
 		ctx.stroke();
+	}
+
+	static function hexToRgb(hex:String):{r:Int, g:Int, b:Int} {
+		final regex = ~/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i;
+		return regex.match(hex) ? {
+			r: Std.parseInt("0x" + regex.matched(1)),
+			g: Std.parseInt("0x" + regex.matched(2)),
+			b: Std.parseInt("0x" + regex.matched(3))
+		} : {r: 0, g: 0, b: 0};
 	}
 
 	public static function clearCanvas():Void {
@@ -713,12 +784,14 @@ class Drawing {
 				});
 			}
 		};
-
 		// Download drawing button
 		final downloadButton = getEl("#download-drawing");
 		downloadButton.onclick = e -> {
 			downloadDrawing();
 		};
+
+		// Setup tablet/stylus controls
+		setupTabletControls();
 	}
 
 	static function updateCanvasStyle():Void {
@@ -1005,5 +1078,277 @@ class Drawing {
 
 		// Apply the background change visually (don't broadcast back)
 		updateBackgroundStyle(false);
+	}
+
+	// Pointer Events for better tablet/stylus support
+	static function onPointerDown(e:js.html.PointerEvent):Void {
+		if (!isDrawingEnabled) return;
+
+		// Aggressively prevent all default behaviors to stop browser interference
+		e.preventDefault();
+		e.stopPropagation();
+		e.stopImmediatePropagation();
+
+		// Update current pointer properties
+		updatePointerProperties(e);
+
+		// Enhanced palm rejection: ignore touch events if pen is active
+		if (palmRejection && e.pointerType == "touch" && isPenActive) {
+			return;
+		}
+
+		// Track pen usage for palm rejection
+		if (e.pointerType == "pen") {
+			isPenActive = true;
+
+			// For pen input, also prevent any potential browser gestures
+			if (canvas.setPointerCapture != null) {
+				canvas.setPointerCapture(e.pointerId);
+			}
+		}
+
+		final pos = getPointerPos(e);
+		startDrawing(pos.x, pos.y);
+	}
+
+	static function onPointerMove(e:js.html.PointerEvent):Void {
+		if (!isDrawingEnabled) return;
+
+		// Aggressively prevent all default behaviors
+		e.preventDefault();
+		e.stopPropagation();
+		e.stopImmediatePropagation();
+
+		// Update current pointer properties
+		updatePointerProperties(e);
+
+		// Enhanced palm rejection: ignore touch events if pen is active
+		if (palmRejection && e.pointerType == "touch" && isPenActive) {
+			return;
+		}
+
+		// Get normalized cursor position
+		final pos = getPointerPos(e);
+
+		// If actively drawing, continue the drawing
+		if (isDrawing) {
+			continueDrawing(pos.x, pos.y);
+		}
+
+		// Send cursor position to other clients when drawing UI is visible
+		if (isDrawingUIVisible) {
+			sendCursorPosition(pos.x, pos.y);
+		}
+	}
+
+	static function onPointerUp(e:js.html.PointerEvent):Void {
+		if (!isDrawingEnabled) return;
+
+		// Aggressively prevent all default behaviors
+		e.preventDefault();
+		e.stopPropagation();
+		e.stopImmediatePropagation();
+
+		// Update current pointer properties
+		updatePointerProperties(e);
+
+		// Reset pen active state when pen is lifted
+		if (e.pointerType == "pen") {
+			isPenActive = false;
+
+			// Release pointer capture for pen
+			if (canvas.releasePointerCapture != null) {
+				canvas.releasePointerCapture(e.pointerId);
+			}
+		}
+
+		// Enhanced palm rejection: ignore touch events if pen is active
+		if (palmRejection && e.pointerType == "touch" && isPenActive) {
+			return;
+		}
+
+		if (isDrawing) {
+			stopDrawing();
+		}
+	}
+
+	static function getPointerPos(e:js.html.PointerEvent):{x:Float, y:Float} {
+		return getVideoNormalizedCoords(e.clientX, e.clientY);
+	}
+
+	static function updatePointerProperties(e:js.html.PointerEvent):Void {
+		currentPointerType = e.pointerType;
+
+		// Update pressure (0.0 to 1.0, defaults to 0.5 for non-pressure devices)
+		if (e.pressure != null && e.pressure > 0) {
+			currentPressure = e.pressure;
+			supportsPressure = true;
+		} else {
+			currentPressure = 0.5; // Default pressure for devices without pressure support
+		}
+
+		// Update tilt values (in degrees, -90 to 90)
+		if (e.tiltX != null) {
+			currentTiltX = e.tiltX;
+		}
+		if (e.tiltY != null) {
+			currentTiltY = e.tiltY;
+		}
+
+		// Update pressure display in real-time
+		updatePressureDisplay();
+	}
+
+	static function setupTabletControls():Void {
+		final tabletSettings = getEl("#tablet-settings");
+		final pressureToggle = getEl("#pressure-toggle");
+		final palmRejectionToggle = getEl("#palm-rejection-toggle");
+		final pressureDisplay = getEl("#pressure-display");
+		final pressureValue = getEl("#pressure-value");
+		final pressureBar = getEl("#pressure-bar");
+		final pointerType = getEl("#pointer-type");
+
+		// Show tablet settings only if pointer events are supported
+		if (untyped window.PointerEvent != null) {
+			tabletSettings.style.display = "block";
+		}
+
+		// Pressure sensitivity toggle
+		pressureToggle.onclick = e -> {
+			pressureSensitivity = !pressureSensitivity;
+			updateTabletButtonState(pressureToggle, pressureSensitivity);
+		};
+
+		// Palm rejection toggle
+		palmRejectionToggle.onclick = e -> {
+			palmRejection = !palmRejection;
+			updateTabletButtonState(palmRejectionToggle, palmRejection);
+		};
+
+		// Setup pressure monitoring
+		if (untyped window.PointerEvent != null) {
+			// Show pressure display when pen is detected
+			Timer.delay(() -> {
+				updatePressureDisplay();
+			}, 100);
+		}
+	}
+
+	static function updateTabletButtonState(button:js.html.Element, enabled:Bool):Void {
+		if (enabled) {
+			button.style.background = "#2196F3";
+			button.innerText = "ON";
+			button.setAttribute("data-enabled", "true");
+		} else {
+			button.style.background = "#555";
+			button.innerText = "OFF";
+			button.setAttribute("data-enabled", "false");
+		}
+	}
+
+	static function updatePressureDisplay():Void {
+		final pressureDisplay = getEl("#pressure-display");
+		final pressureValue = getEl("#pressure-value");
+		final pressureBar = getEl("#pressure-bar");
+		final pointerType = getEl("#pointer-type");
+
+		// Show pressure display when using a pen or when pressure is detected
+		if (currentPointerType == "pen" || supportsPressure) {
+			pressureDisplay.style.display = "block";
+
+			// Update pressure value and bar
+			pressureValue.innerText = Math.round(currentPressure * 100) + "%";
+			pressureBar.style.width = (currentPressure * 100) + "%";
+
+			// Update pointer type display
+			pointerType.innerText = currentPointerType;
+
+			// Color the pressure bar based on pressure level
+			if (currentPressure < 0.3) {
+				pressureBar.style.background = "#ff9800"; // Orange for light pressure
+			} else if (currentPressure < 0.7) {
+				pressureBar.style.background = "#2196F3"; // Blue for medium pressure
+			} else {
+				pressureBar.style.background = "#4caf50"; // Green for high pressure
+			}
+		} else {
+			pressureDisplay.style.display = "none";
+		}
+	}
+
+	// Helper function to prevent default event behavior
+	static function preventDefaultEvent(e:js.html.Event):Void {
+		e.preventDefault();
+		e.stopPropagation();
+	}
+
+	// Setup canvas style properties to prevent browser interference with stylus input
+	static function setupCanvasStyleForStylus():Void {
+		// Prevent browser default behaviors that interfere with stylus input
+		canvas.style.touchAction = "none"; // Disable touch gestures like pinch-zoom, pan
+		canvas.style.userSelect = "none"; // Disable text selection
+
+		// Use untyped access for vendor-specific properties
+		untyped canvas.style.webkitUserSelect = "none"; // Disable text selection on webkit browsers
+		untyped canvas.style.msUserSelect = "none"; // Disable text selection on IE/Edge
+		untyped canvas.style.mozUserSelect = "none"; // Disable text selection on Firefox
+
+		// Prevent drag and drop
+		canvas.draggable = false;
+		canvas.ondragstart = (e) -> {
+			e.preventDefault();
+			return false;
+		};
+
+		// Prevent context menu (right-click menu)
+		canvas.oncontextmenu = (e) -> {
+			e.preventDefault();
+			return false;
+		};
+
+		// Set cursor to crosshair when drawing is enabled
+		canvas.style.cursor = "crosshair";
+	}
+
+	// Prevent browser shortcuts that could interfere with drawing
+	static function preventBrowserShortcuts(e:js.html.KeyboardEvent):Void {
+		// Only prevent shortcuts when drawing UI is visible and canvas is focused
+		if (!isDrawingUIVisible) return;
+
+		// Check if the canvas or its container has focus
+		final activeElement = document.activeElement;
+		final isCanvasFocused = activeElement == canvas || canvas.contains(activeElement);
+
+		if (!isCanvasFocused) return;
+
+		// Prevent common browser shortcuts that might interfere
+		final key = e.key != null ? e.key.toLowerCase() : "";
+		final ctrl = e.ctrlKey;
+		final alt = e.altKey;
+		final shift = e.shiftKey;
+
+		// Prevent Ctrl+Shift+N (incognito mode in Chrome)
+		if (ctrl && shift && key == "n") {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+
+		// Prevent other problematic shortcuts
+		if (ctrl && (key == "t" || key == "w" || key == "n" || key == "r")) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+
+		// Prevent F11 (fullscreen) if it might interfere
+		if (key == "f11") {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+
+		// Prevent Alt+Tab on Windows
+		if (alt && key == "tab") {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 	}
 }
