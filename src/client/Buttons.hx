@@ -1,6 +1,7 @@
 package client;
 
 import Types.UploadResponse;
+import client.Drawing;
 import client.Main.getEl;
 import haxe.Json;
 import haxe.Timer;
@@ -168,15 +169,21 @@ class Buttons {
 				Utils.requestFullscreen(document.documentElement);
 			} else {
 				Utils.requestFullscreen(getEl("#ytapiplayer"));
-			}		}
+			}
+		}
 		initPageFullscreen();
-		
 		// TTS Button
 		final ttsBtn = getEl("#tts-btn");
 		ttsBtn.onclick = e -> {
 			main.toggleTts();
 		}
-		
+
+		// Drawing Button
+		final drawingBtn = getEl("#drawingbtn");
+		drawingBtn.onclick = e -> {
+			Drawing.toggleDrawing();
+		}
+
 		final getPlaylist = getEl("#getplaylist");
 		getPlaylist.onclick = e -> {
 			final text = main.getPlaylistLinks().join(",");
@@ -537,14 +544,14 @@ class Buttons {
 			viewport.addEventListener("resize", e -> onViewportResize());
 			onViewportResize();
 		}
-		
+
 		// Fix the constructor parameters
 		final fastForwardInput = document.createElement("div");
 		fastForwardInput.style.display = "none";
 		new InputWithHistory(
 			chatline,
 			null, // Pass null for history
-			50, 
+			50,
 			value -> {
 				if (main.handleCommands(value)) return true;
 				main.send({
@@ -558,7 +565,7 @@ class Buttons {
 				return true;
 			}
 		);
-		
+
 		final checkboxes:Array<InputElement> = [
 			getEl("#add-temp"),
 		];

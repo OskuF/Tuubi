@@ -145,10 +145,6 @@ button {
   transition: background-color ease-in-out .15s, color ease-in-out .15s;
 }
 
-button:not(:first-child) {
-  margin-left: .5rem;
-}
-
 .server-whisper button {
   margin-left: 0;
   font-style: italic;

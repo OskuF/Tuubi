@@ -732,6 +732,9 @@ client_Buttons.init = function(main) {
 	window.document.querySelector("#tts-btn").onclick = function(e) {
 		main.toggleTts();
 	};
+	window.document.querySelector("#drawingbtn").onclick = function(e) {
+		client_Drawing.toggleDrawing();
+	};
 	var getPlaylist = window.document.querySelector("#getplaylist");
 	getPlaylist.onclick = function(e) {
 		client_Utils.copyToClipboard(main.getPlaylistLinks().join(","));
@@ -867,7 +870,7 @@ client_Buttons.init = function(main) {
 				try {
 					data = JSON.parse(request.responseText);
 				} catch( _g ) {
-					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 333, className : "client.Buttons", methodName : "init"});
+					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 340, className : "client.Buttons", methodName : "init"});
 					return;
 				}
 				if(data.errorId == null) {
@@ -1151,6 +1154,675 @@ client_Buttons.initPageFullscreen = function() {
 			el.classList.remove("mobile-view");
 		}
 	};
+};
+var client_Drawing = function() { };
+client_Drawing.__name__ = true;
+client_Drawing.init = function(main) {
+	client_Drawing.main = main;
+	client_Drawing.canvas = window.document.querySelector("#drawing-canvas");
+	client_Drawing.ctx = client_Drawing.canvas.getContext("2d",null);
+	client_Drawing.playerEl = window.document.querySelector("#ytapiplayer");
+	client_Drawing.setupCanvas();
+	client_Drawing.setupEventListeners();
+	client_Drawing.setupDrawingTools();
+	client_Drawing.startCursorTimer();
+};
+client_Drawing.startCursorTimer = function() {
+	if(client_Drawing.cursorCheckTimer != null) {
+		client_Drawing.cursorCheckTimer.stop();
+	}
+	if(client_Drawing.animFrameId != null) {
+		window.cancelAnimationFrame(client_Drawing.animFrameId);
+	}
+	var renderLoop = null;
+	renderLoop = function(timestamp) {
+		client_Drawing.renderCursors();
+		client_Drawing.animFrameId = window.requestAnimationFrame(renderLoop);
+	};
+	client_Drawing.animFrameId = window.requestAnimationFrame(renderLoop);
+	client_Drawing.cursorCheckTimer = new haxe_Timer(1000);
+	client_Drawing.cursorCheckTimer.run = function() {
+		client_Drawing.cleanupOldCursors();
+	};
+};
+client_Drawing.cleanupOldCursors = function() {
+	var now = new Date().getTime();
+	var keysToRemove = [];
+	var h = client_Drawing.userCursors.h;
+	var _g_keys = Object.keys(h);
+	var _g_length = _g_keys.length;
+	var _g_current = 0;
+	while(_g_current < _g_length) {
+		var key = _g_keys[_g_current++];
+		if(now - h[key].lastUpdate > 5000) {
+			keysToRemove.push(key);
+		}
+	}
+	var _g = 0;
+	while(_g < keysToRemove.length) {
+		var key = keysToRemove[_g];
+		++_g;
+		var _this = client_Drawing.userCursors;
+		if(Object.prototype.hasOwnProperty.call(_this.h,key)) {
+			delete(_this.h[key]);
+		}
+	}
+};
+client_Drawing.setupCanvas = function() {
+	client_Drawing.resizeCanvas();
+	client_Drawing.ctx.lineCap = "round";
+	client_Drawing.ctx.lineJoin = "round";
+	client_Drawing.ctx.strokeStyle = client_Drawing.currentColor;
+	client_Drawing.ctx.lineWidth = client_Drawing.currentSize;
+};
+client_Drawing.resizeCanvas = function() {
+	if(client_Drawing.playerEl == null) {
+		return;
+	}
+	var rect = client_Drawing.playerEl.getBoundingClientRect();
+	client_Drawing.canvas.width = rect.width | 0;
+	client_Drawing.canvas.height = rect.height | 0;
+	client_Drawing.canvas.style.width = rect.width + "px";
+	client_Drawing.canvas.style.height = rect.height + "px";
+	client_Drawing.canvas.style.position = "absolute";
+	client_Drawing.canvas.style.left = rect.left + "px";
+	client_Drawing.canvas.style.top = rect.top + "px";
+	client_Drawing.canvas.style.zIndex = "10";
+	client_Drawing.ctx.lineCap = "round";
+	client_Drawing.ctx.lineJoin = "round";
+	client_Drawing.ctx.strokeStyle = client_Drawing.currentColor;
+	client_Drawing.ctx.lineWidth = client_Drawing.currentSize;
+	if(client_Drawing.isDrawingUIVisible) {
+		client_Drawing.loadDrawing();
+	}
+};
+client_Drawing.setupEventListeners = function() {
+	client_Drawing.canvas.addEventListener("mousedown",client_Drawing.onMouseDown);
+	client_Drawing.canvas.addEventListener("mousemove",client_Drawing.onMouseMove);
+	client_Drawing.canvas.addEventListener("mouseup",client_Drawing.onMouseUp);
+	client_Drawing.canvas.addEventListener("mouseout",client_Drawing.onMouseUp);
+	client_Drawing.canvas.addEventListener("touchstart",client_Drawing.onTouchStart);
+	client_Drawing.canvas.addEventListener("touchmove",client_Drawing.onTouchMove);
+	client_Drawing.canvas.addEventListener("touchend",client_Drawing.onTouchEnd);
+	window.addEventListener("resize",client_Drawing.resizeCanvas);
+	haxe_Timer.delay(function() {
+		var lastWidth = 0.0;
+		var lastHeight = 0.0;
+		var checkResize = function() {
+			if(client_Drawing.playerEl != null) {
+				var rect = client_Drawing.playerEl.getBoundingClientRect();
+				if(rect.width != lastWidth || rect.height != lastHeight) {
+					lastWidth = rect.width;
+					lastHeight = rect.height;
+					client_Drawing.resizeCanvas();
+				}
+			}
+		};
+		new haxe_Timer(500).run = checkResize;
+	},100);
+};
+client_Drawing.getMousePos = function(e) {
+	return client_Drawing.getVideoNormalizedCoords(e.clientX,e.clientY);
+};
+client_Drawing.getTouchPos = function(e) {
+	if(e.touches.length == 0) {
+		return { x : 0, y : 0};
+	}
+	var touch = e.touches[0];
+	return client_Drawing.getVideoNormalizedCoords(touch.clientX,touch.clientY);
+};
+client_Drawing.getVideoNormalizedCoords = function(clientX,clientY) {
+	client_Drawing.canvas.getBoundingClientRect();
+	var playerRect = client_Drawing.playerEl.getBoundingClientRect();
+	var relativeX = clientX - playerRect.left;
+	var relativeY = clientY - playerRect.top;
+	var normalizedX = relativeX / playerRect.width;
+	var normalizedY = relativeY / playerRect.height;
+	return { x : Math.max(0.0,Math.min(1.0,normalizedX)), y : Math.max(0.0,Math.min(1.0,normalizedY))};
+};
+client_Drawing.onMouseDown = function(e) {
+	if(!client_Drawing.isDrawingEnabled) {
+		return;
+	}
+	e.preventDefault();
+	var pos = client_Drawing.getMousePos(e);
+	client_Drawing.startDrawing(pos.x,pos.y);
+};
+client_Drawing.onMouseMove = function(e) {
+	if(!client_Drawing.isDrawingEnabled) {
+		return;
+	}
+	e.preventDefault();
+	var pos = client_Drawing.getMousePos(e);
+	if(client_Drawing.isDrawing) {
+		client_Drawing.continueDrawing(pos.x,pos.y);
+	}
+	if(client_Drawing.isDrawingUIVisible) {
+		client_Drawing.sendCursorPosition(pos.x,pos.y);
+	}
+};
+client_Drawing.onMouseUp = function(e) {
+	if(!client_Drawing.isDrawingEnabled || !client_Drawing.isDrawing) {
+		return;
+	}
+	e.preventDefault();
+	client_Drawing.stopDrawing();
+};
+client_Drawing.sendCursorPosition = function(x,y) {
+	var now = new Date().getTime();
+	if(now - client_Drawing.lastCursorSendTime < client_Drawing.cursorThrottleInterval) {
+		return;
+	}
+	client_Drawing.lastCursorSendTime = now;
+	client_Drawing.main.send({ type : "DrawCursor", drawCursor : { x : x, y : y, clientName : client_Drawing.main.personal.name}});
+};
+client_Drawing.onTouchStart = function(e) {
+	if(!client_Drawing.isDrawingEnabled) {
+		return;
+	}
+	e.preventDefault();
+	var pos = client_Drawing.getTouchPos(e);
+	client_Drawing.startDrawing(pos.x,pos.y);
+};
+client_Drawing.onTouchMove = function(e) {
+	if(!client_Drawing.isDrawingEnabled) {
+		return;
+	}
+	e.preventDefault();
+	var pos = client_Drawing.getTouchPos(e);
+	if(client_Drawing.isDrawing) {
+		client_Drawing.continueDrawing(pos.x,pos.y);
+	}
+	if(client_Drawing.isDrawingUIVisible) {
+		client_Drawing.sendCursorPosition(pos.x,pos.y);
+	}
+};
+client_Drawing.onTouchEnd = function(e) {
+	if(!client_Drawing.isDrawingEnabled || !client_Drawing.isDrawing) {
+		return;
+	}
+	e.preventDefault();
+	client_Drawing.stopDrawing();
+};
+client_Drawing.startDrawing = function(x,y) {
+	client_Drawing.isDrawing = true;
+	client_Drawing.lastX = x;
+	client_Drawing.lastY = y;
+	client_Drawing.main.send({ type : "DrawStart", drawStart : { x : x, y : y, color : client_Drawing.currentColor, size : client_Drawing.currentSize, tool : client_Drawing.currentTool}});
+};
+client_Drawing.continueDrawing = function(x,y) {
+	if(!client_Drawing.isDrawing) {
+		return;
+	}
+	client_Drawing.drawLine(client_Drawing.lastX,client_Drawing.lastY,x,y,client_Drawing.currentColor,client_Drawing.currentSize,client_Drawing.currentTool);
+	client_Drawing.main.send({ type : "DrawMove", drawMove : { x : x, y : y}});
+	client_Drawing.lastX = x;
+	client_Drawing.lastY = y;
+};
+client_Drawing.stopDrawing = function() {
+	if(!client_Drawing.isDrawing) {
+		return;
+	}
+	client_Drawing.isDrawing = false;
+	client_Drawing.main.send({ type : "DrawEnd", drawEnd : { }});
+	client_Drawing.hasUnsavedChanges = true;
+	client_Drawing.saveDrawingInBackground();
+};
+client_Drawing.startAutoSave = function() {
+	client_Drawing.stopAutoSave();
+	client_Drawing.autoSaveTimer = new haxe_Timer(10000);
+	client_Drawing.autoSaveTimer.run = function() {
+		if(client_Drawing.hasUnsavedChanges) {
+			client_Drawing.saveDrawingInBackground();
+		}
+	};
+};
+client_Drawing.stopAutoSave = function() {
+	if(client_Drawing.autoSaveTimer != null) {
+		client_Drawing.autoSaveTimer.stop();
+		client_Drawing.autoSaveTimer = null;
+	}
+};
+client_Drawing.saveDrawingInBackground = function() {
+	if(!client_Drawing.hasUnsavedChanges) {
+		return;
+	}
+	var dataURL = client_Drawing.canvas.toDataURL("image/png");
+	client_Drawing.main.send({ type : "SaveDrawing", saveDrawing : { data : dataURL}});
+	client_Drawing.hasUnsavedChanges = false;
+};
+client_Drawing.drawLine = function(x1,y1,x2,y2,color,size,tool) {
+	var pixelX1 = x1 * client_Drawing.canvas.width;
+	var pixelY1 = y1 * client_Drawing.canvas.height;
+	var pixelX2 = x2 * client_Drawing.canvas.width;
+	var pixelY2 = y2 * client_Drawing.canvas.height;
+	if(tool == "eraser") {
+		client_Drawing.ctx.globalCompositeOperation = "destination-out";
+		client_Drawing.ctx.strokeStyle = "rgba(0,0,0,1)";
+	} else {
+		client_Drawing.ctx.globalCompositeOperation = "source-over";
+		client_Drawing.ctx.strokeStyle = color;
+	}
+	client_Drawing.ctx.lineWidth = size;
+	client_Drawing.ctx.beginPath();
+	client_Drawing.ctx.moveTo(pixelX1,pixelY1);
+	client_Drawing.ctx.lineTo(pixelX2,pixelY2);
+	client_Drawing.ctx.stroke();
+};
+client_Drawing.clearCanvas = function() {
+	client_Drawing.ctx.clearRect(0,0,client_Drawing.canvas.width,client_Drawing.canvas.height);
+	client_Drawing.hasUnsavedChanges = true;
+	client_Drawing.saveDrawingInBackground();
+};
+client_Drawing.toggleDrawing = function() {
+	client_Drawing.isDrawingUIVisible = !client_Drawing.isDrawingUIVisible;
+	var drawingBtn = window.document.querySelector("#drawingbtn");
+	var drawingTools = window.document.querySelector("#drawing-tools");
+	if(client_Drawing.isDrawingUIVisible) {
+		drawingBtn.classList.add("active");
+		drawingTools.style.display = "block";
+		client_Drawing.canvas.style.display = "block";
+		client_Drawing.resizeCanvas();
+		client_Drawing.isDrawingEnabled = true;
+		client_Drawing.canvas.style.pointerEvents = "auto";
+		client_Drawing.updateToolButtonsState();
+		client_Drawing.updateBackgroundStyle(false);
+		client_Drawing.loadDrawing();
+		client_Drawing.startAutoSave();
+	} else {
+		drawingBtn.classList.remove("active");
+		drawingTools.style.display = "none";
+		client_Drawing.canvas.style.display = "none";
+		if(client_Drawing.isDrawing) {
+			client_Drawing.stopDrawing();
+		}
+		client_Drawing.isDrawingEnabled = false;
+		client_Drawing.canvas.style.pointerEvents = "none";
+		client_Drawing.stopAutoSave();
+	}
+};
+client_Drawing.setDrawingEnabled = function(enabled) {
+	client_Drawing.isDrawingEnabled = enabled;
+	client_Drawing.canvas.style.pointerEvents = enabled ? "auto" : "none";
+	var drawingBtn = window.document.querySelector("#drawingbtn");
+	if(enabled) {
+		drawingBtn.classList.add("active");
+		client_Drawing.canvas.style.display = "block";
+		client_Drawing.resizeCanvas();
+	} else {
+		drawingBtn.classList.remove("active");
+		client_Drawing.canvas.style.display = "none";
+		if(client_Drawing.isDrawing) {
+			client_Drawing.isDrawing = false;
+		}
+	}
+};
+client_Drawing.onDrawStart = function(x,y,color,size,tool) {
+	client_Drawing.incomingColor = color;
+	client_Drawing.incomingSize = size;
+	client_Drawing.incomingTool = tool;
+	client_Drawing.lastX = x;
+	client_Drawing.lastY = y;
+};
+client_Drawing.onDrawMove = function(x,y) {
+	client_Drawing.drawLine(client_Drawing.lastX,client_Drawing.lastY,x,y,client_Drawing.incomingColor,client_Drawing.incomingSize,client_Drawing.incomingTool);
+	client_Drawing.lastX = x;
+	client_Drawing.lastY = y;
+};
+client_Drawing.setupDraggable = function() {
+	var drawingTools = window.document.querySelector("#drawing-tools");
+	var header = window.document.querySelector("#drawing-tools-header");
+	var onDocumentMouseMove = function(e) {
+		if(!client_Drawing.isDragging) {
+			return;
+		}
+		var newX = e.clientX - client_Drawing.dragOffsetX;
+		var newY = e.clientY - client_Drawing.dragOffsetY;
+		var viewportWidth = window.innerWidth;
+		var viewportHeight = window.innerHeight;
+		var panelWidth = drawingTools.offsetWidth;
+		var panelHeight = drawingTools.offsetHeight;
+		var clampedY = Math.max(0,Math.min(newY,viewportHeight - panelHeight));
+		drawingTools.style.left = Math.max(0,Math.min(newX,viewportWidth - panelWidth)) + "px";
+		drawingTools.style.top = clampedY + "px";
+		drawingTools.style.right = "auto";
+		e.preventDefault();
+	};
+	var onDocumentMouseUp = null;
+	onDocumentMouseUp = function(e) {
+		if(client_Drawing.isDragging) {
+			client_Drawing.isDragging = false;
+			window.document.removeEventListener("mousemove",onDocumentMouseMove);
+			window.document.removeEventListener("mouseup",onDocumentMouseUp);
+			e.preventDefault();
+		}
+	};
+	header.onmousedown = function(e) {
+		if(e.target != header) {
+			return;
+		}
+		client_Drawing.isDragging = true;
+		var rect = drawingTools.getBoundingClientRect();
+		client_Drawing.dragOffsetX = e.clientX - rect.left;
+		client_Drawing.dragOffsetY = e.clientY - rect.top;
+		window.document.addEventListener("mousemove",onDocumentMouseMove);
+		window.document.addEventListener("mouseup",onDocumentMouseUp);
+		e.preventDefault();
+		e.stopPropagation();
+	};
+	var onDocumentTouchMove = function(e) {
+		if(!client_Drawing.isDragging || e.touches.length != 1) {
+			return;
+		}
+		var touch = e.touches[0];
+		var newX = touch.clientX - client_Drawing.dragOffsetX;
+		var newY = touch.clientY - client_Drawing.dragOffsetY;
+		var viewportWidth = window.innerWidth;
+		var viewportHeight = window.innerHeight;
+		var panelWidth = drawingTools.offsetWidth;
+		var panelHeight = drawingTools.offsetHeight;
+		var clampedY = Math.max(0,Math.min(newY,viewportHeight - panelHeight));
+		drawingTools.style.left = Math.max(0,Math.min(newX,viewportWidth - panelWidth)) + "px";
+		drawingTools.style.top = clampedY + "px";
+		drawingTools.style.right = "auto";
+		e.preventDefault();
+	};
+	var onDocumentTouchEnd = null;
+	onDocumentTouchEnd = function(e) {
+		if(client_Drawing.isDragging) {
+			client_Drawing.isDragging = false;
+			window.document.removeEventListener("touchmove",onDocumentTouchMove);
+			window.document.removeEventListener("touchend",onDocumentTouchEnd);
+			e.preventDefault();
+		}
+	};
+	header.ontouchstart = function(e) {
+		if(e.touches.length != 1) {
+			return;
+		}
+		if(e.target != header) {
+			return;
+		}
+		client_Drawing.isDragging = true;
+		var touch = e.touches[0];
+		var rect = drawingTools.getBoundingClientRect();
+		client_Drawing.dragOffsetX = touch.clientX - rect.left;
+		client_Drawing.dragOffsetY = touch.clientY - rect.top;
+		window.document.addEventListener("touchmove",onDocumentTouchMove);
+		window.document.addEventListener("touchend",onDocumentTouchEnd);
+		e.preventDefault();
+		e.stopPropagation();
+	};
+};
+client_Drawing.setupDrawingTools = function() {
+	client_Drawing.setupDraggable();
+	var colorPicker = window.document.querySelector("#drawing-color");
+	colorPicker.oninput = function(e) {
+		client_Drawing.currentColor = colorPicker.value;
+		client_Drawing.updateCanvasStyle();
+	};
+	colorPicker.onmousedown = function(e) {
+		return e.stopPropagation();
+	};
+	var sizeSlider = window.document.querySelector("#drawing-size");
+	var sizeValue = window.document.querySelector("#size-value");
+	sizeSlider.oninput = function(e) {
+		client_Drawing.currentSize = parseFloat(sizeSlider.value);
+		sizeValue.innerText = Std.string(client_Drawing.currentSize | 0);
+		client_Drawing.updateCanvasStyle();
+	};
+	sizeSlider.onmousedown = function(e) {
+		return e.stopPropagation();
+	};
+	var toolButtons = window.document.querySelectorAll(".drawing-tool");
+	var _g = 0;
+	var _g1 = toolButtons.length;
+	while(_g < _g1) {
+		var button = [toolButtons.item(_g++)];
+		button[0].onclick = (function(button) {
+			return function(e) {
+				var _g = 0;
+				var _g1 = toolButtons.length;
+				while(_g < _g1) {
+					var btn = toolButtons.item(_g++);
+					btn.classList.remove("active");
+					btn.style.background = "#555";
+				}
+				button[0].classList.add("active");
+				button[0].style.background = "#2196F3";
+				client_Drawing.currentTool = button[0].getAttribute("data-tool");
+				client_Drawing.updateCanvasStyle();
+			};
+		})(button);
+		button[0].onmousedown = (function() {
+			return function(e) {
+				return e.stopPropagation();
+			};
+		})();
+	}
+	var backgroundButtons = window.document.querySelectorAll(".background-option");
+	var _g = 0;
+	var _g1 = backgroundButtons.length;
+	while(_g < _g1) {
+		var button1 = [backgroundButtons.item(_g++)];
+		button1[0].onclick = (function(button) {
+			return function(e) {
+				var _g = 0;
+				var _g1 = backgroundButtons.length;
+				while(_g < _g1) {
+					var btn = backgroundButtons.item(_g++);
+					btn.classList.remove("active");
+					btn.style.background = "#555";
+				}
+				button[0].classList.add("active");
+				button[0].style.background = "#2196F3";
+				client_Drawing.currentBackgroundMode = button[0].getAttribute("data-background");
+				client_Drawing.updateBackgroundStyle();
+			};
+		})(button1);
+		button1[0].onmousedown = (function() {
+			return function(e) {
+				return e.stopPropagation();
+			};
+		})();
+	}
+	var backgroundColorPicker = window.document.querySelector("#drawing-background-color");
+	backgroundColorPicker.oninput = function(e) {
+		client_Drawing.currentBackgroundColor = backgroundColorPicker.value;
+		client_Drawing.updateBackgroundStyle();
+	};
+	backgroundColorPicker.onmousedown = function(e) {
+		return e.stopPropagation();
+	};
+	window.document.querySelector("#clear-drawing").onclick = function(e) {
+		var tmp = window;
+		var tmp1 = Lang.get("confirmClearDrawing");
+		if(tmp.confirm(tmp1 != null ? tmp1 : "Are you sure you want to clear the drawing?")) {
+			client_Drawing.clearCanvas();
+			client_Drawing.main.send({ type : "ClearDrawing", clearDrawing : { }});
+		}
+	};
+	window.document.querySelector("#download-drawing").onclick = function(e) {
+		client_Drawing.downloadDrawing();
+	};
+};
+client_Drawing.updateCanvasStyle = function() {
+	if(client_Drawing.currentTool == "eraser") {
+		client_Drawing.ctx.globalCompositeOperation = "destination-out";
+		client_Drawing.ctx.strokeStyle = "rgba(0,0,0,1)";
+	} else {
+		client_Drawing.ctx.globalCompositeOperation = "source-over";
+		client_Drawing.ctx.strokeStyle = client_Drawing.currentColor;
+	}
+	client_Drawing.ctx.lineWidth = client_Drawing.currentSize;
+	client_Drawing.updateToolButtonsState();
+};
+client_Drawing.updateBackgroundStyle = function(broadcast) {
+	if(broadcast == null) {
+		broadcast = true;
+	}
+	if(client_Drawing.currentBackgroundMode == "transparent") {
+		client_Drawing.canvas.style.backgroundColor = "transparent";
+		window.document.querySelector("#background-color-picker").style.display = "none";
+	} else {
+		client_Drawing.canvas.style.backgroundColor = client_Drawing.currentBackgroundColor;
+		window.document.querySelector("#background-color-picker").style.display = "block";
+	}
+	client_Drawing.updateBackgroundButtonsState();
+	if(broadcast) {
+		client_Drawing.broadcastBackgroundChange();
+	}
+};
+client_Drawing.updateBackgroundButtonsState = function() {
+	var transparentButton = window.document.querySelector("#background-transparent");
+	var colorButton = window.document.querySelector("#background-color");
+	transparentButton.classList.remove("active");
+	colorButton.classList.remove("active");
+	transparentButton.style.background = "#555";
+	colorButton.style.background = "#555";
+	if(client_Drawing.currentBackgroundMode == "transparent") {
+		transparentButton.classList.add("active");
+		transparentButton.style.background = "#2196F3";
+	} else {
+		colorButton.classList.add("active");
+		colorButton.style.background = "#2196F3";
+	}
+};
+client_Drawing.updateToolButtonsState = function() {
+	var penButton = window.document.querySelector("#drawing-tool-pen");
+	var eraserButton = window.document.querySelector("#drawing-tool-eraser");
+	penButton.classList.remove("active");
+	eraserButton.classList.remove("active");
+	penButton.style.background = "#555";
+	eraserButton.style.background = "#555";
+	if(client_Drawing.currentTool == "eraser") {
+		eraserButton.classList.add("active");
+		eraserButton.style.background = "#2196F3";
+		var iconElement = eraserButton.querySelector("ion-icon");
+		if(iconElement != null) {
+			iconElement.setAttribute("style","color: white; font-weight: bold;");
+		}
+		var penIconElement = penButton.querySelector("ion-icon");
+		if(penIconElement != null) {
+			penIconElement.setAttribute("style","");
+		}
+	} else {
+		penButton.classList.add("active");
+		penButton.style.background = "#2196F3";
+		var iconElement = penButton.querySelector("ion-icon");
+		if(iconElement != null) {
+			iconElement.setAttribute("style","color: white; font-weight: bold;");
+		}
+		var eraserIconElement = eraserButton.querySelector("ion-icon");
+		if(eraserIconElement != null) {
+			eraserIconElement.setAttribute("style","");
+		}
+	}
+	var toolsHeader = window.document.querySelector("#drawing-tools-header");
+	if(toolsHeader != null) {
+		toolsHeader.innerHTML = client_Drawing.currentTool == "eraser" ? "📝 Drawing Tools (Eraser)" : "📝 Drawing Tools (Pen)";
+	}
+};
+client_Drawing.loadDrawing = function() {
+	client_Drawing.main.send({ type : "LoadDrawing", loadDrawing : { data : "request"}});
+};
+client_Drawing.onLoadDrawing = function(data) {
+	if(data == null || data == "" || data == "data:,") {
+		return;
+	}
+	var img = window.document.createElement("img");
+	img.onload = function() {
+		client_Drawing.ctx.clearRect(0,0,client_Drawing.canvas.width,client_Drawing.canvas.height);
+		client_Drawing.ctx.drawImage(img,0,0);
+		return client_Drawing.hasUnsavedChanges = false;
+	};
+	img.src = data;
+};
+client_Drawing.downloadDrawing = function() {
+	var link = window.document.createElement("a");
+	var dataURL = client_Drawing.canvas.toDataURL("image/png");
+	link.href = dataURL;
+	link.download = "tuubi_drawing_" + new Date().getTime() + ".png";
+	window.document.body.appendChild(link);
+	link.click();
+	window.document.body.removeChild(link);
+};
+client_Drawing.renderCursors = function() {
+	if(!client_Drawing.isDrawingUIVisible) {
+		return;
+	}
+	if(window.document.querySelector("#user-cursor-canvas") == null) {
+		var cursorCanvas = window.document.createElement("canvas");
+		cursorCanvas.id = "user-cursor-canvas";
+		cursorCanvas.style.position = "absolute";
+		cursorCanvas.style.left = "0px";
+		cursorCanvas.style.top = "0px";
+		cursorCanvas.style.pointerEvents = "none";
+		cursorCanvas.style.zIndex = "1001";
+		cursorCanvas.style.transform = "translate3d(0,0,0)";
+		cursorCanvas.style.backfaceVisibility = "hidden";
+		cursorCanvas.width = client_Drawing.canvas.width;
+		cursorCanvas.height = client_Drawing.canvas.height;
+		var canvasRect = client_Drawing.canvas.getBoundingClientRect();
+		cursorCanvas.style.left = canvasRect.left + "px";
+		cursorCanvas.style.top = canvasRect.top + "px";
+		cursorCanvas.style.width = canvasRect.width + "px";
+		cursorCanvas.style.height = canvasRect.height + "px";
+		client_Drawing.canvas.parentNode.insertBefore(cursorCanvas,client_Drawing.canvas.nextSibling);
+	}
+	var cursorCanvas = window.document.querySelector("#user-cursor-canvas");
+	var cursorCtx = cursorCanvas.getContext("2d",null);
+	if(cursorCanvas.width != client_Drawing.canvas.width || cursorCanvas.height != client_Drawing.canvas.height) {
+		cursorCanvas.width = client_Drawing.canvas.width;
+		cursorCanvas.height = client_Drawing.canvas.height;
+		var canvasRect = client_Drawing.canvas.getBoundingClientRect();
+		cursorCanvas.style.left = canvasRect.left + "px";
+		cursorCanvas.style.top = canvasRect.top + "px";
+		cursorCanvas.style.width = canvasRect.width + "px";
+		cursorCanvas.style.height = canvasRect.height + "px";
+	}
+	cursorCtx.clearRect(0,0,cursorCanvas.width,cursorCanvas.height);
+	cursorCtx.shadowColor = "rgba(0, 0, 0, 0.7)";
+	cursorCtx.shadowBlur = 3;
+	cursorCtx.shadowOffsetX = 1;
+	cursorCtx.shadowOffsetY = 1;
+	cursorCtx.font = "12px Arial";
+	cursorCtx.textAlign = "center";
+	var h = client_Drawing.userCursors.h;
+	var _g_keys = Object.keys(h);
+	var _g_length = _g_keys.length;
+	var _g_current = 0;
+	while(_g_current < _g_length) {
+		var _g_value = h[_g_keys[_g_current++]];
+		if(_g_value.name == client_Drawing.main.personal.name) {
+			continue;
+		}
+		var pixelX = _g_value.x * client_Drawing.canvas.width;
+		var pixelY = _g_value.y * client_Drawing.canvas.height;
+		cursorCtx.beginPath();
+		cursorCtx.arc(pixelX,pixelY,8,0,2 * Math.PI);
+		cursorCtx.fillStyle = "rgba(100, 149, 237, 0.6)";
+		cursorCtx.fill();
+		cursorCtx.fillStyle = "white";
+		cursorCtx.fillText(_g_value.name,pixelX,pixelY - 15);
+	}
+};
+client_Drawing.onDrawCursor = function(clientName,x,y) {
+	if(!client_Drawing.isDrawingUIVisible) {
+		return;
+	}
+	var this1 = client_Drawing.userCursors;
+	var value = { name : clientName, x : x, y : y, lastUpdate : new Date().getTime()};
+	this1.h[clientName] = value;
+};
+client_Drawing.broadcastBackgroundChange = function() {
+	client_Drawing.main.send({ type : "SetBackground", setBackground : { isTransparent : client_Drawing.currentBackgroundMode == "transparent", color : client_Drawing.currentBackgroundColor}});
+};
+client_Drawing.onSetBackground = function(isTransparent,color) {
+	client_Drawing.currentBackgroundMode = isTransparent ? "transparent" : "color";
+	client_Drawing.currentBackgroundColor = color;
+	window.document.querySelector("#drawing-background-color").value = client_Drawing.currentBackgroundColor;
+	client_Drawing.updateBackgroundStyle(false);
 };
 var client_IPlayer = function() { };
 client_IPlayer.__name__ = true;
@@ -1437,6 +2109,7 @@ var client_Main = function() {
 		_gthis.openWebSocket();
 	});
 	client_JsApi.init(this,this.player);
+	client_Drawing.init(this);
 	window.document.addEventListener("click",$bind(this,this.onFirstInteraction));
 	window.addEventListener("beforeunload",function() {
 		return _gthis.isPageUnloading = true;
@@ -2042,7 +2715,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 853, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 858, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -2056,6 +2729,9 @@ client_Main.prototype = {
 			break;
 		case "ClearChat":
 			this.clearChat();
+			break;
+		case "ClearDrawing":
+			client_Drawing.clearCanvas();
 			break;
 		case "ClearPlaylist":
 			this.player.clearItems();
@@ -2118,6 +2794,17 @@ client_Main.prototype = {
 			});
 			break;
 		case "Disconnected":
+			break;
+		case "DrawCursor":
+			client_Drawing.onDrawCursor(data.drawCursor.clientName,data.drawCursor.x,data.drawCursor.y);
+			break;
+		case "DrawEnd":
+			break;
+		case "DrawMove":
+			client_Drawing.onDrawMove(data.drawMove.x,data.drawMove.y);
+			break;
+		case "DrawStart":
+			client_Drawing.onDrawStart(data.drawStart.x,data.drawStart.y,data.drawStart.color,data.drawStart.size,data.drawStart.tool);
 			break;
 		case "Dump":
 			client_Utils.saveFile("dump.json","application/json",data.dump.data);
@@ -2186,6 +2873,9 @@ client_Main.prototype = {
 			window.document.title = tmp + "*";
 			this.disabledReconnection = true;
 			this.ws.close();
+			break;
+		case "LoadDrawing":
+			client_Drawing.onLoadDrawing(data.loadDrawing.data);
 			break;
 		case "Login":
 			this.onLogin(data.login.clients,data.login.clientName);
@@ -2256,6 +2946,9 @@ client_Main.prototype = {
 			this.updateLastStateTime();
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
+		case "SaveDrawing":
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1166, className : "client.Main", methodName : "onMessage"});
+			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
 			var text;
@@ -2273,6 +2966,9 @@ client_Main.prototype = {
 				text = Lang.get(id);
 			}
 			this.serverMessage(text);
+			break;
+		case "SetBackground":
+			client_Drawing.onSetBackground(data.setBackground.isTransparent,data.setBackground.color);
 			break;
 		case "SetLeader":
 			ClientTools.setLeader(this.clients,data.setLeader.clientName);
@@ -2308,6 +3004,9 @@ client_Main.prototype = {
 			if(this.player.isListEmpty()) {
 				this.player.pause();
 			}
+			break;
+		case "ToggleDrawing":
+			client_Drawing.setDrawingEnabled(data.toggleDrawing.enabled);
 			break;
 		case "ToggleItemType":
 			this.player.toggleItemType(data.toggleItemType.pos);
@@ -6710,6 +7409,26 @@ if(ArrayBuffer.prototype.slice == null) {
 Lang.langs = new haxe_ds_StringMap();
 Lang.ids = ["en","ru"];
 Lang.lang = HxOverrides.substr($global.navigator.language,0,2).toLowerCase();
+client_Drawing.isDrawingUIVisible = false;
+client_Drawing.isDrawingEnabled = false;
+client_Drawing.isDrawing = false;
+client_Drawing.lastX = 0.0;
+client_Drawing.lastY = 0.0;
+client_Drawing.currentColor = "#FF0000";
+client_Drawing.currentSize = 3.0;
+client_Drawing.currentTool = "pen";
+client_Drawing.currentBackgroundMode = "transparent";
+client_Drawing.currentBackgroundColor = "#FFFFFF";
+client_Drawing.userCursors = new haxe_ds_StringMap();
+client_Drawing.lastCursorSendTime = 0;
+client_Drawing.cursorThrottleInterval = 33;
+client_Drawing.incomingColor = "#FF0000";
+client_Drawing.incomingSize = 3.0;
+client_Drawing.incomingTool = "pen";
+client_Drawing.isDragging = false;
+client_Drawing.dragOffsetX = 0.0;
+client_Drawing.dragOffsetY = 0.0;
+client_Drawing.hasUnsavedChanges = false;
 client_JsApi.subtitleFormats = [];
 client_JsApi.videoChange = [];
 client_JsApi.videoRemove = [];

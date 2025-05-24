@@ -22,6 +22,70 @@
     <!-- Player -->
     <section id="player">
       <div id="ytapiplayer" class="embed-responsive"></div>
+      <canvas id="drawing-canvas"
+        style="display: none; position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1000;"></canvas>
+      <!-- Drawing Tools Panel -->
+      <div id="drawing-tools"
+        style="display: none; position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 8px; z-index: 1001; min-width: 200px; cursor: move;">
+        <div id="drawing-tools-header"
+          style="color: white; margin-bottom: 10px; font-weight: bold; cursor: move; padding: 5px; margin: -5px -5px 10px -5px; background: rgba(255,255,255,0.1); border-radius: 4px; text-align: center;">
+          📝 Drawing Tools
+        </div>
+
+        <!-- Color Picker -->
+        <div style="margin-bottom: 10px;">
+          <label style="color: white; display: block; margin-bottom: 5px;">Color:</label>
+          <input id="drawing-color" type="color" value="#FF0000"
+            style="width: 100%; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
+        </div>
+
+        <!-- Brush Size -->
+        <div style="margin-bottom: 10px;">
+          <label style="color: white; display: block; margin-bottom: 5px;">Size: <span
+              id="size-value">3</span>px</label>
+          <input id="drawing-size" type="range" min="1" max="50" value="3" style="width: 100%;">
+        </div> <!-- Tool Buttons -->
+        <div style="margin-bottom: 10px;">
+          <button id="drawing-tool-pen" class="drawing-tool active" data-tool="pen"
+            style="padding: 6px 12px; margin: 2px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            <ion-icon name="pencil"></ion-icon> Pen
+          </button>
+          <button id="drawing-tool-eraser" class="drawing-tool" data-tool="eraser"
+            style="padding: 6px 12px; margin: 2px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            <ion-icon name="trash"></ion-icon> Eraser
+          </button>
+        </div>
+
+        <!-- Background Options -->
+        <div style="margin-bottom: 10px;">
+          <label style="color: white; display: block; margin-bottom: 5px;">Background:</label>
+          <div style="display: flex; gap: 4px;">
+            <button id="background-transparent" class="background-option active" data-background="transparent"
+              style="flex: 1; padding: 6px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+              <ion-icon name="eye-outline"></ion-icon> Transparent
+            </button>
+            <button id="background-color" class="background-option" data-background="color"
+              style="flex: 1; padding: 6px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+              <ion-icon name="color-fill-outline"></ion-icon> Color
+            </button>
+          </div>
+          <div id="background-color-picker" style="display: none; margin-top: 8px;">
+            <input id="drawing-background-color" type="color" value="#FFFFFF"
+              style="width: 100%; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
+          </div>
+        </div><!-- Action Buttons -->
+        <div style="display: flex; gap: 8px;">
+          <button id="clear-drawing"
+            style="flex: 1; padding: 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            <ion-icon name="trash-outline"></ion-icon> Clear All
+          </button>
+          <button id="download-drawing"
+            style="flex: 1; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            <ion-icon name="download-outline"></ion-icon> Download
+          </button>
+        </div>
+      </div>
+
       <div id="danmaku-container" style="display: none;"></div>
       <!-- Video info -->
       <div class="info video-info">
@@ -46,9 +110,11 @@
               <input type="range" id="tts-volume-input" min="0" max="2" step="0.1" value="1">
               <div class="volume-label">Volume</div>
             </div>
-          </div>
-          <button id="fullscreenbtn" title="${fullscreenPlayer}">
+          </div> <button id="fullscreenbtn" title="${fullscreenPlayer}">
             <ion-icon name="expand"></ion-icon>
+          </button>
+          <button id="drawingbtn" title="Toggle Drawing">
+            <ion-icon name="brush"></ion-icon>
           </button>
           <button id="voteskip" title="${voteForSkip}">
             <ion-icon name="play-skip-forward"></ion-icon>

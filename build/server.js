@@ -555,6 +555,57 @@ JsonParser_$043b7de5ce8f024a03541dbc6c2ccc11.prototype = $extend(json2object_rea
 	}
 	,__class__: JsonParser_$043b7de5ce8f024a03541dbc6c2ccc11
 });
+var JsonParser_$04a13ffc1cc6117f153c05ffdd90876c = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$04a13ffc1cc6117f153c05ffdd90876c.__name__ = true;
+JsonParser_$04a13ffc1cc6117f153c05ffdd90876c.__super__ = json2object_reader_BaseParser;
+JsonParser_$04a13ffc1cc6117f153c05ffdd90876c.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ y : Float, x : Float, tool : String, size : Float, color : String }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,["color","size","tool","x","y"],[false,false,false,false,false]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			switch(field.name) {
+			case "color":
+				this.value.color = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"color",assigned,this.value.color,pos);
+				break;
+			case "size":
+				this.value.size = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"size",assigned,this.value.size,pos);
+				break;
+			case "tool":
+				this.value.tool = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"tool",assigned,this.value.tool,pos);
+				break;
+			case "x":
+				this.value.x = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"x",assigned,this.value.x,pos);
+				break;
+			case "y":
+				this.value.y = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"y",assigned,this.value.y,pos);
+				break;
+			default:
+				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+			}
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { color : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), size : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), tool : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), x : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), y : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+	}
+	,__class__: JsonParser_$04a13ffc1cc6117f153c05ffdd90876c
+});
 var JsonParser_$08065556836b0755d9c8e1550cf9f19c = function(errors,putils,errorType) {
 	if(errorType == null) {
 		errorType = 0;
@@ -721,6 +772,51 @@ JsonParser_$17f62a9968afd16686d4888a98c34102.prototype = $extend(json2object_rea
 		return { atEnd : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), item : new JsonParser_$d89734267d6f665b411f49f013149267([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
 	,__class__: JsonParser_$17f62a9968afd16686d4888a98c34102
+});
+var JsonParser_$1c666dcf50d5150ff2e96763d230d607 = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$1c666dcf50d5150ff2e96763d230d607.__name__ = true;
+JsonParser_$1c666dcf50d5150ff2e96763d230d607.__super__ = json2object_reader_BaseParser;
+JsonParser_$1c666dcf50d5150ff2e96763d230d607.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ y : Float, x : Float, clientName : String }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,["clientName","x","y"],[false,false,false]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			switch(field.name) {
+			case "clientName":
+				this.value.clientName = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"clientName",assigned,this.value.clientName,pos);
+				break;
+			case "x":
+				this.value.x = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"x",assigned,this.value.x,pos);
+				break;
+			case "y":
+				this.value.y = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"y",assigned,this.value.y,pos);
+				break;
+			default:
+				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+			}
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { clientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), x : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), y : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+	}
+	,__class__: JsonParser_$1c666dcf50d5150ff2e96763d230d607
 });
 var JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b = function(errors,putils,errorType) {
 	if(errorType == null) {
@@ -1060,7 +1156,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.__name__ = true;
 JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.__super__ = json2object_reader_BaseParser;
 JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_reader_BaseParser.prototype,{
 	onIncorrectType: function(pos,variable) {
-		this.errors.push(json2object_Error.IncorrectType(variable,"{ ?updatePlaylist : Null<{ videoList : Array<VideoItem> }>, ?updateClients : Null<{ clients : Array<ClientData> }>, type : WsEventType, ?togglePlaylistLock : Null<{ isOpen : Bool }>, ?toggleItemType : Null<{ pos : Int }>, ?skipVideo : Null<{ url : String }>, ?setTime : Null<{ time : Float }>, ?setRate : Null<{ rate : Float }>, ?setNextItem : Null<{ pos : Int }>, ?setLeader : Null<{ clientName : String }>, ?serverMessage : Null<{ textId : String }>, ?rewind : Null<{ time : Float }>, ?removeVideo : Null<{ url : String }>, ?progress : Null<{ type : ProgressType, ratio : Float, ?data : Null<String> }>, ?playItem : Null<{ pos : Int }>, ?play : Null<{ time : Float }>, ?pause : Null<{ time : Float }>, ?message : Null<{ text : String, clientName : String }>, ?logout : Null<{ oldClientName : String, clients : Array<ClientData>, clientName : String }>, ?login : Null<{ ?passHash : Null<String>, ?isUnknownClient : Null<Bool>, ?clients : Null<Array<ClientData>>, clientName : String }>, ?kickClient : Null<{ name : String }>, ?getTime : Null<GetTimeEvent>, ?emoteMessage : Null<{ html : String, clientName : String }>, ?dump : Null<{ data : String }>, ?danmakuMessage : Null<DanmakuMessageEvent>, ?connected : Null<{ videoList : Array<VideoItem>, uuid : String, playersCacheSupport : Array<PlayerType>, itemPos : Int, isUnknownClient : Bool, isPlaylistOpen : Bool, history : Array<Message>, globalIp : String, config : Config, clients : Array<ClientData>, clientName : String }>, ?banClient : Null<{ time : Float, name : String }>, ?addVideo : Null<{ item : VideoItem, atEnd : Bool }> }",pos));
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ ?updatePlaylist : Null<{ videoList : Array<VideoItem> }>, ?updateClients : Null<{ clients : Array<ClientData> }>, type : WsEventType, ?togglePlaylistLock : Null<{ isOpen : Bool }>, ?toggleItemType : Null<{ pos : Int }>, ?toggleDrawing : Null<{ enabled : Bool }>, ?skipVideo : Null<{ url : String }>, ?setTime : Null<{ time : Float }>, ?setRate : Null<{ rate : Float }>, ?setNextItem : Null<{ pos : Int }>, ?setLeader : Null<{ clientName : String }>, ?setBackground : Null<{ isTransparent : Bool, color : String }>, ?serverMessage : Null<{ textId : String }>, ?saveDrawing : Null<{ data : String }>, ?rewind : Null<{ time : Float }>, ?removeVideo : Null<{ url : String }>, ?progress : Null<{ type : ProgressType, ratio : Float, ?data : Null<String> }>, ?playItem : Null<{ pos : Int }>, ?play : Null<{ time : Float }>, ?pause : Null<{ time : Float }>, ?message : Null<{ text : String, clientName : String }>, ?logout : Null<{ oldClientName : String, clients : Array<ClientData>, clientName : String }>, ?login : Null<{ ?passHash : Null<String>, ?isUnknownClient : Null<Bool>, ?clients : Null<Array<ClientData>>, clientName : String }>, ?loadDrawing : Null<{ data : String }>, ?kickClient : Null<{ name : String }>, ?getTime : Null<GetTimeEvent>, ?emoteMessage : Null<{ html : String, clientName : String }>, ?dump : Null<{ data : String }>, ?drawStart : Null<{ y : Float, x : Float, tool : String, size : Float, color : String }>, ?drawMove : Null<{ y : Float, x : Float }>, ?drawEnd : Null<{ }>, ?drawCursor : Null<{ y : Float, x : Float, clientName : String }>, ?danmakuMessage : Null<DanmakuMessageEvent>, ?connected : Null<{ videoList : Array<VideoItem>, uuid : String, playersCacheSupport : Array<PlayerType>, itemPos : Int, isUnknownClient : Bool, isPlaylistOpen : Bool, history : Array<Message>, globalIp : String, config : Config, clients : Array<ClientData>, clientName : String }>, ?clearDrawing : Null<{ }>, ?banClient : Null<{ time : Float, name : String }>, ?addVideo : Null<{ item : VideoItem, atEnd : Bool }> }",pos));
 		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
 	}
 	,loadJsonNull: function(pos,variable) {
@@ -1068,7 +1164,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 	}
 	,loadJsonObject: function(o,pos,variable) {
 		var assigned = new haxe_ds_StringMap();
-		this.objectSetupAssign(assigned,["addVideo","banClient","connected","danmakuMessage","dump","emoteMessage","getTime","kickClient","login","logout","message","pause","play","playItem","progress","removeVideo","rewind","serverMessage","setLeader","setNextItem","setRate","setTime","skipVideo","toggleItemType","togglePlaylistLock","type","updateClients","updatePlaylist"],[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,false,true,true]);
+		this.objectSetupAssign(assigned,["addVideo","banClient","clearDrawing","connected","danmakuMessage","drawCursor","drawEnd","drawMove","drawStart","dump","emoteMessage","getTime","kickClient","loadDrawing","login","logout","message","pause","play","playItem","progress","removeVideo","rewind","saveDrawing","serverMessage","setBackground","setLeader","setNextItem","setRate","setTime","skipVideo","toggleDrawing","toggleItemType","togglePlaylistLock","type","updateClients","updatePlaylist"],[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,false,true,true]);
 		this.value = this.getAuto();
 		var _g = 0;
 		while(_g < o.length) {
@@ -1081,11 +1177,26 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 			case "banClient":
 				this.value.banClient = this.loadObjectField(($_=new JsonParser_$cceff829ad5e63207b6f78bebb03c69a(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"banClient",assigned,this.value.banClient,pos);
 				break;
+			case "clearDrawing":
+				this.value.clearDrawing = this.loadObjectField(($_=new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"clearDrawing",assigned,this.value.clearDrawing,pos);
+				break;
 			case "connected":
 				this.value.connected = this.loadObjectField(($_=new JsonParser_$d011018d886fa55f8828ebb1e93413c3(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"connected",assigned,this.value.connected,pos);
 				break;
 			case "danmakuMessage":
 				this.value.danmakuMessage = this.loadObjectField(($_=new JsonParser_$f378d50044c8c87339ebd29901892072(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"danmakuMessage",assigned,this.value.danmakuMessage,pos);
+				break;
+			case "drawCursor":
+				this.value.drawCursor = this.loadObjectField(($_=new JsonParser_$1c666dcf50d5150ff2e96763d230d607(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawCursor",assigned,this.value.drawCursor,pos);
+				break;
+			case "drawEnd":
+				this.value.drawEnd = this.loadObjectField(($_=new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawEnd",assigned,this.value.drawEnd,pos);
+				break;
+			case "drawMove":
+				this.value.drawMove = this.loadObjectField(($_=new JsonParser_$6b82df4c1655f5a29eb751ecda3611b0(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawMove",assigned,this.value.drawMove,pos);
+				break;
+			case "drawStart":
+				this.value.drawStart = this.loadObjectField(($_=new JsonParser_$04a13ffc1cc6117f153c05ffdd90876c(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawStart",assigned,this.value.drawStart,pos);
 				break;
 			case "dump":
 				this.value.dump = this.loadObjectField(($_=new JsonParser_$dda5f87e2972892b16c7b833df96706a(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"dump",assigned,this.value.dump,pos);
@@ -1098,6 +1209,9 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 				break;
 			case "kickClient":
 				this.value.kickClient = this.loadObjectField(($_=new JsonParser_$b2777fc36a3f1c43a2ae7d80ba0572ca(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"kickClient",assigned,this.value.kickClient,pos);
+				break;
+			case "loadDrawing":
+				this.value.loadDrawing = this.loadObjectField(($_=new JsonParser_$dda5f87e2972892b16c7b833df96706a(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"loadDrawing",assigned,this.value.loadDrawing,pos);
 				break;
 			case "login":
 				this.value.login = this.loadObjectField(($_=new JsonParser_$128275a4734b926daca1924fc6a200c7(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"login",assigned,this.value.login,pos);
@@ -1126,8 +1240,14 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 			case "rewind":
 				this.value.rewind = this.loadObjectField(($_=new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"rewind",assigned,this.value.rewind,pos);
 				break;
+			case "saveDrawing":
+				this.value.saveDrawing = this.loadObjectField(($_=new JsonParser_$dda5f87e2972892b16c7b833df96706a(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"saveDrawing",assigned,this.value.saveDrawing,pos);
+				break;
 			case "serverMessage":
 				this.value.serverMessage = this.loadObjectField(($_=new JsonParser_$d1c1e71f4452df068de6cecc104f6dd6(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"serverMessage",assigned,this.value.serverMessage,pos);
+				break;
+			case "setBackground":
+				this.value.setBackground = this.loadObjectField(($_=new JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"setBackground",assigned,this.value.setBackground,pos);
 				break;
 			case "setLeader":
 				this.value.setLeader = this.loadObjectField(($_=new JsonParser_$65985176838b1da92d970132a0cb6d58(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"setLeader",assigned,this.value.setLeader,pos);
@@ -1143,6 +1263,9 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 				break;
 			case "skipVideo":
 				this.value.skipVideo = this.loadObjectField(($_=new JsonParser_$bf1400338ef221d86126b3ec267cf395(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"skipVideo",assigned,this.value.skipVideo,pos);
+				break;
+			case "toggleDrawing":
+				this.value.toggleDrawing = this.loadObjectField(($_=new JsonParser_$dd7b5d75def09bce38d87fd906f73270(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"toggleDrawing",assigned,this.value.toggleDrawing,pos);
 				break;
 			case "toggleItemType":
 				this.value.toggleItemType = this.loadObjectField(($_=new JsonParser_$5696efcdbd81f0be9220dc4cfb255706(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"toggleItemType",assigned,this.value.toggleItemType,pos);
@@ -1166,7 +1289,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 		this.objectErrors(assigned,pos);
 	}
 	,getAuto: function() {
-		return { addVideo : new JsonParser_$17f62a9968afd16686d4888a98c34102([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), banClient : new JsonParser_$cceff829ad5e63207b6f78bebb03c69a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), connected : new JsonParser_$d011018d886fa55f8828ebb1e93413c3([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), danmakuMessage : new JsonParser_$f378d50044c8c87339ebd29901892072([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), dump : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), emoteMessage : new JsonParser_$c19b4a653b84c0484a2790e2552a7ac7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), getTime : new JsonParser_$feded5bdb427eb48f39e60029d5dca4a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), kickClient : new JsonParser_$b2777fc36a3f1c43a2ae7d80ba0572ca([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), login : new JsonParser_$128275a4734b926daca1924fc6a200c7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), logout : new JsonParser_$8d3a3702ec359ae3022bce905b75550b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), message : new JsonParser_$33c34d246ae14cf949ef186cb0e1d8eb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), pause : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), play : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), playItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), progress : new JsonParser_$e15c2211613da80aa2992b6249949a65([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), removeVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), rewind : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), serverMessage : new JsonParser_$d1c1e71f4452df068de6cecc104f6dd6([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setLeader : new JsonParser_$65985176838b1da92d970132a0cb6d58([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setNextItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setRate : new JsonParser_$359929cb56fda98b8740cbc66ef083c4([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setTime : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), skipVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleItemType : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), togglePlaylistLock : new JsonParser_$e5a960b500232cc84a0caf718de13706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), type : new JsonParser_$d8e5213783812cec0906ca233f0379dc([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updateClients : new JsonParser_$126814d365d277a375ef70de1963f53d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updatePlaylist : new JsonParser_$a82c17fc41c21179c58e1d406d2b20cd([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+		return { addVideo : new JsonParser_$17f62a9968afd16686d4888a98c34102([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), banClient : new JsonParser_$cceff829ad5e63207b6f78bebb03c69a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clearDrawing : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), connected : new JsonParser_$d011018d886fa55f8828ebb1e93413c3([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), danmakuMessage : new JsonParser_$f378d50044c8c87339ebd29901892072([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawCursor : new JsonParser_$1c666dcf50d5150ff2e96763d230d607([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawEnd : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawMove : new JsonParser_$6b82df4c1655f5a29eb751ecda3611b0([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawStart : new JsonParser_$04a13ffc1cc6117f153c05ffdd90876c([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), dump : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), emoteMessage : new JsonParser_$c19b4a653b84c0484a2790e2552a7ac7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), getTime : new JsonParser_$feded5bdb427eb48f39e60029d5dca4a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), kickClient : new JsonParser_$b2777fc36a3f1c43a2ae7d80ba0572ca([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), loadDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), login : new JsonParser_$128275a4734b926daca1924fc6a200c7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), logout : new JsonParser_$8d3a3702ec359ae3022bce905b75550b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), message : new JsonParser_$33c34d246ae14cf949ef186cb0e1d8eb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), pause : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), play : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), playItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), progress : new JsonParser_$e15c2211613da80aa2992b6249949a65([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), removeVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), rewind : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), saveDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), serverMessage : new JsonParser_$d1c1e71f4452df068de6cecc104f6dd6([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setBackground : new JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setLeader : new JsonParser_$65985176838b1da92d970132a0cb6d58([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setNextItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setRate : new JsonParser_$359929cb56fda98b8740cbc66ef083c4([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setTime : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), skipVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleDrawing : new JsonParser_$dd7b5d75def09bce38d87fd906f73270([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleItemType : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), togglePlaylistLock : new JsonParser_$e5a960b500232cc84a0caf718de13706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), type : new JsonParser_$d8e5213783812cec0906ca233f0379dc([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updateClients : new JsonParser_$126814d365d277a375ef70de1963f53d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updatePlaylist : new JsonParser_$a82c17fc41c21179c58e1d406d2b20cd([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
 	,__class__: JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9
 });
@@ -1265,6 +1388,48 @@ JsonParser_$65cb6553a71d34740bf81458b7243f94.prototype = $extend(json2object_rea
 	}
 	,__class__: JsonParser_$65cb6553a71d34740bf81458b7243f94
 });
+var JsonParser_$6b82df4c1655f5a29eb751ecda3611b0 = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$6b82df4c1655f5a29eb751ecda3611b0.__name__ = true;
+JsonParser_$6b82df4c1655f5a29eb751ecda3611b0.__super__ = json2object_reader_BaseParser;
+JsonParser_$6b82df4c1655f5a29eb751ecda3611b0.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ y : Float, x : Float }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,["x","y"],[false,false]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			switch(field.name) {
+			case "x":
+				this.value.x = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"x",assigned,this.value.x,pos);
+				break;
+			case "y":
+				this.value.y = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"y",assigned,this.value.y,pos);
+				break;
+			default:
+				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+			}
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { x : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), y : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+	}
+	,__class__: JsonParser_$6b82df4c1655f5a29eb751ecda3611b0
+});
 var JsonParser_$8d3a3702ec359ae3022bce905b75550b = function(errors,putils,errorType) {
 	if(errorType == null) {
 		errorType = 0;
@@ -1309,6 +1474,48 @@ JsonParser_$8d3a3702ec359ae3022bce905b75550b.prototype = $extend(json2object_rea
 		return { clientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clients : new JsonParser_$b3a4781c98609b64e4a870171c45561f([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), oldClientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
 	,__class__: JsonParser_$8d3a3702ec359ae3022bce905b75550b
+});
+var JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d.__name__ = true;
+JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d.__super__ = json2object_reader_BaseParser;
+JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ isTransparent : Bool, color : String }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,["color","isTransparent"],[false,false]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			switch(field.name) {
+			case "color":
+				this.value.color = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"color",assigned,this.value.color,pos);
+				break;
+			case "isTransparent":
+				this.value.isTransparent = this.loadObjectField(($_=new JsonParser_$c26f15e86e3de4c398a8273272aba034(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"isTransparent",assigned,this.value.isTransparent,pos);
+				break;
+			default:
+				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+			}
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { color : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), isTransparent : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+	}
+	,__class__: JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d
 });
 var JsonParser_$a82c17fc41c21179c58e1d406d2b20cd = function(errors,putils,errorType) {
 	if(errorType == null) {
@@ -1894,9 +2101,46 @@ JsonParser_$d8e5213783812cec0906ca233f0379dc.prototype = $extend(json2object_rea
 		this.value = null;
 	}
 	,loadJsonString: function(s,pos,variable) {
-		this.value = this.loadString(s,pos,variable,["Connected","Disconnected","Login","PasswordRequest","LoginError","Logout","Message","ServerMessage","EmoteMessage","DanmakuMessage","Progress","UpdateClients","BanClient","KickClient","AddVideo","RemoveVideo","SkipVideo","VideoLoaded","Pause","Play","GetTime","SetTime","SetRate","Rewind","Flashback","SetLeader","PlayItem","SetNextItem","ToggleItemType","ClearChat","ClearPlaylist","ShufflePlaylist","UpdatePlaylist","TogglePlaylistLock","Dump"],"Connected");
+		this.value = this.loadString(s,pos,variable,["Connected","Disconnected","Login","PasswordRequest","LoginError","Logout","Message","ServerMessage","EmoteMessage","DanmakuMessage","Progress","UpdateClients","BanClient","KickClient","AddVideo","RemoveVideo","SkipVideo","VideoLoaded","Pause","Play","GetTime","SetTime","SetRate","Rewind","Flashback","SetLeader","PlayItem","SetNextItem","ToggleItemType","ClearChat","ClearPlaylist","ShufflePlaylist","UpdatePlaylist","TogglePlaylistLock","Dump","DrawStart","DrawMove","DrawEnd","ClearDrawing","ToggleDrawing","SaveDrawing","LoadDrawing","DrawCursor","SetBackground"],"Connected");
 	}
 	,__class__: JsonParser_$d8e5213783812cec0906ca233f0379dc
+});
+var JsonParser_$dd7b5d75def09bce38d87fd906f73270 = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$dd7b5d75def09bce38d87fd906f73270.__name__ = true;
+JsonParser_$dd7b5d75def09bce38d87fd906f73270.__super__ = json2object_reader_BaseParser;
+JsonParser_$dd7b5d75def09bce38d87fd906f73270.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ enabled : Bool }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,["enabled"],[false]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			if(field.name == "enabled") {
+				this.value.enabled = this.loadObjectField(($_=new JsonParser_$c26f15e86e3de4c398a8273272aba034(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"enabled",assigned,this.value.enabled,pos);
+			} else {
+				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+			}
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { enabled : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+	}
+	,__class__: JsonParser_$dd7b5d75def09bce38d87fd906f73270
 });
 var JsonParser_$dda5f87e2972892b16c7b833df96706a = function(errors,putils,errorType) {
 	if(errorType == null) {
@@ -2135,6 +2379,39 @@ JsonParser_$f378d50044c8c87339ebd29901892072.prototype = $extend(json2object_rea
 		return { animationClass : new JsonParser_$ddce6d3de223cb2759be5c48797abca5([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), color : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), isHtml : new JsonParser_$f55acea3678203c700715b781ad1ef0c([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), lane : new JsonParser_$fce7124f52c7d8d1f8ed39d333573e17([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), text : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
 	,__class__: JsonParser_$f378d50044c8c87339ebd29901892072
+});
+var JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2 = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2.__name__ = true;
+JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2.__super__ = json2object_reader_BaseParser;
+JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,[],[]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { };
+	}
+	,__class__: JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2
 });
 var JsonParser_$f3c29c0813c93ee49a61ccf072b8a177 = function(errors,putils,errorType) {
 	if(errorType == null) {
@@ -4586,6 +4863,7 @@ var server_Main = function(opts) {
 	this.matchGuestName = new EReg("guest [0-9]+","");
 	this.matchHtmlChars = new EReg("[&^<>'\"]","");
 	this.isServerPause = false;
+	this.savedDrawing = null;
 	this.flashbacks = [];
 	this.messages = [];
 	this.videoTimer = new server_VideoTimer();
@@ -4652,7 +4930,7 @@ var server_Main = function(opts) {
 	preparePort = function() {
 		server_Utils.isPortFree(_gthis.port,function(isFree) {
 			if(!isFree && attempts > 0) {
-				haxe_Log.trace("Warning: port " + _gthis.port + " is already in use. Changed to " + (_gthis.port + 1),{ fileName : "src/server/Main.hx", lineNumber : 140, className : "server.Main", methodName : "new"});
+				haxe_Log.trace("Warning: port " + _gthis.port + " is already in use. Changed to " + (_gthis.port + 1),{ fileName : "src/server/Main.hx", lineNumber : 141, className : "server.Main", methodName : "new"});
 				attempts -= 1;
 				_gthis.port++;
 				preparePort();
@@ -4679,16 +4957,16 @@ server_Main.jsonFilterNulls = function(key,value) {
 server_Main.prototype = {
 	runServer: function() {
 		var _gthis = this;
-		haxe_Log.trace("Local: http://" + this.localIp + ":" + this.port,{ fileName : "src/server/Main.hx", lineNumber : 153, className : "server.Main", methodName : "runServer"});
+		haxe_Log.trace("Local: http://" + this.localIp + ":" + this.port,{ fileName : "src/server/Main.hx", lineNumber : 154, className : "server.Main", methodName : "runServer"});
 		if(this.config.localNetworkOnly) {
-			haxe_Log.trace("Global network is disabled in config",{ fileName : "src/server/Main.hx", lineNumber : 155, className : "server.Main", methodName : "runServer"});
+			haxe_Log.trace("Global network is disabled in config",{ fileName : "src/server/Main.hx", lineNumber : 156, className : "server.Main", methodName : "runServer"});
 		} else if(!this.isNoState) {
 			server_Utils.getGlobalIp(function(ip) {
 				if(ip.indexOf(":") != -1) {
 					ip = "[" + ip + "]";
 				}
 				_gthis.globalIp = ip;
-				haxe_Log.trace("Global: http://" + _gthis.globalIp + ":" + _gthis.port,{ fileName : "src/server/Main.hx", lineNumber : 161, className : "server.Main", methodName : "runServer"});
+				haxe_Log.trace("Global: http://" + _gthis.globalIp + ":" + _gthis.port,{ fileName : "src/server/Main.hx", lineNumber : 162, className : "server.Main", methodName : "runServer"});
 			});
 		}
 		var dir = "" + this.rootDir + "/res";
@@ -4773,7 +5051,7 @@ server_Main.prototype = {
 			var field = _g1[_g];
 			++_g;
 			if(Reflect.field(config,field) == null) {
-				haxe_Log.trace("Warning: config field \"" + field + "\" is unknown",{ fileName : "src/server/Main.hx", lineNumber : 235, className : "server.Main", methodName : "getUserConfig"});
+				haxe_Log.trace("Warning: config field \"" + field + "\" is unknown",{ fileName : "src/server/Main.hx", lineNumber : 236, className : "server.Main", methodName : "getUserConfig"});
 			}
 			config[field] = Reflect.field(customConfig,field);
 		}
@@ -4784,14 +5062,14 @@ server_Main.prototype = {
 			var emote = _g1[_g];
 			++_g;
 			if(emoteCopies_h[emote.name]) {
-				haxe_Log.trace("Warning: emote name \"" + emote.name + "\" has copy",{ fileName : "src/server/Main.hx", lineNumber : 241, className : "server.Main", methodName : "getUserConfig"});
+				haxe_Log.trace("Warning: emote name \"" + emote.name + "\" has copy",{ fileName : "src/server/Main.hx", lineNumber : 242, className : "server.Main", methodName : "getUserConfig"});
 			}
 			emoteCopies_h[emote.name] = true;
 			if(!this.verbose) {
 				continue;
 			}
 			if(emoteCopies_h[emote.image]) {
-				haxe_Log.trace("Warning: emote url of name \"" + emote.name + "\" has copy",{ fileName : "src/server/Main.hx", lineNumber : 245, className : "server.Main", methodName : "getUserConfig"});
+				haxe_Log.trace("Warning: emote url of name \"" + emote.name + "\" has copy",{ fileName : "src/server/Main.hx", lineNumber : 246, className : "server.Main", methodName : "getUserConfig"});
 			}
 			emoteCopies_h[emote.image] = true;
 		}
@@ -4828,13 +5106,12 @@ server_Main.prototype = {
 		js_node_Fs.writeFileSync("" + this.userDir + "/users.json",JSON.stringify({ admins : users1, bans : _g, salt : users.salt},null,"\t"));
 	}
 	,saveState: function() {
-		haxe_Log.trace("Saving state...",{ fileName : "src/server/Main.hx", lineNumber : 283, className : "server.Main", methodName : "saveState"});
 		var json = JSON.stringify(this.getCurrentState(),null,"\t");
 		js_node_Fs.writeFileSync(this.statePath,json);
 		this.writeUsers(this.userList);
 	}
 	,getCurrentState: function() {
-		return { videoList : this.videoList.items, isPlaylistOpen : this.videoList.isOpen, itemPos : this.videoList.pos, messages : this.messages, timer : { time : this.videoTimer.getTime(), paused : this.videoTimer.isPaused()}, flashbacks : this.flashbacks, cachedFiles : this.cache.getCachedFiles()};
+		return { videoList : this.videoList.items, isPlaylistOpen : this.videoList.isOpen, itemPos : this.videoList.pos, messages : this.messages, timer : { time : this.videoTimer.getTime(), paused : this.videoTimer.isPaused()}, flashbacks : this.flashbacks, cachedFiles : this.cache.getCachedFiles(), savedDrawing : this.savedDrawing};
 	}
 	,loadState: function() {
 		if(this.isNoState) {
@@ -4843,10 +5120,11 @@ server_Main.prototype = {
 		if(!sys_FileSystem.exists(this.statePath)) {
 			return;
 		}
-		haxe_Log.trace("Loading state...",{ fileName : "src/server/Main.hx", lineNumber : 307, className : "server.Main", methodName : "loadState"});
+		haxe_Log.trace("Loading state...",{ fileName : "src/server/Main.hx", lineNumber : 308, className : "server.Main", methodName : "loadState"});
 		var state = JSON.parse(js_node_Fs.readFileSync(this.statePath,{ encoding : "utf8"}));
 		state.flashbacks = state.flashbacks != null ? state.flashbacks : [];
 		state.cachedFiles = state.cachedFiles != null ? state.cachedFiles : [];
+		state.savedDrawing = state.savedDrawing != null ? state.savedDrawing : null;
 		this.videoList.setItems(state.videoList);
 		this.videoList.isOpen = state.isPlaylistOpen;
 		this.videoList.setPos(state.itemPos);
@@ -4859,13 +5137,14 @@ server_Main.prototype = {
 		var _g1 = state.flashbacks;
 		while(_g < _g1.length) this.flashbacks.push(_g1[_g++]);
 		this.cache.setCachedFiles(state.cachedFiles);
+		this.savedDrawing = state.savedDrawing;
 		this.videoTimer.start();
 		this.videoTimer.setTime(state.timer.time);
 		this.videoTimer.pause();
 	}
 	,logError: function(type,data) {
 		this.cache.removeOlderCache(1048576);
-		haxe_Log.trace(type,{ fileName : "src/server/Main.hx", lineNumber : 331, className : "server.Main", methodName : "logError", customParams : [data]});
+		haxe_Log.trace(type,{ fileName : "src/server/Main.hx", lineNumber : 334, className : "server.Main", methodName : "logError", customParams : [data]});
 		var crashesFolder = "" + this.userDir + "/crashes";
 		server_Utils.ensureDir(crashesFolder);
 		var name = DateTools.format(new Date(),"%Y-%m-%d_%H_%M_%S") + "-" + type;
@@ -4887,7 +5166,7 @@ server_Main.prototype = {
 			if(_gthis.clients.length == 0) {
 				return;
 			}
-			haxe_Log.trace("Ping " + url,{ fileName : "src/server/Main.hx", lineNumber : 344, className : "server.Main", methodName : "initIntergationHandlers"});
+			haxe_Log.trace("Ping " + url,{ fileName : "src/server/Main.hx", lineNumber : 347, className : "server.Main", methodName : "initIntergationHandlers"});
 			js_node_Http.get(url,null,function(r) {
 			});
 		};
@@ -4906,13 +5185,13 @@ server_Main.prototype = {
 		password += this.config.salt;
 		var hash = haxe_crypto_Sha256.encode(password);
 		this.userList.admins.push({ name : name, hash : hash});
-		haxe_Log.trace("Admin " + name + " added.",{ fileName : "src/server/Main.hx", lineNumber : 365, className : "server.Main", methodName : "addAdmin"});
+		haxe_Log.trace("Admin " + name + " added.",{ fileName : "src/server/Main.hx", lineNumber : 368, className : "server.Main", methodName : "addAdmin"});
 	}
 	,removeAdmin: function(name) {
 		HxOverrides.remove(this.userList.admins,Lambda.find(this.userList.admins,function(item) {
 			return item.name == name;
 		}));
-		haxe_Log.trace("Admin " + name + " removed.",{ fileName : "src/server/Main.hx", lineNumber : 372, className : "server.Main", methodName : "removeAdmin"});
+		haxe_Log.trace("Admin " + name + " removed.",{ fileName : "src/server/Main.hx", lineNumber : 375, className : "server.Main", methodName : "removeAdmin"});
 	}
 	,hasAdmins: function() {
 		return this.userList.admins.length > 0;
@@ -4982,7 +5261,7 @@ server_Main.prototype = {
 		var ip = this.clientIp(req);
 		var id = this.freeIds.length > 0 ? this.freeIds.shift() : this.clients.length;
 		var name = "Guest " + (id + 1);
-		haxe_Log.trace(HxOverrides.dateStr(new Date()),{ fileName : "src/server/Main.hx", lineNumber : 435, className : "server.Main", methodName : "onConnect", customParams : ["" + name + " connected (" + ip + ")"]});
+		haxe_Log.trace(HxOverrides.dateStr(new Date()),{ fileName : "src/server/Main.hx", lineNumber : 438, className : "server.Main", methodName : "onConnect", customParams : ["" + name + " connected (" + ip + ")"]});
 		var isAdmin = this.config.localAdmins && req.socket.localAddress == ip;
 		var client = new Client(ws,req,id,name,0);
 		client.uuid = uuid;
@@ -4996,7 +5275,7 @@ server_Main.prototype = {
 			var obj = _gthis.wsEventParser.fromJson(data.toString());
 			if(_gthis.wsEventParser.errors.length > 0 || _gthis.noTypeObj(obj)) {
 				var errors = "" + ("Wrong request for type \"" + obj.type + "\":") + "\n" + json2object_ErrorUtils.convertErrorArray(_gthis.wsEventParser.errors);
-				haxe_Log.trace(errors,{ fileName : "src/server/Main.hx", lineNumber : 452, className : "server.Main", methodName : "onConnect"});
+				haxe_Log.trace(errors,{ fileName : "src/server/Main.hx", lineNumber : 455, className : "server.Main", methodName : "onConnect"});
 				_gthis.serverMessage(client,errors);
 				return;
 			}
@@ -5149,6 +5428,12 @@ server_Main.prototype = {
 			this.messages.length = 0;
 			this.broadcast(data);
 			break;
+		case "ClearDrawing":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			this.broadcast(data);
+			break;
 		case "ClearPlaylist":
 			if(this.isPlaylistLockedFor(client)) {
 				return;
@@ -5210,7 +5495,7 @@ server_Main.prototype = {
 			if(!internal) {
 				return;
 			}
-			haxe_Log.trace(HxOverrides.dateStr(new Date()),{ fileName : "src/server/Main.hx", lineNumber : 517, className : "server.Main", methodName : "onMessage", customParams : ["Client " + client.name + " disconnected"]});
+			haxe_Log.trace(HxOverrides.dateStr(new Date()),{ fileName : "src/server/Main.hx", lineNumber : 520, className : "server.Main", methodName : "onMessage", customParams : ["Client " + client.name + " disconnected"]});
 			server_Utils.sortedPush(this.freeIds,client.id);
 			HxOverrides.remove(this.clients,client);
 			this.sendClientList();
@@ -5244,6 +5529,30 @@ server_Main.prototype = {
 				}
 				_gthis.broadcast({ type : "ServerMessage", serverMessage : { textId : "" + client.name + " has left"}});
 			},5000);
+			break;
+		case "DrawCursor":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			this.broadcastExcept(client,data);
+			break;
+		case "DrawEnd":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			this.broadcastExcept(client,data);
+			break;
+		case "DrawMove":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			this.broadcastExcept(client,data);
+			break;
+		case "DrawStart":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			this.broadcastExcept(client,data);
 			break;
 		case "Dump":
 			if((client.group & 8) == 0) {
@@ -5328,6 +5637,14 @@ server_Main.prototype = {
 			}
 			this.send(tmp,{ type : "KickClient"});
 			break;
+		case "LoadDrawing":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			if(this.savedDrawing != null) {
+				this.send(client,{ type : "LoadDrawing", loadDrawing : { data : this.savedDrawing}});
+			}
+			break;
 		case "Login":
 			var name = StringTools.trim(data.login.clientName);
 			var lcName = name.toLowerCase();
@@ -5357,7 +5674,7 @@ server_Main.prototype = {
 				this.send(client,{ type : "LoginError"});
 				return;
 			}
-			haxe_Log.trace(HxOverrides.dateStr(new Date()),{ fileName : "src/server/Main.hx", lineNumber : 608, className : "server.Main", methodName : "onMessage", customParams : ["Client " + client.name + " logged as " + name]});
+			haxe_Log.trace(HxOverrides.dateStr(new Date()),{ fileName : "src/server/Main.hx", lineNumber : 611, className : "server.Main", methodName : "onMessage", customParams : ["Client " + client.name + " logged as " + name]});
 			client.name = name;
 			client.setGroupFlag(ClientGroup.User,true);
 			this.checkBan(client);
@@ -5370,7 +5687,7 @@ server_Main.prototype = {
 			var oldName = client.name;
 			client.name = "Guest " + (this.clients.indexOf(client) + 1);
 			client.setGroupFlag(ClientGroup.User,false);
-			haxe_Log.trace(HxOverrides.dateStr(new Date()),{ fileName : "src/server/Main.hx", lineNumber : 629, className : "server.Main", methodName : "onMessage", customParams : ["Client " + oldName + " logout to " + client.name]});
+			haxe_Log.trace(HxOverrides.dateStr(new Date()),{ fileName : "src/server/Main.hx", lineNumber : 632, className : "server.Main", methodName : "onMessage", customParams : ["Client " + oldName + " logout to " + client.name]});
 			this.send(client,{ type : data.type, logout : { oldClientName : oldName, clientName : client.name, clients : this.clientList()}});
 			this.sendClientListExcept(client);
 			break;
@@ -5492,7 +5809,20 @@ server_Main.prototype = {
 			this.videoTimer.setTime(data.rewind.time);
 			this.broadcast({ type : data.type, rewind : data.rewind});
 			break;
+		case "SaveDrawing":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			this.savedDrawing = data.saveDrawing.data;
+			this.saveState();
+			break;
 		case "ServerMessage":
+			break;
+		case "SetBackground":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			this.broadcastExcept(client,data);
 			break;
 		case "SetLeader":
 			var clientName = data.setLeader.clientName;
@@ -5578,6 +5908,12 @@ server_Main.prototype = {
 				return;
 			}
 			this.skipVideo(data);
+			break;
+		case "ToggleDrawing":
+			if(!this.checkPermission(client,"writeChat")) {
+				return;
+			}
+			this.broadcastExcept(client,data);
 			break;
 		case "ToggleItemType":
 			if(this.isPlaylistLockedFor(client)) {
@@ -5700,7 +6036,7 @@ server_Main.prototype = {
 			client.setGroupFlag(ClientGroup.Banned,!isOutdated);
 			if(isOutdated) {
 				HxOverrides.remove(this.userList.bans,ban);
-				haxe_Log.trace("" + client.name + " ban removed",{ fileName : "src/server/Main.hx", lineNumber : 1107, className : "server.Main", methodName : "checkBan"});
+				haxe_Log.trace("" + client.name + " ban removed",{ fileName : "src/server/Main.hx", lineNumber : 1160, className : "server.Main", methodName : "checkBan"});
 				this.sendClientList();
 			}
 			break;

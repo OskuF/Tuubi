@@ -264,6 +264,37 @@ typedef WsEvent = {
 	?dump:{
 		data:String
 	},
+	?drawStart:{
+		x:Float,
+		y:Float,
+		color:String,
+		size:Float,
+		tool:String
+	},
+	?drawMove:{
+		x:Float,
+		y:Float
+	},
+	?drawEnd:{},
+	?clearDrawing:{},
+	?toggleDrawing:{
+		enabled:Bool
+	},
+	?saveDrawing:{
+		data:String
+	},
+	?loadDrawing:{
+		data:String
+	},
+	?drawCursor:{
+		x:Float,
+		y:Float,
+		clientName:String
+	},
+	?setBackground:{
+		isTransparent:Bool,
+		color:String
+	},
 }
 
 enum abstract WsEventType(String) {
@@ -302,6 +333,15 @@ enum abstract WsEventType(String) {
 	var UpdatePlaylist;
 	var TogglePlaylistLock;
 	var Dump;
+	var DrawStart;
+	var DrawMove;
+	var DrawEnd;
+	var ClearDrawing;
+	var ToggleDrawing;
+	var SaveDrawing;
+	var LoadDrawing;
+	var DrawCursor;
+	var SetBackground;
 }
 
 typedef DanmakuMessageEvent = {

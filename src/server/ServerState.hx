@@ -14,4 +14,5 @@ typedef ServerState = {
 	},
 	?flashbacks:Array<FlashbackItem>,
 	?cachedFiles:Array<String>,
+	?savedDrawing:String,
 }

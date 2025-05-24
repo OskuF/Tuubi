@@ -8,6 +8,7 @@ import Types.PlayerType;
 import Types.VideoData;
 import Types.VideoDataRequest;
 import Types.WsEvent;
+import client.Drawing;
 import haxe.Json;
 import haxe.Timer;
 import haxe.crypto.Sha256;
@@ -122,9 +123,9 @@ class Main {
 			Buttons.initTextButtons(this);
 			Buttons.initHotkeys(this, player);
 			initTts();
-			openWebSocket();
-		});
+			openWebSocket();});
 		JsApi.init(this, player);
+		Drawing.init(this);
 
 		document.addEventListener("click", onFirstInteraction);
 		window.addEventListener("beforeunload", () -> isPageUnloading = true);
@@ -512,6 +513,10 @@ class Main {
 	}
 
 	public inline function getName():String {
+		return personal.name;
+	}
+
+	public inline function getPersonalName():String {
 		return personal.name;
 	}
 
@@ -1138,12 +1143,37 @@ class Main {
 			case ShufflePlaylist: // server-only
 			case UpdatePlaylist:
 				player.setItems(data.updatePlaylist.videoList);
-
 			case TogglePlaylistLock:
 				setPlaylistLock(data.togglePlaylistLock.isOpen);
 
 			case Dump:
 				Utils.saveFile("dump.json", ApplicationJson, data.dump.data);
+			case DrawStart:
+				Drawing.onDrawStart(data.drawStart.x, data.drawStart.y, data.drawStart.color, data.drawStart.size, data.drawStart.tool);
+
+			case DrawMove:
+				Drawing.onDrawMove(data.drawMove.x, data.drawMove.y);
+
+			case DrawEnd:
+				Drawing.onDrawEnd();
+			case ToggleDrawing:
+				Drawing.setDrawingEnabled(data.toggleDrawing.enabled);
+			case ClearDrawing:
+				Drawing.clearCanvas();
+
+			case SaveDrawing:
+				// Server acknowledges save - could show confirmation
+				trace("Drawing saved successfully");
+
+			case LoadDrawing:
+				Drawing.onLoadDrawing(data.loadDrawing.data);
+			case DrawCursor:
+				// Process incoming cursor data from other clients
+				Drawing.onDrawCursor(data.drawCursor.clientName, data.drawCursor.x, data.drawCursor.y);
+
+			case SetBackground:
+				// Process incoming background changes from other clients
+				Drawing.onSetBackground(data.setBackground.isTransparent, data.setBackground.color);
 		}
 	}
 

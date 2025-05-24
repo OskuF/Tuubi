@@ -66,6 +66,7 @@ class Main {
 	final videoTimer = new VideoTimer();
 	final messages:Array<Message> = [];
 	final flashbacks:Array<FlashbackItem> = [];
+	var savedDrawing:Null<String> = null;
 	final logger:Logger;
 	/**
 		Stop video timer after `EMPTY_ROOM_CALLBACK_DELAY` in case
@@ -280,7 +281,6 @@ class Main {
 	}
 
 	function saveState():Void {
-		trace("Saving state...");
 		final json = Json.stringify(getCurrentState(), "\t");
 		File.saveContent(statePath, json);
 		writeUsers(userList);
@@ -297,7 +297,8 @@ class Main {
 				paused: videoTimer.isPaused()
 			},
 			flashbacks: flashbacks,
-			cachedFiles: cache.getCachedFiles()
+			cachedFiles: cache.getCachedFiles(),
+			savedDrawing: savedDrawing
 		}
 	}
 
@@ -308,6 +309,7 @@ class Main {
 		final state:ServerState = Json.parse(File.getContent(statePath));
 		state.flashbacks ??= [];
 		state.cachedFiles ??= [];
+		state.savedDrawing ??= null;
 
 		videoList.setItems(state.videoList);
 		videoList.isOpen = state.isPlaylistOpen;
@@ -320,6 +322,7 @@ class Main {
 		for (flashback in state.flashbacks) flashbacks.push(flashback);
 
 		cache.setCachedFiles(state.cachedFiles);
+		savedDrawing = state.savedDrawing;
 
 		videoTimer.start();
 		videoTimer.setTime(state.timer.time);
@@ -663,7 +666,8 @@ class Main {
 
 				// Always generate an animation class for HTML content if one isn't provided
 				if (data.danmakuMessage.isHtml == true) {
-					if (data.danmakuMessage.animationClass == null || data.danmakuMessage.animationClass == "") {
+					if (data.danmakuMessage.animationClass == null
+						|| data.danmakuMessage.animationClass == "") {
 						// Generate a random value between 0 and 1
 						final random = Math.random();
 						// 20% chance of no animation (empty string)
@@ -672,13 +676,13 @@ class Main {
 						} else {
 							// Select from available animation classes - same as in client's getRandomEmoteAnimation function
 							final animations = [
-								"danmaku-emote-glow", "danmaku-emote-shake", 
-								"danmaku-emote-spin", "danmaku-emote-pulse", 
-								"danmaku-emote-bounce", "danmaku-emote-rainbow", 
-								"danmaku-emote-flip", "danmaku-emote-hover", 
-								"danmaku-emote-heartbeat", "danmaku-emote-wobble", 
-								"danmaku-emote-blur", "danmaku-emote-glitch", 
-								"danmaku-emote-swing", "danmaku-emote-trampoline", 
+								"danmaku-emote-glow", "danmaku-emote-shake",
+								"danmaku-emote-spin", "danmaku-emote-pulse",
+								"danmaku-emote-bounce", "danmaku-emote-rainbow",
+								"danmaku-emote-flip", "danmaku-emote-hover",
+								"danmaku-emote-heartbeat", "danmaku-emote-wobble",
+								"danmaku-emote-blur", "danmaku-emote-glitch",
+								"danmaku-emote-swing", "danmaku-emote-trampoline",
 								"danmaku-emote-neon", "danmaku-emote-fade"
 							];
 							final index = Math.floor(Math.random() * animations.length);
@@ -686,7 +690,7 @@ class Main {
 						}
 					}
 				}
-				
+
 				data.danmakuMessage.clientName = client.name;
 				broadcast(data);
 
@@ -977,7 +981,6 @@ class Main {
 						isOpen: videoList.isOpen
 					}
 				});
-
 			case Dump:
 				if (!client.isAdmin) return;
 				final data = {
@@ -1003,6 +1006,56 @@ class Main {
 						data: json
 					}
 				});
+
+			case DrawStart:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Broadcast drawing start event to all other clients
+				broadcastExcept(client, data);
+
+			case DrawMove:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Broadcast drawing move event to all other clients
+				broadcastExcept(client, data);
+
+			case DrawEnd:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Broadcast drawing end event to all other clients
+				broadcastExcept(client, data);
+
+			case ToggleDrawing:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Broadcast drawing toggle state to all other clients
+				broadcastExcept(client, data);
+			case ClearDrawing:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Broadcast clear drawing event to all clients
+				broadcast(data);
+			case SaveDrawing:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Save drawing data to server state
+				savedDrawing = data.saveDrawing.data;
+				saveState();
+
+			case LoadDrawing:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Send saved drawing to requesting client
+				if (savedDrawing != null) {
+					send(client, {
+						type: LoadDrawing,
+						loadDrawing: {
+							data: savedDrawing
+						}
+					});
+				}
+			case DrawCursor:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Broadcast drawing cursor position to all other clients
+				broadcastExcept(client, data);
+
+			case SetBackground:
+				if (!checkPermission(client, WriteChatPerm)) return;
+				// Broadcast background setting to all other clients
+				broadcastExcept(client, data);
 		}
 	}
 
