@@ -269,11 +269,13 @@ typedef WsEvent = {
 		y:Float,
 		color:String,
 		size:Float,
-		tool:String
+		tool:String,
+		clientName:String
 	},
 	?drawMove:{
 		x:Float,
-		y:Float
+		y:Float,
+		clientName:String
 	},
 	?drawEnd:{},
 	?clearDrawing:{},

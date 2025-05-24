@@ -1149,10 +1149,10 @@ class Main {
 			case Dump:
 				Utils.saveFile("dump.json", ApplicationJson, data.dump.data);
 			case DrawStart:
-				Drawing.onDrawStart(data.drawStart.x, data.drawStart.y, data.drawStart.color, data.drawStart.size, data.drawStart.tool);
+				Drawing.onDrawStart(data.drawStart.x, data.drawStart.y, data.drawStart.color, data.drawStart.size, data.drawStart.tool, data.drawStart.clientName);
 
 			case DrawMove:
-				Drawing.onDrawMove(data.drawMove.x, data.drawMove.y);
+				Drawing.onDrawMove(data.drawMove.x, data.drawMove.y, data.drawMove.clientName);
 
 			case DrawEnd:
 				Drawing.onDrawEnd();

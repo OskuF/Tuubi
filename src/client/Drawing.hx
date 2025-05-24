@@ -19,6 +19,15 @@ typedef UserCursor = {
 	lastUpdate:Float
 }
 
+// Structure to represent other users' drawing state
+typedef UserDrawingState = {
+	color:String,
+	size:Float,
+	tool:String,
+	lastX:Float,
+	lastY:Float
+}
+
 class Drawing {
 	static var canvas:CanvasElement;
 	static var ctx:CanvasRenderingContext2D;
@@ -42,18 +51,21 @@ class Drawing {
 	static var currentPointerType = "mouse"; // "mouse", "pen", "touch"
 	static var pressureSensitivity = true; // Can be toggled by user
 	static var palmRejection = true; // Reject touch when pen is being used
-	static var isPenActive = false; // Track if pen is currently being used
-	// Map to store other users' cursor positions
+	static var isPenActive = false; // Track if pen is currently being used	// Map to store other users' cursor positions
 	static var userCursors:Map<String, UserCursor> = new Map<String, UserCursor>();
+	// Map to store other users' drawing states for per-user position tracking
+	static var userDrawingStates:Map<String, UserDrawingState> = new Map<String,
+		UserDrawingState>();
 	static var cursorCheckTimer:Timer;
 	static var lastCursorSendTime:Float = 0;
 	static var cursorThrottleInterval:Float = 33; // ~30fps for cursor position updates
 	static var animFrameId:Int;
-
-	// Separate variables for rendering incoming strokes from other clients
+	// Legacy variables kept for backward compatibility but no longer used for multi-user
 	static var incomingColor = "#FF0000";
 	static var incomingSize = 3.0;
 	static var incomingTool = "pen"; // "pen" or "eraser"
+	static var incomingLastX = 0.0;
+	static var incomingLastY = 0.0;
 	static var playerEl:Element;
 
 	// Dragging variables
@@ -114,9 +126,11 @@ class Drawing {
 			}
 		}
 
-		// Remove stale cursors
+		// Remove stale cursors and their associated drawing states
 		for (key in keysToRemove) {
 			userCursors.remove(key);
+			// Also clean up drawing state for disconnected users
+			userDrawingStates.remove(key);
 		}
 	}
 
@@ -362,7 +376,8 @@ class Drawing {
 				y: y,
 				color: currentColor,
 				size: currentSize,
-				tool: currentTool
+				tool: currentTool,
+				clientName: main.getName()
 			}
 		});
 	}
@@ -378,7 +393,8 @@ class Drawing {
 			type: DrawMove,
 			drawMove: {
 				x: x,
-				y: y
+				y: y,
+				clientName: main.getName()
 			}
 		});
 
@@ -556,21 +572,43 @@ class Drawing {
 		}
 	}
 
-	public static function onDrawStart(x:Float, y:Float, color:String, size:Float, tool:String):Void {
+	public static function onDrawStart(x:Float, y:Float, color:String, size:Float, tool:String, clientName:String):Void {
+		// Store or update drawing state for this specific user
+		userDrawingStates.set(clientName, {
+			color: color,
+			size: size,
+			tool: tool,
+			lastX: x,
+			lastY: y
+		});
+
+		// Update legacy variables for backward compatibility (using the most recent user's data)
 		incomingColor = color;
 		incomingSize = size;
 		incomingTool = tool;
-		lastX = x;
-		lastY = y;
-
-		// DO NOT update current user's settings - only store incoming values for rendering
-		// The currentColor, currentSize, and currentTool should remain the user's own settings
+		incomingLastX = x;
+		incomingLastY = y;
 	}
 
-	public static function onDrawMove(x:Float, y:Float):Void {
-		drawLine(lastX, lastY, x, y, incomingColor, incomingSize, incomingTool);
-		lastX = x;
-		lastY = y;
+	public static function onDrawMove(x:Float, y:Float, clientName:String):Void {
+		// Get the drawing state for this specific user
+		final userState = userDrawingStates.get(clientName);
+		if (userState == null) {
+			// If we don't have a state for this user, ignore the move event
+			// This can happen if we missed the DrawStart event
+			return;
+		}
+
+		// Draw the line using this user's drawing state
+		drawLine(userState.lastX, userState.lastY, x, y, userState.color, userState.size, userState.tool);
+
+		// Update the user's last position
+		userState.lastX = x;
+		userState.lastY = y;
+
+		// Update legacy variables for backward compatibility (using the most recent user's data)
+		incomingLastX = x;
+		incomingLastY = y;
 	}
 
 	public static function onDrawEnd():Void {

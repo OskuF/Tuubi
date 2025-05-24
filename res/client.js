@@ -1206,6 +1206,10 @@ client_Drawing.cleanupOldCursors = function() {
 		if(Object.prototype.hasOwnProperty.call(_this.h,key)) {
 			delete(_this.h[key]);
 		}
+		var _this1 = client_Drawing.userDrawingStates;
+		if(Object.prototype.hasOwnProperty.call(_this1.h,key)) {
+			delete(_this1.h[key]);
+		}
 	}
 };
 client_Drawing.setupCanvas = function() {
@@ -1371,14 +1375,14 @@ client_Drawing.startDrawing = function(x,y) {
 	client_Drawing.isDrawing = true;
 	client_Drawing.lastX = x;
 	client_Drawing.lastY = y;
-	client_Drawing.main.send({ type : "DrawStart", drawStart : { x : x, y : y, color : client_Drawing.currentColor, size : client_Drawing.currentSize, tool : client_Drawing.currentTool}});
+	client_Drawing.main.send({ type : "DrawStart", drawStart : { x : x, y : y, color : client_Drawing.currentColor, size : client_Drawing.currentSize, tool : client_Drawing.currentTool, clientName : client_Drawing.main.personal.name}});
 };
 client_Drawing.continueDrawing = function(x,y) {
 	if(!client_Drawing.isDrawing) {
 		return;
 	}
 	client_Drawing.drawLine(client_Drawing.lastX,client_Drawing.lastY,x,y,client_Drawing.currentColor,client_Drawing.currentSize,client_Drawing.currentTool);
-	client_Drawing.main.send({ type : "DrawMove", drawMove : { x : x, y : y}});
+	client_Drawing.main.send({ type : "DrawMove", drawMove : { x : x, y : y, clientName : client_Drawing.main.personal.name}});
 	client_Drawing.lastX = x;
 	client_Drawing.lastY = y;
 };
@@ -1501,17 +1505,24 @@ client_Drawing.setDrawingEnabled = function(enabled) {
 		}
 	}
 };
-client_Drawing.onDrawStart = function(x,y,color,size,tool) {
+client_Drawing.onDrawStart = function(x,y,color,size,tool,clientName) {
+	client_Drawing.userDrawingStates.h[clientName] = { color : color, size : size, tool : tool, lastX : x, lastY : y};
 	client_Drawing.incomingColor = color;
 	client_Drawing.incomingSize = size;
 	client_Drawing.incomingTool = tool;
-	client_Drawing.lastX = x;
-	client_Drawing.lastY = y;
+	client_Drawing.incomingLastX = x;
+	client_Drawing.incomingLastY = y;
 };
-client_Drawing.onDrawMove = function(x,y) {
-	client_Drawing.drawLine(client_Drawing.lastX,client_Drawing.lastY,x,y,client_Drawing.incomingColor,client_Drawing.incomingSize,client_Drawing.incomingTool);
-	client_Drawing.lastX = x;
-	client_Drawing.lastY = y;
+client_Drawing.onDrawMove = function(x,y,clientName) {
+	var userState = client_Drawing.userDrawingStates.h[clientName];
+	if(userState == null) {
+		return;
+	}
+	client_Drawing.drawLine(userState.lastX,userState.lastY,x,y,userState.color,userState.size,userState.tool);
+	userState.lastX = x;
+	userState.lastY = y;
+	client_Drawing.incomingLastX = x;
+	client_Drawing.incomingLastY = y;
 };
 client_Drawing.setupDraggable = function() {
 	var drawingTools = window.document.querySelector("#drawing-tools");
@@ -3032,10 +3043,10 @@ client_Main.prototype = {
 		case "DrawEnd":
 			break;
 		case "DrawMove":
-			client_Drawing.onDrawMove(data.drawMove.x,data.drawMove.y);
+			client_Drawing.onDrawMove(data.drawMove.x,data.drawMove.y,data.drawMove.clientName);
 			break;
 		case "DrawStart":
-			client_Drawing.onDrawStart(data.drawStart.x,data.drawStart.y,data.drawStart.color,data.drawStart.size,data.drawStart.tool);
+			client_Drawing.onDrawStart(data.drawStart.x,data.drawStart.y,data.drawStart.color,data.drawStart.size,data.drawStart.tool,data.drawStart.clientName);
 			break;
 		case "Dump":
 			client_Utils.saveFile("dump.json","application/json",data.dump.data);
@@ -7659,11 +7670,14 @@ client_Drawing.pressureSensitivity = true;
 client_Drawing.palmRejection = true;
 client_Drawing.isPenActive = false;
 client_Drawing.userCursors = new haxe_ds_StringMap();
+client_Drawing.userDrawingStates = new haxe_ds_StringMap();
 client_Drawing.lastCursorSendTime = 0;
 client_Drawing.cursorThrottleInterval = 33;
 client_Drawing.incomingColor = "#FF0000";
 client_Drawing.incomingSize = 3.0;
 client_Drawing.incomingTool = "pen";
+client_Drawing.incomingLastX = 0.0;
+client_Drawing.incomingLastY = 0.0;
 client_Drawing.isDragging = false;
 client_Drawing.dragOffsetX = 0.0;
 client_Drawing.dragOffsetY = 0.0;

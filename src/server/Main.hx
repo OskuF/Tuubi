@@ -9,6 +9,7 @@ import Types.PlayerType;
 import Types.UserList;
 import Types.VideoItem;
 import Types.WsEvent;
+import Types.WsEventType;
 import haxe.Json;
 import haxe.Timer;
 import haxe.crypto.Sha256;
@@ -983,7 +984,7 @@ class Main {
 				});
 			case Dump:
 				if (!client.isAdmin) return;
-				final data = {
+				final dumpData = {
 					state: getCurrentState(),
 					clients: clients.map(client -> {
 						name: client.name,
@@ -995,8 +996,8 @@ class Main {
 						isUser: client.isUser,
 					}),
 					logs: logger.getLogs()
-				}
-				final json = jsonStringify(data, "\t");
+				};
+				final json = jsonStringify(dumpData, "\t");
 				serverMessage(client, "Free space: "
 					+ (cache.getFreeSpace() / 1024).toFixed()
 					+ "KiB");
@@ -1006,16 +1007,32 @@ class Main {
 						data: json
 					}
 				});
-
 			case DrawStart:
 				if (!checkPermission(client, WriteChatPerm)) return;
-				// Broadcast drawing start event to all other clients
-				broadcastExcept(client, data);
+				// Add client identification and broadcast drawing start event to all other clients
+				broadcastExcept(client, {
+					type: DrawStart,
+					drawStart: {
+						x: data.drawStart.x,
+						y: data.drawStart.y,
+						color: data.drawStart.color,
+						size: data.drawStart.size,
+						tool: data.drawStart.tool,
+						clientName: client.name
+					}
+				});
 
 			case DrawMove:
 				if (!checkPermission(client, WriteChatPerm)) return;
-				// Broadcast drawing move event to all other clients
-				broadcastExcept(client, data);
+				// Add client identification and broadcast drawing move event to all other clients
+				broadcastExcept(client, {
+					type: DrawMove,
+					drawMove: {
+						x: data.drawMove.x,
+						y: data.drawMove.y,
+						clientName: client.name
+					}
+				});
 
 			case DrawEnd:
 				if (!checkPermission(client, WriteChatPerm)) return;
