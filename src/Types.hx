@@ -270,12 +270,20 @@ typedef WsEvent = {
 		color:String,
 		size:Float,
 		tool:String,
-		clientName:String
+		clientName:String,
+		pressure:Float,
+		brushOpacity:Float,
+		brushFlow:Float,
+		brushHardness:Float,
+		brushTexture:Float,
+		brushScatter:Float,
+		seed:Float
 	},
 	?drawMove:{
 		x:Float,
 		y:Float,
-		clientName:String
+		clientName:String,
+		pressure:Float
 	},
 	?drawEnd:{},
 	?clearDrawing:{},

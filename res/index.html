@@ -37,23 +37,109 @@
           <label style="color: white; display: block; margin-bottom: 5px;">Color:</label>
           <input id="drawing-color" type="color" value="#FF0000"
             style="width: 100%; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
-        </div>
-
-        <!-- Brush Size -->
+        </div> <!-- Brush Size -->
         <div style="margin-bottom: 10px;">
           <label style="color: white; display: block; margin-bottom: 5px;">Size: <span
               id="size-value">3</span>px</label>
           <input id="drawing-size" type="range" min="1" max="50" value="3" style="width: 100%;">
-        </div> <!-- Tool Buttons -->
+        </div>
+
+        <!-- Advanced Brush Controls -->
+        <div id="advanced-brush-controls" style="margin-bottom: 10px;">
+          <label style="color: white; display: block; margin-bottom: 5px;">Brush Properties:</label>
+
+          <!-- Opacity -->
+          <div style="margin-bottom: 6px;">
+            <label style="color: #ccc; font-size: 11px; display: block;">Opacity: <span
+                id="opacity-value">100</span>%</label>
+            <input id="brush-opacity" type="range" min="0.1" max="1" step="0.01" value="1"
+              style="width: 100%; height: 4px;">
+          </div>
+
+          <!-- Flow -->
+          <div style="margin-bottom: 6px;">
+            <label style="color: #ccc; font-size: 11px; display: block;">Flow: <span id="flow-value">100</span>%</label>
+            <input id="brush-flow" type="range" min="0.1" max="1" step="0.01" value="1"
+              style="width: 100%; height: 4px;">
+          </div>
+
+          <!-- Hardness -->
+          <div style="margin-bottom: 6px;">
+            <label style="color: #ccc; font-size: 11px; display: block;">Hardness: <span
+                id="hardness-value">100</span>%</label>
+            <input id="brush-hardness" type="range" min="0" max="1" step="0.01" value="1"
+              style="width: 100%; height: 4px;">
+          </div>
+
+          <!-- Spacing -->
+          <div style="margin-bottom: 6px;">
+            <label style="color: #ccc; font-size: 11px; display: block;">Spacing: <span
+                id="spacing-value">10</span>%</label>
+            <input id="brush-spacing" type="range" min="0.01" max="1" step="0.01" value="0.1"
+              style="width: 100%; height: 4px;">
+          </div>
+
+          <!-- Scatter -->
+          <div style="margin-bottom: 6px;">
+            <label style="color: #ccc; font-size: 11px; display: block;">Scatter: <span
+                id="scatter-value">0</span>%</label>
+            <input id="brush-scatter" type="range" min="0" max="1" step="0.01" value="0"
+              style="width: 100%; height: 4px;">
+          </div>
+
+          <!-- Texture -->
+          <div style="margin-bottom: 6px;">
+            <label style="color: #ccc; font-size: 11px; display: block;">Texture: <span
+                id="texture-value">100</span>%</label>
+            <input id="brush-texture" type="range" min="0" max="1" step="0.01" value="1"
+              style="width: 100%; height: 4px;">
+          </div>
+
+          <!-- Dynamics Toggle -->
+          <div style="margin-bottom: 6px;">
+            <label style="color: #ccc; font-size: 11px; display: block;">Brush Dynamics:</label>
+            <button id="brush-dynamics"
+              style="padding: 4px 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; width: 50px;">
+              ON
+            </button>
+          </div>
+        </div><!-- Tool Buttons -->
         <div style="margin-bottom: 10px;">
-          <button id="drawing-tool-pen" class="drawing-tool active" data-tool="pen"
-            style="padding: 6px 12px; margin: 2px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            <ion-icon name="pencil"></ion-icon> Pen
-          </button>
-          <button id="drawing-tool-eraser" class="drawing-tool" data-tool="eraser"
-            style="padding: 6px 12px; margin: 2px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            <ion-icon name="trash"></ion-icon> Eraser
-          </button>
+          <label style="color: white; display: block; margin-bottom: 5px;">Brush Tools:</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 5px;">
+            <button id="drawing-tool-pen" class="drawing-tool active" data-tool="pen"
+              style="padding: 4px 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              <ion-icon name="pencil"></ion-icon> Pen
+            </button>
+            <button id="drawing-tool-brush" class="drawing-tool" data-tool="brush"
+              style="padding: 4px 8px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              <ion-icon name="brush"></ion-icon> Brush
+            </button>
+            <button id="drawing-tool-pencil" class="drawing-tool" data-tool="pencil"
+              style="padding: 4px 8px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              <ion-icon name="create"></ion-icon> Pencil
+            </button>
+            <button id="drawing-tool-airbrush" class="drawing-tool" data-tool="airbrush"
+              style="padding: 4px 8px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              <ion-icon name="contrast"></ion-icon> Airbrush
+            </button>
+            <button id="drawing-tool-marker" class="drawing-tool" data-tool="marker"
+              style="padding: 4px 8px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              <ion-icon name="color-wand"></ion-icon> Marker
+            </button>
+            <button id="drawing-tool-charcoal" class="drawing-tool" data-tool="charcoal"
+              style="padding: 4px 8px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              <ion-icon name="ellipse"></ion-icon> Charcoal
+            </button>
+            <button id="drawing-tool-watercolor" class="drawing-tool" data-tool="watercolor"
+              style="padding: 4px 8px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              <ion-icon name="water"></ion-icon> Watercolor
+            </button>
+            <button id="drawing-tool-eraser" class="drawing-tool" data-tool="eraser"
+              style="padding: 4px 8px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+              <ion-icon name="trash"></ion-icon> Eraser
+            </button>
+          </div>
         </div>
 
         <!-- Background Options -->

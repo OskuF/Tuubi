@@ -1095,6 +1095,54 @@ JsonParser_$5a6d5e1c31f149294d2abd0cc01ec07d.prototype = $extend(json2object_rea
 	}
 	,__class__: JsonParser_$5a6d5e1c31f149294d2abd0cc01ec07d
 });
+var JsonParser_$5dc93c5ec03bda1f796c1a61ccb95f33 = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$5dc93c5ec03bda1f796c1a61ccb95f33.__name__ = true;
+JsonParser_$5dc93c5ec03bda1f796c1a61ccb95f33.__super__ = json2object_reader_BaseParser;
+JsonParser_$5dc93c5ec03bda1f796c1a61ccb95f33.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ y : Float, x : Float, pressure : Float, clientName : String }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,["clientName","pressure","x","y"],[false,false,false,false]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			switch(field.name) {
+			case "clientName":
+				this.value.clientName = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"clientName",assigned,this.value.clientName,pos);
+				break;
+			case "pressure":
+				this.value.pressure = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"pressure",assigned,this.value.pressure,pos);
+				break;
+			case "x":
+				this.value.x = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"x",assigned,this.value.x,pos);
+				break;
+			case "y":
+				this.value.y = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"y",assigned,this.value.y,pos);
+				break;
+			default:
+				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+			}
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { clientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), pressure : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), x : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), y : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+	}
+	,__class__: JsonParser_$5dc93c5ec03bda1f796c1a61ccb95f33
+});
 var JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9 = function(errors,putils,errorType) {
 	if(errorType == null) {
 		errorType = 0;
@@ -1105,7 +1153,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.__name__ = true;
 JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.__super__ = json2object_reader_BaseParser;
 JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_reader_BaseParser.prototype,{
 	onIncorrectType: function(pos,variable) {
-		this.errors.push(json2object_Error.IncorrectType(variable,"{ ?updatePlaylist : Null<{ videoList : Array<VideoItem> }>, ?updateClients : Null<{ clients : Array<ClientData> }>, type : WsEventType, ?togglePlaylistLock : Null<{ isOpen : Bool }>, ?toggleItemType : Null<{ pos : Int }>, ?toggleDrawing : Null<{ enabled : Bool }>, ?skipVideo : Null<{ url : String }>, ?setTime : Null<{ time : Float }>, ?setRate : Null<{ rate : Float }>, ?setNextItem : Null<{ pos : Int }>, ?setLeader : Null<{ clientName : String }>, ?setBackground : Null<{ isTransparent : Bool, color : String }>, ?serverMessage : Null<{ textId : String }>, ?saveDrawing : Null<{ data : String }>, ?rewind : Null<{ time : Float }>, ?removeVideo : Null<{ url : String }>, ?progress : Null<{ type : ProgressType, ratio : Float, ?data : Null<String> }>, ?playItem : Null<{ pos : Int }>, ?play : Null<{ time : Float }>, ?pause : Null<{ time : Float }>, ?message : Null<{ text : String, clientName : String }>, ?logout : Null<{ oldClientName : String, clients : Array<ClientData>, clientName : String }>, ?login : Null<{ ?passHash : Null<String>, ?isUnknownClient : Null<Bool>, ?clients : Null<Array<ClientData>>, clientName : String }>, ?loadDrawing : Null<{ data : String }>, ?kickClient : Null<{ name : String }>, ?getTime : Null<GetTimeEvent>, ?emoteMessage : Null<{ html : String, clientName : String }>, ?dump : Null<{ data : String }>, ?drawStart : Null<{ y : Float, x : Float, tool : String, size : Float, color : String, clientName : String }>, ?drawMove : Null<{ y : Float, x : Float, clientName : String }>, ?drawEnd : Null<{ }>, ?drawCursor : Null<{ y : Float, x : Float, clientName : String }>, ?danmakuMessage : Null<DanmakuMessageEvent>, ?connected : Null<{ videoList : Array<VideoItem>, uuid : String, playersCacheSupport : Array<PlayerType>, itemPos : Int, isUnknownClient : Bool, isPlaylistOpen : Bool, history : Array<Message>, globalIp : String, config : Config, clients : Array<ClientData>, clientName : String }>, ?clearDrawing : Null<{ }>, ?banClient : Null<{ time : Float, name : String }>, ?addVideo : Null<{ item : VideoItem, atEnd : Bool }> }",pos));
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ ?updatePlaylist : Null<{ videoList : Array<VideoItem> }>, ?updateClients : Null<{ clients : Array<ClientData> }>, type : WsEventType, ?togglePlaylistLock : Null<{ isOpen : Bool }>, ?toggleItemType : Null<{ pos : Int }>, ?toggleDrawing : Null<{ enabled : Bool }>, ?skipVideo : Null<{ url : String }>, ?setTime : Null<{ time : Float }>, ?setRate : Null<{ rate : Float }>, ?setNextItem : Null<{ pos : Int }>, ?setLeader : Null<{ clientName : String }>, ?setBackground : Null<{ isTransparent : Bool, color : String }>, ?serverMessage : Null<{ textId : String }>, ?saveDrawing : Null<{ data : String }>, ?rewind : Null<{ time : Float }>, ?removeVideo : Null<{ url : String }>, ?progress : Null<{ type : ProgressType, ratio : Float, ?data : Null<String> }>, ?playItem : Null<{ pos : Int }>, ?play : Null<{ time : Float }>, ?pause : Null<{ time : Float }>, ?message : Null<{ text : String, clientName : String }>, ?logout : Null<{ oldClientName : String, clients : Array<ClientData>, clientName : String }>, ?login : Null<{ ?passHash : Null<String>, ?isUnknownClient : Null<Bool>, ?clients : Null<Array<ClientData>>, clientName : String }>, ?loadDrawing : Null<{ data : String }>, ?kickClient : Null<{ name : String }>, ?getTime : Null<GetTimeEvent>, ?emoteMessage : Null<{ html : String, clientName : String }>, ?dump : Null<{ data : String }>, ?drawStart : Null<{ y : Float, x : Float, tool : String, size : Float, seed : Float, pressure : Float, color : String, clientName : String, brushTexture : Float, brushScatter : Float, brushOpacity : Float, brushHardness : Float, brushFlow : Float }>, ?drawMove : Null<{ y : Float, x : Float, pressure : Float, clientName : String }>, ?drawEnd : Null<{ }>, ?drawCursor : Null<{ y : Float, x : Float, clientName : String }>, ?danmakuMessage : Null<DanmakuMessageEvent>, ?connected : Null<{ videoList : Array<VideoItem>, uuid : String, playersCacheSupport : Array<PlayerType>, itemPos : Int, isUnknownClient : Bool, isPlaylistOpen : Bool, history : Array<Message>, globalIp : String, config : Config, clients : Array<ClientData>, clientName : String }>, ?clearDrawing : Null<{ }>, ?banClient : Null<{ time : Float, name : String }>, ?addVideo : Null<{ item : VideoItem, atEnd : Bool }> }",pos));
 		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
 	}
 	,loadJsonNull: function(pos,variable) {
@@ -1142,10 +1190,10 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 				this.value.drawEnd = this.loadObjectField(($_=new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawEnd",assigned,this.value.drawEnd,pos);
 				break;
 			case "drawMove":
-				this.value.drawMove = this.loadObjectField(($_=new JsonParser_$1c666dcf50d5150ff2e96763d230d607(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawMove",assigned,this.value.drawMove,pos);
+				this.value.drawMove = this.loadObjectField(($_=new JsonParser_$5dc93c5ec03bda1f796c1a61ccb95f33(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawMove",assigned,this.value.drawMove,pos);
 				break;
 			case "drawStart":
-				this.value.drawStart = this.loadObjectField(($_=new JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawStart",assigned,this.value.drawStart,pos);
+				this.value.drawStart = this.loadObjectField(($_=new JsonParser_$c617b3120e4b9933ae024a2a3429a4c0(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"drawStart",assigned,this.value.drawStart,pos);
 				break;
 			case "dump":
 				this.value.dump = this.loadObjectField(($_=new JsonParser_$dda5f87e2972892b16c7b833df96706a(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"dump",assigned,this.value.dump,pos);
@@ -1238,7 +1286,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 		this.objectErrors(assigned,pos);
 	}
 	,getAuto: function() {
-		return { addVideo : new JsonParser_$17f62a9968afd16686d4888a98c34102([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), banClient : new JsonParser_$cceff829ad5e63207b6f78bebb03c69a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clearDrawing : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), connected : new JsonParser_$d011018d886fa55f8828ebb1e93413c3([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), danmakuMessage : new JsonParser_$f378d50044c8c87339ebd29901892072([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawCursor : new JsonParser_$1c666dcf50d5150ff2e96763d230d607([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawEnd : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawMove : new JsonParser_$1c666dcf50d5150ff2e96763d230d607([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawStart : new JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), dump : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), emoteMessage : new JsonParser_$c19b4a653b84c0484a2790e2552a7ac7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), getTime : new JsonParser_$feded5bdb427eb48f39e60029d5dca4a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), kickClient : new JsonParser_$b2777fc36a3f1c43a2ae7d80ba0572ca([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), loadDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), login : new JsonParser_$128275a4734b926daca1924fc6a200c7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), logout : new JsonParser_$8d3a3702ec359ae3022bce905b75550b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), message : new JsonParser_$33c34d246ae14cf949ef186cb0e1d8eb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), pause : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), play : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), playItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), progress : new JsonParser_$e15c2211613da80aa2992b6249949a65([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), removeVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), rewind : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), saveDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), serverMessage : new JsonParser_$d1c1e71f4452df068de6cecc104f6dd6([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setBackground : new JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setLeader : new JsonParser_$65985176838b1da92d970132a0cb6d58([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setNextItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setRate : new JsonParser_$359929cb56fda98b8740cbc66ef083c4([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setTime : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), skipVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleDrawing : new JsonParser_$dd7b5d75def09bce38d87fd906f73270([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleItemType : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), togglePlaylistLock : new JsonParser_$e5a960b500232cc84a0caf718de13706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), type : new JsonParser_$d8e5213783812cec0906ca233f0379dc([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updateClients : new JsonParser_$126814d365d277a375ef70de1963f53d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updatePlaylist : new JsonParser_$a82c17fc41c21179c58e1d406d2b20cd([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+		return { addVideo : new JsonParser_$17f62a9968afd16686d4888a98c34102([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), banClient : new JsonParser_$cceff829ad5e63207b6f78bebb03c69a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clearDrawing : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), connected : new JsonParser_$d011018d886fa55f8828ebb1e93413c3([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), danmakuMessage : new JsonParser_$f378d50044c8c87339ebd29901892072([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawCursor : new JsonParser_$1c666dcf50d5150ff2e96763d230d607([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawEnd : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawMove : new JsonParser_$5dc93c5ec03bda1f796c1a61ccb95f33([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawStart : new JsonParser_$c617b3120e4b9933ae024a2a3429a4c0([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), dump : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), emoteMessage : new JsonParser_$c19b4a653b84c0484a2790e2552a7ac7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), getTime : new JsonParser_$feded5bdb427eb48f39e60029d5dca4a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), kickClient : new JsonParser_$b2777fc36a3f1c43a2ae7d80ba0572ca([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), loadDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), login : new JsonParser_$128275a4734b926daca1924fc6a200c7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), logout : new JsonParser_$8d3a3702ec359ae3022bce905b75550b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), message : new JsonParser_$33c34d246ae14cf949ef186cb0e1d8eb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), pause : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), play : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), playItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), progress : new JsonParser_$e15c2211613da80aa2992b6249949a65([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), removeVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), rewind : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), saveDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), serverMessage : new JsonParser_$d1c1e71f4452df068de6cecc104f6dd6([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setBackground : new JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setLeader : new JsonParser_$65985176838b1da92d970132a0cb6d58([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setNextItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setRate : new JsonParser_$359929cb56fda98b8740cbc66ef083c4([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setTime : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), skipVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleDrawing : new JsonParser_$dd7b5d75def09bce38d87fd906f73270([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleItemType : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), togglePlaylistLock : new JsonParser_$e5a960b500232cc84a0caf718de13706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), type : new JsonParser_$d8e5213783812cec0906ca233f0379dc([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updateClients : new JsonParser_$126814d365d277a375ef70de1963f53d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updatePlaylist : new JsonParser_$a82c17fc41c21179c58e1d406d2b20cd([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
 	,__class__: JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9
 });
@@ -1659,17 +1707,17 @@ JsonParser_$c26f15e86e3de4c398a8273272aba034.prototype = $extend(json2object_rea
 	}
 	,__class__: JsonParser_$c26f15e86e3de4c398a8273272aba034
 });
-var JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb = function(errors,putils,errorType) {
+var JsonParser_$c617b3120e4b9933ae024a2a3429a4c0 = function(errors,putils,errorType) {
 	if(errorType == null) {
 		errorType = 0;
 	}
 	json2object_reader_BaseParser.call(this,errors,putils,errorType);
 };
-JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb.__name__ = true;
-JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb.__super__ = json2object_reader_BaseParser;
-JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb.prototype = $extend(json2object_reader_BaseParser.prototype,{
+JsonParser_$c617b3120e4b9933ae024a2a3429a4c0.__name__ = true;
+JsonParser_$c617b3120e4b9933ae024a2a3429a4c0.__super__ = json2object_reader_BaseParser;
+JsonParser_$c617b3120e4b9933ae024a2a3429a4c0.prototype = $extend(json2object_reader_BaseParser.prototype,{
 	onIncorrectType: function(pos,variable) {
-		this.errors.push(json2object_Error.IncorrectType(variable,"{ y : Float, x : Float, tool : String, size : Float, color : String, clientName : String }",pos));
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ y : Float, x : Float, tool : String, size : Float, seed : Float, pressure : Float, color : String, clientName : String, brushTexture : Float, brushScatter : Float, brushOpacity : Float, brushHardness : Float, brushFlow : Float }",pos));
 		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
 	}
 	,loadJsonNull: function(pos,variable) {
@@ -1677,18 +1725,39 @@ JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb.prototype = $extend(json2object_rea
 	}
 	,loadJsonObject: function(o,pos,variable) {
 		var assigned = new haxe_ds_StringMap();
-		this.objectSetupAssign(assigned,["clientName","color","size","tool","x","y"],[false,false,false,false,false,false]);
+		this.objectSetupAssign(assigned,["brushFlow","brushHardness","brushOpacity","brushScatter","brushTexture","clientName","color","pressure","seed","size","tool","x","y"],[false,false,false,false,false,false,false,false,false,false,false,false,false]);
 		this.value = this.getAuto();
 		var _g = 0;
 		while(_g < o.length) {
 			var field = o[_g];
 			++_g;
 			switch(field.name) {
+			case "brushFlow":
+				this.value.brushFlow = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"brushFlow",assigned,this.value.brushFlow,pos);
+				break;
+			case "brushHardness":
+				this.value.brushHardness = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"brushHardness",assigned,this.value.brushHardness,pos);
+				break;
+			case "brushOpacity":
+				this.value.brushOpacity = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"brushOpacity",assigned,this.value.brushOpacity,pos);
+				break;
+			case "brushScatter":
+				this.value.brushScatter = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"brushScatter",assigned,this.value.brushScatter,pos);
+				break;
+			case "brushTexture":
+				this.value.brushTexture = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"brushTexture",assigned,this.value.brushTexture,pos);
+				break;
 			case "clientName":
 				this.value.clientName = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"clientName",assigned,this.value.clientName,pos);
 				break;
 			case "color":
 				this.value.color = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"color",assigned,this.value.color,pos);
+				break;
+			case "pressure":
+				this.value.pressure = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"pressure",assigned,this.value.pressure,pos);
+				break;
+			case "seed":
+				this.value.seed = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"seed",assigned,this.value.seed,pos);
 				break;
 			case "size":
 				this.value.size = this.loadObjectField(($_=new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"size",assigned,this.value.size,pos);
@@ -1709,9 +1778,9 @@ JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb.prototype = $extend(json2object_rea
 		this.objectErrors(assigned,pos);
 	}
 	,getAuto: function() {
-		return { clientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), color : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), size : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), tool : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), x : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), y : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+		return { brushFlow : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), brushHardness : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), brushOpacity : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), brushScatter : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), brushTexture : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clientName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), color : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), pressure : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), seed : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), size : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), tool : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), x : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), y : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
-	,__class__: JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb
+	,__class__: JsonParser_$c617b3120e4b9933ae024a2a3429a4c0
 });
 var JsonParser_$cceff829ad5e63207b6f78bebb03c69a = function(errors,putils,errorType) {
 	if(errorType == null) {
@@ -5507,13 +5576,13 @@ server_Main.prototype = {
 			if(!this.checkPermission(client,"writeChat")) {
 				return;
 			}
-			this.broadcastExcept(client,{ type : "DrawMove", drawMove : { x : data.drawMove.x, y : data.drawMove.y, clientName : client.name}});
+			this.broadcastExcept(client,{ type : "DrawMove", drawMove : { x : data.drawMove.x, y : data.drawMove.y, clientName : client.name, pressure : data.drawMove.pressure}});
 			break;
 		case "DrawStart":
 			if(!this.checkPermission(client,"writeChat")) {
 				return;
 			}
-			this.broadcastExcept(client,{ type : "DrawStart", drawStart : { x : data.drawStart.x, y : data.drawStart.y, color : data.drawStart.color, size : data.drawStart.size, tool : data.drawStart.tool, clientName : client.name}});
+			this.broadcastExcept(client,{ type : "DrawStart", drawStart : { x : data.drawStart.x, y : data.drawStart.y, color : data.drawStart.color, size : data.drawStart.size, tool : data.drawStart.tool, seed : data.drawStart.seed, clientName : client.name, pressure : data.drawStart.pressure, brushOpacity : data.drawStart.brushOpacity, brushFlow : data.drawStart.brushFlow, brushHardness : data.drawStart.brushHardness, brushTexture : data.drawStart.brushTexture, brushScatter : data.drawStart.brushScatter}});
 			break;
 		case "Dump":
 			if((client.group & 8) == 0) {
@@ -5997,7 +6066,7 @@ server_Main.prototype = {
 			client.setGroupFlag(ClientGroup.Banned,!isOutdated);
 			if(isOutdated) {
 				HxOverrides.remove(this.userList.bans,ban);
-				haxe_Log.trace("" + client.name + " ban removed",{ fileName : "src/server/Main.hx", lineNumber : 1177, className : "server.Main", methodName : "checkBan"});
+				haxe_Log.trace("" + client.name + " ban removed",{ fileName : "src/server/Main.hx", lineNumber : 1184, className : "server.Main", methodName : "checkBan"});
 				this.sendClientList();
 			}
 			break;

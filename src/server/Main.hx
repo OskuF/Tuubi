@@ -1008,8 +1008,8 @@ class Main {
 					}
 				});
 			case DrawStart:
-				if (!checkPermission(client, WriteChatPerm)) return;
-				// Add client identification and broadcast drawing start event to all other clients
+				if (!checkPermission(client, WriteChatPerm)) return
+					; // Add client identification and broadcast drawing start event to all other clients
 				broadcastExcept(client, {
 					type: DrawStart,
 					drawStart: {
@@ -1018,10 +1018,16 @@ class Main {
 						color: data.drawStart.color,
 						size: data.drawStart.size,
 						tool: data.drawStart.tool,
-						clientName: client.name
+						seed: data.drawStart.seed,
+						clientName: client.name,
+						pressure: data.drawStart.pressure,
+						brushOpacity: data.drawStart.brushOpacity,
+						brushFlow: data.drawStart.brushFlow,
+						brushHardness: data.drawStart.brushHardness,
+						brushTexture: data.drawStart.brushTexture,
+						brushScatter: data.drawStart.brushScatter
 					}
 				});
-
 			case DrawMove:
 				if (!checkPermission(client, WriteChatPerm)) return;
 				// Add client identification and broadcast drawing move event to all other clients
@@ -1030,7 +1036,8 @@ class Main {
 					drawMove: {
 						x: data.drawMove.x,
 						y: data.drawMove.y,
-						clientName: client.name
+						clientName: client.name,
+						pressure: data.drawMove.pressure
 					}
 				});
 

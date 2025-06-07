@@ -1155,6 +1155,20 @@ client_Buttons.initPageFullscreen = function() {
 		}
 	};
 };
+var client_SeededRandom = function(seed) {
+	this.seed = seed;
+};
+client_SeededRandom.__name__ = true;
+client_SeededRandom.prototype = {
+	next: function() {
+		this.seed = (this.seed * 1103515245 + 12345) % 2147483648;
+		return this.seed / 2147483648;
+	}
+	,setSeed: function(newSeed) {
+		this.seed = newSeed;
+	}
+	,__class__: client_SeededRandom
+};
 var client_Drawing = function() { };
 client_Drawing.__name__ = true;
 client_Drawing.init = function(main) {
@@ -1165,6 +1179,7 @@ client_Drawing.init = function(main) {
 	client_Drawing.setupCanvas();
 	client_Drawing.setupEventListeners();
 	client_Drawing.setupDrawingTools();
+	client_Drawing.setupBrushControls();
 	client_Drawing.startCursorTimer();
 };
 client_Drawing.startCursorTimer = function() {
@@ -1375,14 +1390,16 @@ client_Drawing.startDrawing = function(x,y) {
 	client_Drawing.isDrawing = true;
 	client_Drawing.lastX = x;
 	client_Drawing.lastY = y;
-	client_Drawing.main.send({ type : "DrawStart", drawStart : { x : x, y : y, color : client_Drawing.currentColor, size : client_Drawing.currentSize, tool : client_Drawing.currentTool, clientName : client_Drawing.main.personal.name}});
+	client_Drawing.currentStrokeSeed = Math.random() * 1000000;
+	client_Drawing.syncRandom.setSeed(client_Drawing.currentStrokeSeed);
+	client_Drawing.main.send({ type : "DrawStart", drawStart : { x : x, y : y, color : client_Drawing.currentColor, size : client_Drawing.currentSize, tool : client_Drawing.currentTool, clientName : client_Drawing.main.personal.name, pressure : client_Drawing.currentPressure, brushOpacity : client_Drawing.brushOpacity, brushFlow : client_Drawing.brushFlow, brushHardness : client_Drawing.brushHardness, brushTexture : client_Drawing.brushTexture, brushScatter : client_Drawing.brushScatter, seed : client_Drawing.currentStrokeSeed}});
 };
 client_Drawing.continueDrawing = function(x,y) {
 	if(!client_Drawing.isDrawing) {
 		return;
 	}
 	client_Drawing.drawLine(client_Drawing.lastX,client_Drawing.lastY,x,y,client_Drawing.currentColor,client_Drawing.currentSize,client_Drawing.currentTool);
-	client_Drawing.main.send({ type : "DrawMove", drawMove : { x : x, y : y, clientName : client_Drawing.main.personal.name}});
+	client_Drawing.main.send({ type : "DrawMove", drawMove : { x : x, y : y, clientName : client_Drawing.main.personal.name, pressure : client_Drawing.currentPressure}});
 	client_Drawing.lastX = x;
 	client_Drawing.lastY = y;
 };
@@ -1426,28 +1443,41 @@ client_Drawing.drawLineWithPressure = function(x1,y1,x2,y2,color,size,pressure,t
 	var pixelY1 = y1 * client_Drawing.canvas.height;
 	var pixelX2 = x2 * client_Drawing.canvas.width;
 	var pixelY2 = y2 * client_Drawing.canvas.height;
-	var effectiveSize = size;
-	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
-		var minSize = size * 0.2;
-		effectiveSize = minSize + (size * 1.5 - minSize) * pressure;
-	}
-	if(tool == "eraser") {
-		client_Drawing.ctx.globalCompositeOperation = "destination-out";
-		client_Drawing.ctx.strokeStyle = "rgba(0,0,0,1)";
+	var currentTime = new Date().getTime();
+	var deltaTime = currentTime - client_Drawing.lastBrushTime;
+	client_Drawing.brushVelocity = deltaTime > 0 ? Math.sqrt((pixelX2 - pixelX1) * (pixelX2 - pixelX1) + (pixelY2 - pixelY1) * (pixelY2 - pixelY1)) / deltaTime : 0;
+	client_Drawing.lastBrushTime = currentTime;
+	if(tool == null) {
+		client_Drawing.drawPen(pixelX1,pixelY1,pixelX2,pixelY2,color,size,pressure);
 	} else {
-		client_Drawing.ctx.globalCompositeOperation = "source-over";
-		client_Drawing.ctx.strokeStyle = color;
-		if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
-			var alpha = Math.max(0.3,Math.min(1.0,pressure + 0.3));
-			var rgbColor = client_Drawing.hexToRgb(color);
-			client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + alpha + ")";
+		switch(tool) {
+		case "airbrush":
+			client_Drawing.drawAirbrush(pixelX1,pixelY1,pixelX2,pixelY2,color,size,pressure);
+			break;
+		case "brush":
+			client_Drawing.drawBrush(pixelX1,pixelY1,pixelX2,pixelY2,color,size,pressure);
+			break;
+		case "charcoal":
+			client_Drawing.drawCharcoal(pixelX1,pixelY1,pixelX2,pixelY2,color,size,pressure);
+			break;
+		case "eraser":
+			client_Drawing.drawEraser(pixelX1,pixelY1,pixelX2,pixelY2,size,pressure);
+			break;
+		case "marker":
+			client_Drawing.drawMarker(pixelX1,pixelY1,pixelX2,pixelY2,color,size,pressure);
+			break;
+		case "pencil":
+			client_Drawing.drawPencil(pixelX1,pixelY1,pixelX2,pixelY2,color,size,pressure);
+			break;
+		case "watercolor":
+			client_Drawing.drawWatercolor(pixelX1,pixelY1,pixelX2,pixelY2,color,size,pressure);
+			break;
+		default:
+			client_Drawing.drawPen(pixelX1,pixelY1,pixelX2,pixelY2,color,size,pressure);
 		}
 	}
-	client_Drawing.ctx.lineWidth = effectiveSize;
-	client_Drawing.ctx.beginPath();
-	client_Drawing.ctx.moveTo(pixelX1,pixelY1);
-	client_Drawing.ctx.lineTo(pixelX2,pixelY2);
-	client_Drawing.ctx.stroke();
+	client_Drawing.lastBrushX = pixelX2;
+	client_Drawing.lastBrushY = pixelY2;
 };
 client_Drawing.hexToRgb = function(hex) {
 	var regex = new EReg("^#?([a-f\\d]{2})([a-f\\d]{2})([a-f\\d]{2})$","i");
@@ -1505,7 +1535,14 @@ client_Drawing.setDrawingEnabled = function(enabled) {
 		}
 	}
 };
-client_Drawing.onDrawStart = function(x,y,color,size,tool,clientName) {
+client_Drawing.onDrawStart = function(x,y,color,size,tool,clientName,seed) {
+	if(seed == null) {
+		seed = 0;
+	}
+	if(seed != 0) {
+		client_Drawing.currentStrokeSeed = seed;
+		client_Drawing.syncRandom.setSeed(client_Drawing.currentStrokeSeed);
+	}
 	client_Drawing.userDrawingStates.h[clientName] = { color : color, size : size, tool : tool, lastX : x, lastY : y};
 	client_Drawing.incomingColor = color;
 	client_Drawing.incomingSize = size;
@@ -1646,6 +1683,7 @@ client_Drawing.setupDrawingTools = function() {
 				button[0].classList.add("active");
 				button[0].style.background = "#2196F3";
 				client_Drawing.currentTool = button[0].getAttribute("data-tool");
+				client_Drawing.applyToolPreset(client_Drawing.currentTool);
 				client_Drawing.updateCanvasStyle();
 			};
 		})(button);
@@ -1702,6 +1740,177 @@ client_Drawing.setupDrawingTools = function() {
 	};
 	client_Drawing.setupTabletControls();
 };
+client_Drawing.setupBrushControls = function() {
+	var opacitySlider = window.document.querySelector("#brush-opacity");
+	if(opacitySlider != null) {
+		var opacityValue = window.document.querySelector("#opacity-value");
+		opacitySlider.oninput = function(e) {
+			client_Drawing.brushOpacity = parseFloat(opacitySlider.value);
+			return opacityValue.innerText = Std.string(client_Drawing.brushOpacity * 100 | 0) + "%";
+		};
+	}
+	var flowSlider = window.document.querySelector("#brush-flow");
+	if(flowSlider != null) {
+		var flowValue = window.document.querySelector("#flow-value");
+		flowSlider.oninput = function(e) {
+			client_Drawing.brushFlow = parseFloat(flowSlider.value);
+			return flowValue.innerText = Std.string(client_Drawing.brushFlow * 100 | 0) + "%";
+		};
+	}
+	var hardnessSlider = window.document.querySelector("#brush-hardness");
+	if(hardnessSlider != null) {
+		var hardnessValue = window.document.querySelector("#hardness-value");
+		hardnessSlider.oninput = function(e) {
+			client_Drawing.brushHardness = parseFloat(hardnessSlider.value);
+			return hardnessValue.innerText = Std.string(client_Drawing.brushHardness * 100 | 0) + "%";
+		};
+	}
+	var spacingSlider = window.document.querySelector("#brush-spacing");
+	if(spacingSlider != null) {
+		var spacingValue = window.document.querySelector("#spacing-value");
+		spacingSlider.oninput = function(e) {
+			client_Drawing.brushSpacing = parseFloat(spacingSlider.value);
+			return spacingValue.innerText = Std.string(client_Drawing.brushSpacing * 100 | 0) + "%";
+		};
+	}
+	var scatterSlider = window.document.querySelector("#brush-scatter");
+	if(scatterSlider != null) {
+		var scatterValue = window.document.querySelector("#scatter-value");
+		scatterSlider.oninput = function(e) {
+			client_Drawing.brushScatter = parseFloat(scatterSlider.value);
+			return scatterValue.innerText = Std.string(client_Drawing.brushScatter * 100 | 0) + "%";
+		};
+	}
+	var textureSlider = window.document.querySelector("#brush-texture");
+	if(textureSlider != null) {
+		var textureValue = window.document.querySelector("#texture-value");
+		textureSlider.oninput = function(e) {
+			client_Drawing.brushTexture = parseFloat(textureSlider.value);
+			return textureValue.innerText = Std.string(client_Drawing.brushTexture * 100 | 0) + "%";
+		};
+	}
+	var dynamicsToggle = window.document.querySelector("#brush-dynamics");
+	if(dynamicsToggle != null) {
+		dynamicsToggle.onclick = function(e) {
+			client_Drawing.brushDynamics = !client_Drawing.brushDynamics;
+			var button = dynamicsToggle;
+			if(client_Drawing.brushDynamics) {
+				button.style.background = "#2196F3";
+				return button.innerText = "ON";
+			} else {
+				button.style.background = "#555";
+				return button.innerText = "OFF";
+			}
+		};
+	}
+};
+client_Drawing.applyToolPreset = function(tool) {
+	switch(tool) {
+	case "airbrush":
+		client_Drawing.brushOpacity = 0.6;
+		client_Drawing.brushFlow = 0.3;
+		client_Drawing.brushHardness = 0.1;
+		client_Drawing.brushSpacing = 0.3;
+		client_Drawing.brushScatter = 0.4;
+		client_Drawing.brushTexture = 1.0;
+		break;
+	case "brush":
+		client_Drawing.brushOpacity = 0.8;
+		client_Drawing.brushFlow = 0.7;
+		client_Drawing.brushHardness = 0.6;
+		client_Drawing.brushSpacing = 0.1;
+		client_Drawing.brushScatter = 0.1;
+		client_Drawing.brushTexture = 0.9;
+		break;
+	case "charcoal":
+		client_Drawing.brushOpacity = 0.8;
+		client_Drawing.brushFlow = 0.6;
+		client_Drawing.brushHardness = 0.3;
+		client_Drawing.brushSpacing = 0.15;
+		client_Drawing.brushScatter = 0.6;
+		client_Drawing.brushTexture = 0.4;
+		break;
+	case "eraser":
+		client_Drawing.brushOpacity = 1.0;
+		client_Drawing.brushFlow = 1.0;
+		client_Drawing.brushHardness = 0.7;
+		client_Drawing.brushSpacing = 0.05;
+		client_Drawing.brushScatter = 0.0;
+		client_Drawing.brushTexture = 1.0;
+		break;
+	case "marker":
+		client_Drawing.brushOpacity = 0.7;
+		client_Drawing.brushFlow = 1.0;
+		client_Drawing.brushHardness = 0.9;
+		client_Drawing.brushSpacing = 0.05;
+		client_Drawing.brushScatter = 0.0;
+		client_Drawing.brushTexture = 1.0;
+		break;
+	case "pen":
+		client_Drawing.brushOpacity = 1.0;
+		client_Drawing.brushFlow = 1.0;
+		client_Drawing.brushHardness = 1.0;
+		client_Drawing.brushSpacing = 0.05;
+		client_Drawing.brushScatter = 0.0;
+		client_Drawing.brushTexture = 1.0;
+		break;
+	case "pencil":
+		client_Drawing.brushOpacity = 0.9;
+		client_Drawing.brushFlow = 0.8;
+		client_Drawing.brushHardness = 0.8;
+		client_Drawing.brushSpacing = 0.02;
+		client_Drawing.brushScatter = 0.2;
+		client_Drawing.brushTexture = 0.7;
+		break;
+	case "watercolor":
+		client_Drawing.brushOpacity = 0.5;
+		client_Drawing.brushFlow = 0.4;
+		client_Drawing.brushHardness = 0.2;
+		client_Drawing.brushSpacing = 0.2;
+		client_Drawing.brushScatter = 0.3;
+		client_Drawing.brushTexture = 0.8;
+		break;
+	}
+	client_Drawing.updateBrushControlsUI();
+};
+client_Drawing.updateBrushControlsUI = function() {
+	var opacitySlider = window.document.querySelector("#brush-opacity");
+	var opacityValue = window.document.querySelector("#opacity-value");
+	if(opacitySlider != null && opacityValue != null) {
+		opacitySlider.value = Std.string(client_Drawing.brushOpacity);
+		opacityValue.innerText = Std.string(client_Drawing.brushOpacity * 100 | 0) + "%";
+	}
+	var flowSlider = window.document.querySelector("#brush-flow");
+	var flowValue = window.document.querySelector("#flow-value");
+	if(flowSlider != null && flowValue != null) {
+		flowSlider.value = Std.string(client_Drawing.brushFlow);
+		flowValue.innerText = Std.string(client_Drawing.brushFlow * 100 | 0) + "%";
+	}
+	var hardnessSlider = window.document.querySelector("#brush-hardness");
+	var hardnessValue = window.document.querySelector("#hardness-value");
+	if(hardnessSlider != null && hardnessValue != null) {
+		hardnessSlider.value = Std.string(client_Drawing.brushHardness);
+		hardnessValue.innerText = Std.string(client_Drawing.brushHardness * 100 | 0) + "%";
+	}
+	var spacingSlider = window.document.querySelector("#brush-spacing");
+	var spacingValue = window.document.querySelector("#spacing-value");
+	if(spacingSlider != null && spacingValue != null) {
+		spacingSlider.value = Std.string(client_Drawing.brushSpacing);
+		spacingValue.innerText = Std.string(client_Drawing.brushSpacing * 100 | 0) + "%";
+	}
+	var scatterSlider = window.document.querySelector("#brush-scatter");
+	var scatterValue = window.document.querySelector("#scatter-value");
+	if(scatterSlider != null && scatterValue != null) {
+		scatterSlider.value = Std.string(client_Drawing.brushScatter);
+		scatterValue.innerText = Std.string(client_Drawing.brushScatter * 100 | 0) + "%";
+	}
+	var textureSlider = window.document.querySelector("#brush-texture");
+	var textureValue = window.document.querySelector("#texture-value");
+	if(textureSlider != null && textureValue != null) {
+		textureSlider.value = Std.string(client_Drawing.brushTexture);
+		textureValue.innerText = Std.string(client_Drawing.brushTexture * 100 | 0) + "%";
+	}
+};
 client_Drawing.updateCanvasStyle = function() {
 	if(client_Drawing.currentTool == "eraser") {
 		client_Drawing.ctx.globalCompositeOperation = "destination-out";
@@ -1745,38 +1954,60 @@ client_Drawing.updateBackgroundButtonsState = function() {
 	}
 };
 client_Drawing.updateToolButtonsState = function() {
-	var penButton = window.document.querySelector("#drawing-tool-pen");
-	var eraserButton = window.document.querySelector("#drawing-tool-eraser");
-	penButton.classList.remove("active");
-	eraserButton.classList.remove("active");
-	penButton.style.background = "#555";
-	eraserButton.style.background = "#555";
-	if(client_Drawing.currentTool == "eraser") {
-		eraserButton.classList.add("active");
-		eraserButton.style.background = "#2196F3";
-		var iconElement = eraserButton.querySelector("ion-icon");
+	var toolButtons = window.document.querySelectorAll(".drawing-tool");
+	var _g = 0;
+	var _g1 = toolButtons.length;
+	while(_g < _g1) {
+		var button = toolButtons.item(_g++);
+		button.classList.remove("active");
+		button.style.background = "#555";
+		var iconElement = button.querySelector("ion-icon");
+		if(iconElement != null) {
+			iconElement.setAttribute("style","");
+		}
+	}
+	var id = "#drawing-tool-" + client_Drawing.currentTool;
+	var activeButton = window.document.querySelector(id);
+	if(activeButton != null) {
+		activeButton.classList.add("active");
+		activeButton.style.background = "#2196F3";
+		var iconElement = activeButton.querySelector("ion-icon");
 		if(iconElement != null) {
 			iconElement.setAttribute("style","color: white; font-weight: bold;");
-		}
-		var penIconElement = penButton.querySelector("ion-icon");
-		if(penIconElement != null) {
-			penIconElement.setAttribute("style","");
-		}
-	} else {
-		penButton.classList.add("active");
-		penButton.style.background = "#2196F3";
-		var iconElement = penButton.querySelector("ion-icon");
-		if(iconElement != null) {
-			iconElement.setAttribute("style","color: white; font-weight: bold;");
-		}
-		var eraserIconElement = eraserButton.querySelector("ion-icon");
-		if(eraserIconElement != null) {
-			eraserIconElement.setAttribute("style","");
 		}
 	}
 	var toolsHeader = window.document.querySelector("#drawing-tools-header");
 	if(toolsHeader != null) {
-		toolsHeader.innerHTML = client_Drawing.currentTool == "eraser" ? "📝 Drawing Tools (Eraser)" : "📝 Drawing Tools (Pen)";
+		var toolIcon;
+		switch(client_Drawing.currentTool) {
+		case "airbrush":
+			toolIcon = "💨";
+			break;
+		case "brush":
+			toolIcon = "🖌️";
+			break;
+		case "charcoal":
+			toolIcon = "⚫";
+			break;
+		case "eraser":
+			toolIcon = "🧽";
+			break;
+		case "marker":
+			toolIcon = "🖊️";
+			break;
+		case "pen":
+			toolIcon = "✏️";
+			break;
+		case "pencil":
+			toolIcon = "✏️";
+			break;
+		case "watercolor":
+			toolIcon = "🎨";
+			break;
+		default:
+			toolIcon = "📝";
+		}
+		toolsHeader.innerHTML = "" + toolIcon + " Drawing Tools (" + (client_Drawing.currentTool.charAt(0).toUpperCase() + client_Drawing.currentTool.substring(1)) + ")";
 	}
 };
 client_Drawing.loadDrawing = function() {
@@ -2064,6 +2295,1107 @@ client_Drawing.preventBrowserShortcuts = function(e) {
 	if(alt && key == "tab") {
 		e.preventDefault();
 		e.stopPropagation();
+	}
+};
+client_Drawing.drawPen = function(x1,y1,x2,y2,color,size,pressure) {
+	var effectiveSize = size;
+	var baseAlpha = client_Drawing.brushOpacity;
+	var inkFlow = client_Drawing.brushFlow * 1.2;
+	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+		var minSize = size * 0.08;
+		var normalSize = size * 1.4;
+		if(pressure < 0.5) {
+			effectiveSize = minSize + (normalSize - minSize) * Math.pow(Math.min(pressure * 2.0,1.0),0.6);
+		} else {
+			effectiveSize = normalSize + (size * 2.2 - normalSize) * Math.pow(Math.max(0,(pressure - 0.5) * 2.0),0.8);
+		}
+		baseAlpha = Math.pow(pressure,0.5) * (0.6 + Math.pow(pressure,1.5) * 0.4) * client_Drawing.brushOpacity * inkFlow;
+	}
+	var rgbColor = client_Drawing.hexToRgb(color);
+	var distance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+	var strokeVelocity = distance / Math.max(1,new Date().getTime() - client_Drawing.lastBrushTime);
+	client_Drawing.ctx.globalCompositeOperation = "source-over";
+	if(client_Drawing.brushHardness >= 0.95) {
+		client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha + ")";
+		client_Drawing.ctx.lineWidth = effectiveSize;
+		client_Drawing.ctx.lineCap = "round";
+		client_Drawing.ctx.lineJoin = "round";
+		client_Drawing.ctx.beginPath();
+		client_Drawing.ctx.moveTo(x1,y1);
+		client_Drawing.ctx.lineTo(x2,y2);
+		client_Drawing.ctx.stroke();
+		if(pressure > 0.7 && effectiveSize > 3) {
+			client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha * 0.15 + ")";
+			client_Drawing.ctx.lineWidth = effectiveSize * 0.7;
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.moveTo(x1,y1);
+			client_Drawing.ctx.lineTo(x2,y2);
+			client_Drawing.ctx.stroke();
+		}
+	} else {
+		var aaLayers = Math.ceil((1 - client_Drawing.brushHardness) * 6) + 2;
+		var _g = 0;
+		while(_g < aaLayers) {
+			var layerRatio = _g++ / (aaLayers - 1);
+			client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha * Math.pow(1 - layerRatio,1.8) * client_Drawing.brushHardness + ")";
+			client_Drawing.ctx.lineWidth = effectiveSize * (1.0 + layerRatio * (1 - client_Drawing.brushHardness) * 0.6);
+			client_Drawing.ctx.lineCap = "round";
+			client_Drawing.ctx.lineJoin = "round";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.moveTo(x1,y1);
+			client_Drawing.ctx.lineTo(x2,y2);
+			client_Drawing.ctx.stroke();
+		}
+	}
+	if(client_Drawing.brushTexture < 0.95) {
+		var textureIntensity = (1 - client_Drawing.brushTexture) * (0.7 + Math.min(strokeVelocity * 0.8,1.0) * 0.3);
+		var textureSteps = Math.floor(distance / 1.2) + 2;
+		var _g = 0;
+		var _g1 = textureSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / textureSteps;
+			var texNoise = (client_Drawing.syncRandom.next() - 0.5) * textureIntensity * 2.5;
+			if(client_Drawing.syncRandom.next() < textureIntensity * 0.4) {
+				var dropletSize = effectiveSize * 0.06 * textureIntensity * (0.5 + client_Drawing.syncRandom.next() * 0.5);
+				var dropletAlpha = baseAlpha * 0.4 * textureIntensity * client_Drawing.syncRandom.next();
+				client_Drawing.ctx.fillStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + dropletAlpha + ")";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.arc(x1 + t * (x2 - x1) + texNoise,y1 + t * (y2 - y1) + texNoise,dropletSize,0,Math.PI * 2);
+				client_Drawing.ctx.fill();
+			}
+		}
+	}
+	if(pressure > 0.8 && strokeVelocity < 0.3 && distance > 1) {
+		var poolSteps = Math.floor(distance / 2.5) + 1;
+		var _g = 0;
+		var _g1 = poolSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / poolSteps;
+			var poolX = x1 + t * (x2 - x1);
+			var poolY = y1 + t * (y2 - y1);
+			var poolRadius = effectiveSize * pressure * 0.25 * inkFlow;
+			var poolAlpha = baseAlpha * 0.2 * pressure;
+			var poolGradient = client_Drawing.ctx.createRadialGradient(poolX,poolY,0,poolX,poolY,poolRadius);
+			poolGradient.addColorStop(0,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + poolAlpha + ")");
+			poolGradient.addColorStop(0.6,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + poolAlpha * 0.5 + ")");
+			poolGradient.addColorStop(1,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", 0)");
+			client_Drawing.ctx.fillStyle = poolGradient;
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(poolX,poolY,poolRadius,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+		}
+	}
+	if(pressure > 0.6 && client_Drawing.brushFlow > 0.7) {
+		var bleedSteps = Math.floor(distance / 4) + 1;
+		var _g = 0;
+		var _g1 = bleedSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / bleedSteps;
+			var bleedX = x1 + t * (x2 - x1);
+			var bleedY = y1 + t * (y2 - y1);
+			var bleedCount = Math.floor(pressure * 4) + 2;
+			var _g2 = 0;
+			while(_g2 < bleedCount) {
+				++_g2;
+				var bleedAngle = client_Drawing.syncRandom.next() * Math.PI * 2;
+				var bleedDist = client_Drawing.syncRandom.next() * effectiveSize * 0.3 * pressure;
+				var microX = bleedX + Math.cos(bleedAngle) * bleedDist;
+				var microY = bleedY + Math.sin(bleedAngle) * bleedDist;
+				var microSize = client_Drawing.syncRandom.next() * 0.8 + 0.3;
+				var microAlpha = baseAlpha * 0.15 * pressure * client_Drawing.syncRandom.next();
+				client_Drawing.ctx.fillStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + microAlpha + ")";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.arc(microX,microY,microSize,0,Math.PI * 2);
+				client_Drawing.ctx.fill();
+			}
+		}
+	}
+};
+client_Drawing.drawBrush = function(x1,y1,x2,y2,color,size,pressure) {
+	var effectiveSize = size;
+	var baseAlpha = client_Drawing.brushOpacity * client_Drawing.brushFlow * 0.35;
+	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+		effectiveSize = size * (0.3 + pressure * 0.7);
+		baseAlpha *= 0.5 + pressure * 0.5;
+	}
+	var rgbColor = client_Drawing.hexToRgb(color);
+	var distance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+	var brushAngle = Math.atan2(y2 - y1,x2 - x1);
+	var strokeSpeed = distance / Math.max(1,new Date().getTime() - client_Drawing.lastBrushTime);
+	var bristleCount = Math.floor(effectiveSize * 1.2) + 5;
+	var bristleSpread = effectiveSize * 0.85;
+	client_Drawing.ctx.globalCompositeOperation = "source-over";
+	var _g = 0;
+	while(_g < 3) {
+		var group = _g++;
+		var groupRadius = bristleSpread * (group + 1) / 3;
+		var groupBristles = Math.floor(bristleCount * (1 - group * 0.2) / 3);
+		var _g1 = 0;
+		var _g2 = groupBristles | 0;
+		while(_g1 < _g2) {
+			var bristleAngle = _g1++ / groupBristles * Math.PI * 2;
+			var bristleRadius = groupRadius * (0.7 + client_Drawing.syncRandom.next() * 0.6);
+			var bristleBaseX = x1 + Math.cos(bristleAngle) * bristleRadius;
+			var bristleBaseY = y1 + Math.sin(bristleAngle) * bristleRadius;
+			var bendStrength = pressure * 0.4 + Math.min(strokeSpeed * 0.01,0.3);
+			var bristleTipX = x2 + Math.cos(bristleAngle) * bristleRadius * (1 - bendStrength * 0.5) + Math.cos(brushAngle) * bendStrength * bristleRadius * 0.3;
+			var bristleTipY = y2 + Math.sin(bristleAngle) * bristleRadius * (1 - bendStrength * 0.5) + Math.sin(brushAngle) * bendStrength * bristleRadius * 0.3;
+			var distanceFromCenter = bristleRadius / bristleSpread;
+			var effectivePaintLoad = Math.max(0.4,1.0 - distanceFromCenter * 0.4) * client_Drawing.brushFlow * (0.8 + client_Drawing.syncRandom.next() * 0.4) * (1 - Math.min(distance * 0.002,0.3));
+			var bristleAlpha = baseAlpha * effectivePaintLoad * (0.9 + pressure * 0.3);
+			var bristleThickness = effectiveSize * (0.08 + effectivePaintLoad * 0.12) * (1.2 - distanceFromCenter * 0.5);
+			var bristleLayers = Math.max(1,Math.floor(effectivePaintLoad * 3)) | 0;
+			var _g3 = 0;
+			while(_g3 < bristleLayers) {
+				var layer = _g3++;
+				var textureNoise = (client_Drawing.syncRandom.next() - 0.5) * 0.4;
+				client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + bristleAlpha * (1 - layer * 0.2) / bristleLayers + ")";
+				client_Drawing.ctx.lineWidth = bristleThickness * (1 + layer * 0.3);
+				client_Drawing.ctx.lineCap = "round";
+				client_Drawing.ctx.lineJoin = "round";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.moveTo(bristleBaseX + textureNoise,bristleBaseY + textureNoise);
+				client_Drawing.ctx.lineTo(bristleTipX + textureNoise * 0.7,bristleTipY + textureNoise * 0.7);
+				client_Drawing.ctx.stroke();
+			}
+		}
+	}
+	if(client_Drawing.brushFlow > 0.5 && pressure > 0.6) {
+		var poolingSteps = Math.floor(distance / 3) + 1;
+		var _g = 0;
+		var _g1 = poolingSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / poolingSteps;
+			var poolX = x1 + t * (x2 - x1);
+			var poolY = y1 + t * (y2 - y1);
+			var poolRadius = effectiveSize * client_Drawing.brushFlow * 0.3 * pressure;
+			var poolGradient = client_Drawing.ctx.createRadialGradient(poolX,poolY,0,poolX,poolY,poolRadius);
+			var poolAlpha = baseAlpha * 0.4 * client_Drawing.brushFlow * pressure;
+			poolGradient.addColorStop(0,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + poolAlpha + ")");
+			poolGradient.addColorStop(0.6,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + poolAlpha * 0.6 + ")");
+			poolGradient.addColorStop(1,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", 0)");
+			client_Drawing.ctx.fillStyle = poolGradient;
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(poolX,poolY,poolRadius,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+		}
+	}
+	if(client_Drawing.brushTexture > 0.3 && client_Drawing.syncRandom.next() < 0.6) {
+		var textureSteps = Math.floor(distance / 1.5) + 2;
+		var _g = 0;
+		var _g1 = textureSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / textureSteps;
+			var texX = x1 + t * (x2 - x1) + (client_Drawing.syncRandom.next() - 0.5) * client_Drawing.brushScatter * 4;
+			var texY = y1 + t * (y2 - y1) + (client_Drawing.syncRandom.next() - 0.5) * client_Drawing.brushScatter * 4;
+			var impastoHeight = pressure * client_Drawing.brushTexture * 0.8;
+			if(client_Drawing.syncRandom.next() < impastoHeight) {
+				var texSize = effectiveSize * 0.08 * client_Drawing.brushTexture * (1 + impastoHeight);
+				var texAlpha = baseAlpha * 0.5 * client_Drawing.brushTexture * client_Drawing.syncRandom.next();
+				var mixR = Math.floor(rgbColor.r * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.08));
+				var mixG = Math.floor(rgbColor.g * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.08));
+				var mixB = Math.floor(rgbColor.b * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.08));
+				client_Drawing.ctx.fillStyle = "rgba(" + Math.max(0,Math.min(255,mixR)) + ", " + Math.max(0,Math.min(255,mixG)) + ", " + Math.max(0,Math.min(255,mixB)) + ", " + texAlpha + ")";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.arc(texX,texY,texSize,0,Math.PI * 2);
+				client_Drawing.ctx.fill();
+			}
+		}
+	}
+	var coreSteps = Math.max(2,Math.floor(distance / 1.2));
+	var _g = 0;
+	var _g1 = coreSteps | 0;
+	while(_g < _g1) {
+		var i = _g++;
+		var t = i / coreSteps;
+		var nextT = Math.min(1.0,(i + 1) / coreSteps);
+		var paintDensity = 1.0 - t * 0.1;
+		client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha * 0.9 * paintDensity + ")";
+		client_Drawing.ctx.lineWidth = effectiveSize * (0.7 + pressure * 0.4) * paintDensity;
+		client_Drawing.ctx.lineCap = "round";
+		client_Drawing.ctx.lineJoin = "round";
+		client_Drawing.ctx.beginPath();
+		client_Drawing.ctx.moveTo(x1 + t * (x2 - x1),y1 + t * (y2 - y1));
+		client_Drawing.ctx.lineTo(x1 + nextT * (x2 - x1),y1 + nextT * (y2 - y1));
+		client_Drawing.ctx.stroke();
+	}
+	if(pressure > 0.8 && strokeSpeed > 0.1) {
+		var splatterCount = Math.floor(client_Drawing.syncRandom.next() * 3) + 1;
+		var _g = 0;
+		while(_g < splatterCount) {
+			++_g;
+			var splatterAngle = brushAngle + (client_Drawing.syncRandom.next() - 0.5) * 1.2;
+			var splatterDistance = client_Drawing.syncRandom.next() * effectiveSize * 1.5;
+			var splatterX = x2 + Math.cos(splatterAngle) * splatterDistance;
+			var splatterY = y2 + Math.sin(splatterAngle) * splatterDistance;
+			var splatterSize = client_Drawing.syncRandom.next() * 2.2 + 0.8;
+			var splatterAlpha = baseAlpha * 0.3 * pressure * client_Drawing.syncRandom.next();
+			client_Drawing.ctx.fillStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + splatterAlpha + ")";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(splatterX,splatterY,splatterSize,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+		}
+	}
+};
+client_Drawing.drawAirbrush = function(x1,y1,x2,y2,color,size,pressure) {
+	var effectiveSize = size * 3.5;
+	var sprayIntensity = pressure * client_Drawing.brushFlow * 0.15;
+	var sprayDensity = pressure * client_Drawing.brushOpacity * 1.2;
+	var airPressure = Math.pow(pressure,0.8);
+	var rgbColor = client_Drawing.hexToRgb(color);
+	var distance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+	var steps = Math.max(1,Math.floor(distance / (client_Drawing.brushSpacing * 1.5)));
+	var strokeVelocity = distance / Math.max(1,new Date().getTime() - client_Drawing.lastBrushTime);
+	client_Drawing.ctx.globalCompositeOperation = "source-over";
+	var _g = 0;
+	var _g1 = steps | 0;
+	while(_g < _g1) {
+		var t = _g++ / steps;
+		var sprayX = x1 + t * (x2 - x1);
+		var sprayY = y1 + t * (y2 - y1);
+		var baseParticleCount = effectiveSize * sprayIntensity * sprayDensity * 4;
+		var _g2 = 0;
+		while(_g2 < 6) {
+			var ring = _g2++;
+			var ringRadius = effectiveSize * (ring + 1) / 6;
+			var ringDensity = Math.pow(1.0 - ring * 0.18,2.2);
+			var ringParticles = baseParticleCount * ringDensity / 6 | 0;
+			var ringIntensity = sprayIntensity * ringDensity;
+			var _g3 = 0;
+			while(_g3 < ringParticles) {
+				++_g3;
+				var angle = client_Drawing.syncRandom.next() * Math.PI * 2;
+				var particleDistance = 0.0;
+				var _g4 = 0;
+				while(_g4 < 3) {
+					var octaveWeight = Math.pow(0.5,_g4++);
+					particleDistance += (client_Drawing.syncRandom.next() - 0.5) * octaveWeight;
+				}
+				particleDistance = Math.abs(particleDistance) * ringRadius * 0.9;
+				var velocitySpread = Math.min(strokeVelocity * 0.4,1.0);
+				var turbulence = (client_Drawing.syncRandom.next() - 0.5) * client_Drawing.brushScatter * 8 * (1 + velocitySpread);
+				var finalDistance = particleDistance * (airPressure * (1 + velocitySpread * 0.5));
+				var particleX = sprayX + Math.cos(angle) * finalDistance + turbulence;
+				var particleY = sprayY + Math.sin(angle) * finalDistance + turbulence;
+				var baseSize = 0.4 + client_Drawing.syncRandom.next() * 2.2;
+				var falloffFactor = Math.max(0,1 - Math.sqrt((particleX - sprayX) * (particleX - sprayX) + (particleY - sprayY) * (particleY - sprayY)) / (effectiveSize * 0.8));
+				var particleSize = baseSize * Math.max(0.3,1.0 - (airPressure - 0.3) * 0.4) * (0.6 + falloffFactor * 0.7);
+				var pressureOpacity = ringIntensity * falloffFactor * (0.5 + client_Drawing.syncRandom.next() * 0.5) * client_Drawing.brushOpacity * airPressure;
+				var densityVariation = client_Drawing.syncRandom.next() * 0.12;
+				var colorR = Math.floor(rgbColor.r * (1 + (client_Drawing.syncRandom.next() - 0.5) * densityVariation));
+				var colorG = Math.floor(rgbColor.g * (1 + (client_Drawing.syncRandom.next() - 0.5) * densityVariation));
+				var colorB = Math.floor(rgbColor.b * (1 + (client_Drawing.syncRandom.next() - 0.5) * densityVariation));
+				if(pressureOpacity > 0.01) {
+					client_Drawing.ctx.fillStyle = "rgba(" + Math.max(0,Math.min(255,colorR)) + ", " + Math.max(0,Math.min(255,colorG)) + ", " + Math.max(0,Math.min(255,colorB)) + ", " + pressureOpacity + ")";
+					client_Drawing.ctx.beginPath();
+					client_Drawing.ctx.arc(particleX,particleY,particleSize,0,Math.PI * 2);
+					client_Drawing.ctx.fill();
+				}
+			}
+		}
+		var coreSize = effectiveSize * 0.18 * airPressure;
+		var coreGradient = client_Drawing.ctx.createRadialGradient(sprayX,sprayY,0,sprayX,sprayY,coreSize);
+		var coreAlpha = sprayIntensity * client_Drawing.brushOpacity * airPressure * 1.1;
+		coreGradient.addColorStop(0,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + coreAlpha + ")");
+		coreGradient.addColorStop(0.3,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + coreAlpha * 0.8 + ")");
+		coreGradient.addColorStop(0.7,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + coreAlpha * 0.4 + ")");
+		coreGradient.addColorStop(1,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", 0)");
+		client_Drawing.ctx.fillStyle = coreGradient;
+		client_Drawing.ctx.beginPath();
+		client_Drawing.ctx.arc(sprayX,sprayY,coreSize,0,Math.PI * 2);
+		client_Drawing.ctx.fill();
+		if(airPressure > 0.7) {
+			var oversprayCount = Math.floor(airPressure * 6) + 2;
+			var _g5 = 0;
+			while(_g5 < oversprayCount) {
+				++_g5;
+				var oversprayAngle = client_Drawing.syncRandom.next() * Math.PI * 2;
+				var oversprayDistance = (client_Drawing.syncRandom.next() + 0.5) * effectiveSize * 1.2 * airPressure;
+				var oversprayX = sprayX + Math.cos(oversprayAngle) * oversprayDistance;
+				var oversprayY = sprayY + Math.sin(oversprayAngle) * oversprayDistance;
+				var overspraySize = client_Drawing.syncRandom.next() * 1.8 + 0.4;
+				var oversprayAlpha = sprayIntensity * 0.25 * airPressure * client_Drawing.syncRandom.next();
+				client_Drawing.ctx.fillStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + oversprayAlpha + ")";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.arc(oversprayX,oversprayY,overspraySize,0,Math.PI * 2);
+				client_Drawing.ctx.fill();
+			}
+		}
+		if(airPressure > 0.8 && Math.abs(y2 - y1) > Math.abs(x2 - x1) && client_Drawing.syncRandom.next() < 0.3) {
+			var dripLength = client_Drawing.syncRandom.next() * effectiveSize * 0.6 * airPressure;
+			var dripX = sprayX + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 0.3;
+			var dripEndY = sprayY + dripLength;
+			var dripGradient = client_Drawing.ctx.createLinearGradient(dripX,sprayY,dripX,dripEndY);
+			var dripAlpha = sprayIntensity * 0.4 * airPressure;
+			dripGradient.addColorStop(0,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + dripAlpha + ")");
+			dripGradient.addColorStop(0.8,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + dripAlpha * 0.5 + ")");
+			dripGradient.addColorStop(1,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", 0)");
+			client_Drawing.ctx.strokeStyle = dripGradient;
+			var tmp = client_Drawing.syncRandom.next() * 2;
+			client_Drawing.ctx.lineWidth = tmp + 0.5;
+			client_Drawing.ctx.lineCap = "round";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.moveTo(dripX,sprayY);
+			client_Drawing.ctx.lineTo(dripX,dripEndY);
+			client_Drawing.ctx.stroke();
+		}
+	}
+};
+client_Drawing.drawMarker = function(x1,y1,x2,y2,color,size,pressure) {
+	var effectiveSize = size;
+	var baseAlpha = 0.85 * client_Drawing.brushOpacity;
+	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+		effectiveSize = size * (0.2 + pressure * 1.1);
+		baseAlpha = (0.4 + pressure * 0.8) * client_Drawing.brushOpacity;
+	}
+	var rgbColor = client_Drawing.hexToRgb(color);
+	var distance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+	var strokeVelocity = distance / Math.max(1,new Date().getTime() - client_Drawing.lastBrushTime);
+	var perpAngle = Math.atan2(y2 - y1,x2 - x1) + Math.PI / 2;
+	client_Drawing.ctx.globalCompositeOperation = "multiply";
+	var fiberDensity = Math.floor(effectiveSize * 1.2) + 5;
+	var fiberSpread = effectiveSize * 1.1;
+	var _g = 0;
+	while(_g < 3) {
+		var layer = _g++;
+		var layerOffset = layer * 0.3;
+		var layerAlpha = baseAlpha * (1 - layer * 0.2) / 3;
+		var _g1 = 0;
+		var _g2 = fiberDensity | 0;
+		while(_g1 < _g2) {
+			var fiberPos = (_g1++ - fiberDensity / 2) / (fiberDensity / 2);
+			var fiberOffset = fiberPos * fiberSpread * 0.45;
+			var inkLoad = Math.max(0.2,Math.pow(1.0 - Math.abs(fiberPos),1.5)) * (0.7 + client_Drawing.syncRandom.next() * 0.6);
+			var fiberSpread1 = Math.max(0.1,pressure * 1.2);
+			var fiberNoise = (client_Drawing.syncRandom.next() - 0.5) * fiberSpread1;
+			var bendOffset = pressure * strokeVelocity * 0.8 * (client_Drawing.syncRandom.next() - 0.5);
+			var fiberX1 = x1 + Math.cos(perpAngle) * (fiberOffset + fiberNoise) + layerOffset;
+			var fiberY1 = y1 + Math.sin(perpAngle) * (fiberOffset + fiberNoise) + layerOffset;
+			var fiberX2 = x2 + Math.cos(perpAngle) * (fiberOffset + fiberNoise * 0.6 + bendOffset);
+			var fiberY2 = y2 + Math.sin(perpAngle) * (fiberOffset + fiberNoise * 0.6 + bendOffset);
+			client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + layerAlpha * inkLoad * (0.6 + pressure * 0.5) + ")";
+			client_Drawing.ctx.lineWidth = effectiveSize * 0.08 * inkLoad * (1 + pressure * 0.4);
+			client_Drawing.ctx.lineCap = "round";
+			client_Drawing.ctx.lineJoin = "round";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.moveTo(fiberX1,fiberY1);
+			client_Drawing.ctx.lineTo(fiberX2,fiberY2);
+			client_Drawing.ctx.stroke();
+		}
+	}
+	if(pressure > 0.4) {
+		var bleedSteps = Math.max(3,Math.floor(distance / 1.8));
+		var _g = 0;
+		var _g1 = bleedSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / bleedSteps;
+			var bleedX = x1 + t * (x2 - x1);
+			var bleedY = y1 + t * (y2 - y1);
+			var capillaryCount = Math.floor(pressure * 8) + 3;
+			var _g2 = 0;
+			while(_g2 < capillaryCount) {
+				++_g2;
+				var capillaryAngle = client_Drawing.syncRandom.next() * Math.PI * 2;
+				var capillaryLength = client_Drawing.syncRandom.next() * effectiveSize * 0.6 * pressure;
+				var bleedSteps2 = Math.floor(capillaryLength / 2) + 2;
+				var _g3 = 0;
+				var _g4 = bleedSteps2 | 0;
+				while(_g3 < _g4) {
+					var bleedT = _g3++ / bleedSteps2;
+					var capillaryX = bleedX + Math.cos(capillaryAngle) * capillaryLength * bleedT;
+					var capillaryY = bleedY + Math.sin(capillaryAngle) * capillaryLength * bleedT;
+					var bleedSize = Math.max(0.2,client_Drawing.syncRandom.next() * 2.0 * (1 - bleedT));
+					var bleedAlpha = baseAlpha * 0.25 * pressure * (1 - bleedT) * client_Drawing.syncRandom.next();
+					client_Drawing.ctx.fillStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + bleedAlpha + ")";
+					client_Drawing.ctx.beginPath();
+					client_Drawing.ctx.arc(capillaryX,capillaryY,bleedSize,0,Math.PI * 2);
+					client_Drawing.ctx.fill();
+				}
+			}
+		}
+	}
+	var mainStrokeAlpha = baseAlpha * 0.95;
+	var mainStrokeSize = effectiveSize * (0.7 + pressure * 0.5);
+	var tipGradient = client_Drawing.ctx.createLinearGradient(x1 - Math.cos(perpAngle) * mainStrokeSize * 0.5,y1 - Math.sin(perpAngle) * mainStrokeSize * 0.5,x1 + Math.cos(perpAngle) * mainStrokeSize * 0.5,y1 + Math.sin(perpAngle) * mainStrokeSize * 0.5);
+	tipGradient.addColorStop(0,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + mainStrokeAlpha * 0.6 + ")");
+	tipGradient.addColorStop(0.5,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + mainStrokeAlpha + ")");
+	tipGradient.addColorStop(1,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + mainStrokeAlpha * 0.6 + ")");
+	client_Drawing.ctx.strokeStyle = tipGradient;
+	client_Drawing.ctx.lineWidth = mainStrokeSize;
+	client_Drawing.ctx.lineCap = "square";
+	client_Drawing.ctx.lineJoin = "miter";
+	client_Drawing.ctx.beginPath();
+	client_Drawing.ctx.moveTo(x1,y1);
+	client_Drawing.ctx.lineTo(x2,y2);
+	client_Drawing.ctx.stroke();
+	if(pressure < 0.5 && client_Drawing.syncRandom.next() < 0.8) {
+		var dryStreakCount = Math.floor(effectiveSize * 0.4) + 3;
+		var _g = 0;
+		while(_g < dryStreakCount) {
+			++_g;
+			var streakPos = (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 0.9;
+			client_Drawing.syncRandom.next();
+			var streakX1 = x1 + Math.cos(perpAngle) * streakPos;
+			var streakY1 = y1 + Math.sin(perpAngle) * streakPos;
+			var streakX2 = x2 + Math.cos(perpAngle) * streakPos;
+			var streakY2 = y2 + Math.sin(perpAngle) * streakPos;
+			if(client_Drawing.syncRandom.next() < 0.5) {
+				continue;
+			}
+			var streakSegments = Math.floor(distance / 3) + 2;
+			var _g1 = 0;
+			var _g2 = streakSegments | 0;
+			while(_g1 < _g2) {
+				var seg = _g1++;
+				if(client_Drawing.syncRandom.next() < 0.3) {
+					continue;
+				}
+				var segT1 = seg / streakSegments;
+				var segT2 = Math.min(1.0,(seg + 0.7) / streakSegments);
+				var streakAlpha = baseAlpha * 0.4 * (1 - pressure) * client_Drawing.syncRandom.next();
+				client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + streakAlpha + ")";
+				client_Drawing.ctx.lineWidth = effectiveSize * 0.06;
+				client_Drawing.ctx.lineCap = "round";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.moveTo(streakX1 + segT1 * (streakX2 - streakX1),streakY1 + segT1 * (streakY2 - streakY1));
+				client_Drawing.ctx.lineTo(streakX1 + segT2 * (streakX2 - streakX1),streakY1 + segT2 * (streakY2 - streakY1));
+				client_Drawing.ctx.stroke();
+			}
+		}
+	}
+	if(pressure > 0.7 && strokeVelocity < 0.2) {
+		var poolSteps = Math.floor(distance / 4) + 1;
+		var _g = 0;
+		var _g1 = poolSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / poolSteps;
+			var poolX = x1 + t * (x2 - x1);
+			var poolY = y1 + t * (y2 - y1);
+			var poolRadius = effectiveSize * pressure * 0.35;
+			var poolAlpha = baseAlpha * 0.2 * pressure;
+			var poolGradient = client_Drawing.ctx.createRadialGradient(poolX,poolY,0,poolX,poolY,poolRadius);
+			poolGradient.addColorStop(0,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + poolAlpha + ")");
+			poolGradient.addColorStop(0.7,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + poolAlpha * 0.5 + ")");
+			poolGradient.addColorStop(1,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", 0)");
+			client_Drawing.ctx.fillStyle = poolGradient;
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(poolX,poolY,poolRadius,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+		}
+	}
+	var overlayAlpha = baseAlpha * 0.3;
+	client_Drawing.ctx.globalCompositeOperation = "source-over";
+	var overlayGradient = client_Drawing.ctx.createLinearGradient(x1 - Math.cos(perpAngle) * effectiveSize * 0.5,y1 - Math.sin(perpAngle) * effectiveSize * 0.5,x1 + Math.cos(perpAngle) * effectiveSize * 0.5,y1 + Math.sin(perpAngle) * effectiveSize * 0.5);
+	overlayGradient.addColorStop(0,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + overlayAlpha * 0.5 + ")");
+	overlayGradient.addColorStop(0.5,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + overlayAlpha + ")");
+	overlayGradient.addColorStop(1,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + overlayAlpha * 0.5 + ")");
+	client_Drawing.ctx.strokeStyle = overlayGradient;
+	client_Drawing.ctx.lineWidth = effectiveSize * 0.8;
+	client_Drawing.ctx.lineCap = "square";
+	client_Drawing.ctx.lineJoin = "miter";
+	client_Drawing.ctx.beginPath();
+	client_Drawing.ctx.moveTo(x1,y1);
+	client_Drawing.ctx.lineTo(x2,y2);
+	client_Drawing.ctx.stroke();
+};
+client_Drawing.drawPencil = function(x1,y1,x2,y2,color,size,pressure) {
+	var effectiveSize = size * 0.75;
+	var baseAlpha = 0.85 * client_Drawing.brushOpacity;
+	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+		effectiveSize = size * (0.1 + pressure * 0.8);
+		baseAlpha = (0.2 + pressure * 0.7) * client_Drawing.brushOpacity;
+	}
+	var rgbColor = client_Drawing.hexToRgb(color);
+	var distance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+	var strokeAngle = Math.atan2(y2 - y1,x2 - x1);
+	var perpAngle = strokeAngle + Math.PI / 2;
+	var grainSteps = Math.max(5,Math.floor(distance / 0.25));
+	client_Drawing.ctx.globalCompositeOperation = "multiply";
+	client_Drawing.ctx.lineCap = "round";
+	client_Drawing.ctx.lineJoin = "round";
+	var _g = 0;
+	var _g1 = grainSteps | 0;
+	while(_g < _g1) {
+		var t = _g++ / grainSteps;
+		var baseX = x1 + t * (x2 - x1);
+		var baseY = y1 + t * (y2 - y1);
+		var paperTooth = (Math.sin(baseX * 0.4 + baseY * 0.35) * Math.cos(baseX * 0.8 - baseY * 0.6) * 0.5 + Math.sin(baseX * 1.3 + baseY * 0.95) * Math.cos(baseX * 1.1 + baseY * 1.25) * 0.3 + Math.sin(baseX * 3.2 - baseY * 2.4) * Math.cos(baseX * 3.8 + baseY * 3.1) * 0.15 + Math.sin(baseX * 6.1 + baseY * 4.7) * Math.cos(baseX * 5.9 - baseY * 5.3) * 0.05) * client_Drawing.brushTexture * 2.2;
+		var toothHeight = 0.5 + paperTooth * 0.6;
+		var graphiteCatch = Math.max(0,toothHeight + pressure * 0.5);
+		if(client_Drawing.syncRandom.next() < graphiteCatch) {
+			var fiberDirection = Math.sin(baseX * 0.15) * Math.cos(baseY * 0.18);
+			var fiberY = Math.sin(perpAngle + fiberDirection * 0.3) * paperTooth * 1.5;
+			var grainX = baseX + Math.cos(perpAngle + fiberDirection * 0.3) * paperTooth * 1.5 + (client_Drawing.syncRandom.next() - 0.5) * 0.6;
+			var grainY = baseY + fiberY + (client_Drawing.syncRandom.next() - 0.5) * 0.6;
+			var particleCount = Math.floor(pressure * 6) + 2;
+			var _g2 = 0;
+			while(_g2 < particleCount) {
+				++_g2;
+				var clusterSpread = effectiveSize * 0.15;
+				var particleX = grainX + (client_Drawing.syncRandom.next() - 0.5) * clusterSpread;
+				var particleY = grainY + (client_Drawing.syncRandom.next() - 0.5) * clusterSpread;
+				var particleSize = effectiveSize * (0.02 + client_Drawing.syncRandom.next() * 0.08) * Math.max(0.3,pressure) * toothHeight;
+				var depositIntensity = baseAlpha * graphiteCatch * (0.6 + client_Drawing.syncRandom.next() * 0.5) * (0.7 + pressure * 0.5);
+				var crystalShine = client_Drawing.syncRandom.next();
+				var particleAlpha = depositIntensity;
+				if(crystalShine > 0.92 && pressure > 0.8) {
+					particleAlpha = depositIntensity * 1.4;
+				} else if(crystalShine < 0.2) {
+					particleAlpha = depositIntensity * 0.6;
+				}
+				var streakLength = client_Drawing.syncRandom.next() * 0.8 + 0.2;
+				var streakAngle = strokeAngle + (client_Drawing.syncRandom.next() - 0.5) * 0.4;
+				var streakEndX = particleX + Math.cos(streakAngle) * streakLength;
+				var streakEndY = particleY + Math.sin(streakAngle) * streakLength;
+				client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + particleAlpha + ")";
+				client_Drawing.ctx.lineWidth = particleSize;
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.moveTo(particleX,particleY);
+				client_Drawing.ctx.lineTo(streakEndX,streakEndY);
+				client_Drawing.ctx.stroke();
+			}
+		}
+	}
+	var coreSteps = Math.max(3,Math.floor(distance / 0.8));
+	var _g = 0;
+	var _g1 = coreSteps | 0;
+	while(_g < _g1) {
+		var i = _g++;
+		var t = i / coreSteps;
+		var nextT = Math.min(1.0,(i + 1) / coreSteps);
+		var coreDensity = 0.8 + (client_Drawing.syncRandom.next() - 0.5) * 0.12000000000000002 + pressure * 0.3;
+		var coreSize = effectiveSize * (0.6 + pressure * 0.5) * Math.max(0.5,coreDensity);
+		client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha * Math.max(0.3,coreDensity) * 0.7 + ")";
+		client_Drawing.ctx.lineWidth = coreSize;
+		client_Drawing.ctx.beginPath();
+		client_Drawing.ctx.moveTo(x1 + t * (x2 - x1),y1 + t * (y2 - y1));
+		client_Drawing.ctx.lineTo(x1 + nextT * (x2 - x1),y1 + nextT * (y2 - y1));
+		client_Drawing.ctx.stroke();
+	}
+	if(pressure > 0.6 && client_Drawing.syncRandom.next() < 0.5) {
+		var sheenAlpha = baseAlpha * 0.12 * ((pressure - 0.6) * 2.5);
+		var sheenSize = effectiveSize * 0.25;
+		client_Drawing.ctx.globalCompositeOperation = "screen";
+		client_Drawing.ctx.strokeStyle = "rgba(" + 240 + ", " + 240 + ", " + 240 + ", " + sheenAlpha + ")";
+		client_Drawing.ctx.lineWidth = sheenSize;
+		client_Drawing.ctx.beginPath();
+		client_Drawing.ctx.moveTo(x1,y1);
+		client_Drawing.ctx.lineTo(x2,y2);
+		client_Drawing.ctx.stroke();
+		client_Drawing.ctx.globalCompositeOperation = "screen";
+		client_Drawing.ctx.strokeStyle = "rgba(" + 220 + ", " + 220 + ", " + 220 + ", " + sheenAlpha * 0.6 + ")";
+		client_Drawing.ctx.lineWidth = sheenSize * 1.3;
+		client_Drawing.ctx.beginPath();
+		client_Drawing.ctx.moveTo(x1 + 0.3,y1 + 0.3);
+		client_Drawing.ctx.lineTo(x2 + 0.3,y2 + 0.3);
+		client_Drawing.ctx.stroke();
+		client_Drawing.ctx.globalCompositeOperation = "multiply";
+	}
+	if(pressure < 0.3 && client_Drawing.syncRandom.next() < 0.6) {
+		var dragSteps = Math.floor(distance / 1.2) + 1;
+		var _g = 0;
+		var _g1 = dragSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / dragSteps;
+			var dragX = x1 + t * (x2 - x1) + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 0.8;
+			var dragY = y1 + t * (y2 - y1) + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 0.8;
+			if(client_Drawing.syncRandom.next() < 0.3) {
+				var dragSize = effectiveSize * 0.05 * client_Drawing.syncRandom.next();
+				var dragAlpha = baseAlpha * 0.4 * pressure * client_Drawing.syncRandom.next();
+				client_Drawing.ctx.fillStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + dragAlpha + ")";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.arc(dragX,dragY,dragSize,0,Math.PI * 2);
+				client_Drawing.ctx.fill();
+			}
+		}
+	}
+};
+client_Drawing.drawCharcoal = function(x1,y1,x2,y2,color,size,pressure) {
+	var effectiveSize = size * 1.6;
+	var baseAlpha = 0.75 * client_Drawing.brushOpacity;
+	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+		effectiveSize = size * (0.5 + pressure * 1.2);
+		baseAlpha = (0.4 + pressure * 0.7) * client_Drawing.brushOpacity;
+	}
+	var rgbColor = client_Drawing.hexToRgb(color);
+	var distance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+	var strokeAngle = Math.atan2(y2 - y1,x2 - x1);
+	var perpAngle = strokeAngle + Math.PI / 2;
+	client_Drawing.ctx.globalCompositeOperation = "multiply";
+	var paperToothSteps = Math.max(8,Math.floor(distance / 0.3));
+	var _g = 0;
+	var _g1 = paperToothSteps | 0;
+	while(_g < _g1) {
+		var t = _g++ / paperToothSteps;
+		var baseX = x1 + t * (x2 - x1);
+		var baseY = y1 + t * (y2 - y1);
+		var paperHeight = 0.5 + (Math.sin(baseX * 0.35 + baseY * 0.28) * Math.cos(baseX * 0.73 - baseY * 0.51) * 0.45 + Math.sin(baseX * 1.17 + baseY * 0.94) * Math.cos(baseX * 1.33 + baseY * 1.28) * 0.3 + Math.sin(baseX * 2.91 - baseY * 2.15) * Math.cos(baseX * 3.42 + baseY * 2.87) * 0.15 + Math.sin(baseX * 5.23 + baseY * 4.61) * Math.cos(baseX * 6.11 - baseY * 5.77) * 0.1) * client_Drawing.brushTexture * 0.7;
+		var charcoalContact = Math.max(0,paperHeight + pressure * 0.6 - 0.3);
+		if(client_Drawing.syncRandom.next() < charcoalContact * 1.2) {
+			var _g2 = 0;
+			var _g3 = Math.floor(effectiveSize * 0.5 * charcoalContact) + 3 | 0;
+			while(_g2 < _g3) {
+				++_g2;
+				var clusterSpread = effectiveSize * 0.4;
+				var scatterX = baseX + (client_Drawing.syncRandom.next() - 0.5) * clusterSpread;
+				var scatterY = baseY + (client_Drawing.syncRandom.next() - 0.5) * clusterSpread;
+				var particleDirection = strokeAngle + (client_Drawing.syncRandom.next() - 0.5) * 0.6;
+				var particleLength = (0.5 + client_Drawing.syncRandom.next() * 2.5) * pressure * charcoalContact;
+				var streakEndX = scatterX + Math.cos(particleDirection) * particleLength;
+				var streakEndY = scatterY + Math.sin(particleDirection) * particleLength;
+				var particleSize = (0.3 + client_Drawing.syncRandom.next() * 1.8) * pressure * charcoalContact * (1 + paperHeight * 0.3);
+				var finalIntensity = baseAlpha * charcoalContact * (0.6 + client_Drawing.syncRandom.next() * 0.6) * client_Drawing.brushTexture * (0.7 + client_Drawing.syncRandom.next() * 0.5);
+				client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + finalIntensity + ")";
+				client_Drawing.ctx.lineWidth = particleSize;
+				client_Drawing.ctx.lineCap = "round";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.moveTo(scatterX,scatterY);
+				client_Drawing.ctx.lineTo(streakEndX,streakEndY);
+				client_Drawing.ctx.stroke();
+			}
+		}
+	}
+	var bodySteps = Math.max(4,Math.floor(distance / 1.0));
+	var _g = 0;
+	var _g1 = bodySteps | 0;
+	while(_g < _g1) {
+		var i = _g++;
+		var t = i / bodySteps;
+		var nextT = Math.min(1.0,(i + 1) / bodySteps);
+		var totalVariation = Math.sin(t * distance * 0.3) * effectiveSize * 0.3 + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 0.5;
+		var perpOffsetX = Math.cos(perpAngle) * totalVariation;
+		var perpOffsetY = Math.sin(perpAngle) * totalVariation;
+		var materialDensity = 0.6 + client_Drawing.syncRandom.next() * 0.6 + pressure * 0.4;
+		client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha * materialDensity * 0.85 + ")";
+		client_Drawing.ctx.lineWidth = effectiveSize * (0.8 + pressure * 0.5) * materialDensity;
+		client_Drawing.ctx.lineCap = "round";
+		client_Drawing.ctx.lineJoin = "round";
+		client_Drawing.ctx.beginPath();
+		client_Drawing.ctx.moveTo(x1 + t * (x2 - x1) + perpOffsetX,y1 + t * (y2 - y1) + perpOffsetY);
+		client_Drawing.ctx.lineTo(x1 + nextT * (x2 - x1) + perpOffsetX * 0.8,y1 + nextT * (y2 - y1) + perpOffsetY * 0.8);
+		client_Drawing.ctx.stroke();
+	}
+	if(pressure > 0.6) {
+		var _g = 0;
+		var _g1 = Math.floor(pressure * distance * 0.15) + 3 | 0;
+		while(_g < _g1) {
+			++_g;
+			var dustSpread = effectiveSize * 2.0;
+			var dustX = x1 + client_Drawing.syncRandom.next() * (x2 - x1) + (client_Drawing.syncRandom.next() - 0.5) * dustSpread;
+			var dustY = y1 + client_Drawing.syncRandom.next() * (y2 - y1) + (client_Drawing.syncRandom.next() - 0.5) * dustSpread;
+			var dustSize = client_Drawing.syncRandom.next() * 1.8 + 0.2;
+			var dustAlpha = baseAlpha * 0.25 * client_Drawing.syncRandom.next() * pressure * client_Drawing.brushTexture;
+			var dustR = Math.floor(rgbColor.r * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.1));
+			var dustG = Math.floor(rgbColor.g * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.1));
+			var dustB = Math.floor(rgbColor.b * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.1));
+			client_Drawing.ctx.fillStyle = "rgba(" + Math.max(0,Math.min(255,dustR)) + ", " + Math.max(0,Math.min(255,dustG)) + ", " + Math.max(0,Math.min(255,dustB)) + ", " + dustAlpha + ")";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(dustX,dustY,dustSize,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+		}
+	}
+	if(client_Drawing.brushScatter > 0.5 && pressure > 0.4) {
+		var sideStrokeWidth = effectiveSize * 3.2;
+		var sideStrokeAlpha = baseAlpha * 0.25 * client_Drawing.brushScatter * pressure;
+		var _g = 0;
+		while(_g < 3) {
+			var layer = _g++;
+			var layerOffset = (layer - 1) * 0.8;
+			client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + sideStrokeAlpha * (1 - layer * 0.2) / 3 + ")";
+			client_Drawing.ctx.lineWidth = sideStrokeWidth * (1 + layer * 0.1);
+			client_Drawing.ctx.lineCap = "round";
+			client_Drawing.ctx.lineJoin = "round";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.moveTo(x1 + layerOffset,y1 + layerOffset);
+			client_Drawing.ctx.lineTo(x2 + layerOffset,y2 + layerOffset);
+			client_Drawing.ctx.stroke();
+		}
+	}
+	if(pressure > 0.8 && client_Drawing.syncRandom.next() < 0.4) {
+		var smudgeLength = effectiveSize * 1.5;
+		var smudgeDirection = strokeAngle + (client_Drawing.syncRandom.next() - 0.5) * 0.8;
+		var smudgeSteps = Math.floor(smudgeLength / 2) + 2;
+		var _g = 0;
+		var _g1 = smudgeSteps | 0;
+		while(_g < _g1) {
+			var i = _g++;
+			var smudgeDistance = i / smudgeSteps * smudgeLength;
+			var smudgeX = x2 + Math.cos(smudgeDirection) * smudgeDistance;
+			var smudgeY = y2 + Math.sin(smudgeDirection) * smudgeDistance;
+			client_Drawing.ctx.fillStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha * (1 - i / smudgeSteps) * 0.2 * pressure + ")";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(smudgeX,smudgeY,effectiveSize * (1 - i / smudgeSteps) * 0.3,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+		}
+	}
+};
+client_Drawing.drawWatercolor = function(x1,y1,x2,y2,color,size,pressure) {
+	var effectiveSize = size * 2.2;
+	var baseAlpha = 0.35 * client_Drawing.brushOpacity;
+	var waterLoad = pressure * client_Drawing.brushFlow * 1.2;
+	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+		effectiveSize = size * (0.6 + pressure * 1.6);
+		baseAlpha = (0.15 + pressure * 0.4) * client_Drawing.brushOpacity;
+		waterLoad = Math.min(1.0,waterLoad * (0.7 + pressure * 0.5));
+	}
+	var rgbColor = client_Drawing.hexToRgb(color);
+	var distance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+	client_Drawing.ctx.globalCompositeOperation = "multiply";
+	var _g = 0;
+	while(_g < 6) {
+		var layer = _g++;
+		var layerSize = effectiveSize * (1 + layer * 0.8);
+		var layerIntensity = waterLoad * (1 - layer * 0.18);
+		var layerAlpha = baseAlpha * (1 - layer * 0.15) / 6;
+		var bleedSteps = Math.max(3,Math.floor(distance / 1.5));
+		var _g1 = 0;
+		var _g2 = bleedSteps | 0;
+		while(_g1 < _g2) {
+			var t = _g1++ / bleedSteps;
+			var centerX = x1 + t * (x2 - x1);
+			var centerY = y1 + t * (y2 - y1);
+			var spreadRadius = layerSize * layerIntensity * 0.85;
+			var ringCount = Math.floor(spreadRadius / 3) + 3;
+			var _g3 = 0;
+			while(_g3 < ringCount) {
+				var ringRatio = _g3++ / ringCount;
+				var ringRadius = spreadRadius * ringRatio;
+				var ringAlpha = layerAlpha * (1 - ringRatio * 0.7) * layerIntensity;
+				client_Drawing.ctx.beginPath();
+				var _g4 = 0;
+				while(_g4 < 16) {
+					var k = _g4++;
+					var angle = k / 16 * Math.PI * 2;
+					var irregularRadius = ringRadius * (1 + (Math.sin(angle * 3 + centerX * 0.01) * 0.3 + Math.sin(angle * 7 - centerY * 0.01) * 0.15 + Math.sin(angle * 13 + (centerX + centerY) * 0.005) * 0.08) + (client_Drawing.syncRandom.next() - 0.5) * 0.2);
+					var pointX = centerX + Math.cos(angle) * irregularRadius;
+					var pointY = centerY + Math.sin(angle) * irregularRadius;
+					if(k == 0) {
+						client_Drawing.ctx.moveTo(pointX,pointY);
+					} else {
+						client_Drawing.ctx.lineTo(pointX,pointY);
+					}
+				}
+				client_Drawing.ctx.closePath();
+				client_Drawing.ctx.fillStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + ringAlpha + ")";
+				client_Drawing.ctx.fill();
+			}
+		}
+	}
+	if(client_Drawing.brushTexture > 0.3) {
+		var granulationDensity = client_Drawing.brushTexture * waterLoad;
+		var granulationSteps = Math.floor(distance / 1.0) + 4;
+		var _g = 0;
+		var _g1 = granulationSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / granulationSteps;
+			var grainCenterX = x1 + t * (x2 - x1) + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 0.9;
+			var grainCenterY = y1 + t * (y2 - y1) + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 0.9;
+			var settlementIntensity = Math.max(0.3,0.7 + Math.sin(grainCenterX * 0.03) * Math.cos(grainCenterY * 0.025) * 0.4);
+			if(client_Drawing.syncRandom.next() < granulationDensity * settlementIntensity) {
+				var clusterSize = Math.floor(client_Drawing.syncRandom.next() * 6) + 3;
+				var _g2 = 0;
+				while(_g2 < clusterSize) {
+					++_g2;
+					var clusterX = grainCenterX + (client_Drawing.syncRandom.next() - 0.5) * 4.0;
+					var clusterY = grainCenterY + (client_Drawing.syncRandom.next() - 0.5) * 4.0;
+					var grainSize = client_Drawing.syncRandom.next() * 2.2 + 0.4;
+					var grainAlpha = baseAlpha * 0.7 * client_Drawing.brushTexture * client_Drawing.syncRandom.next() * settlementIntensity;
+					var shiftR = Math.floor(rgbColor.r * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.12));
+					var shiftG = Math.floor(rgbColor.g * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.12));
+					var shiftB = Math.floor(rgbColor.b * (1 + (client_Drawing.syncRandom.next() - 0.5) * 0.12));
+					client_Drawing.ctx.fillStyle = "rgba(" + Math.max(0,Math.min(255,shiftR)) + ", " + Math.max(0,Math.min(255,shiftG)) + ", " + Math.max(0,Math.min(255,shiftB)) + ", " + grainAlpha + ")";
+					client_Drawing.ctx.beginPath();
+					client_Drawing.ctx.arc(clusterX,clusterY,grainSize,0,Math.PI * 2);
+					client_Drawing.ctx.fill();
+				}
+			}
+		}
+	}
+	if(waterLoad > 0.5 && client_Drawing.syncRandom.next() < 0.5) {
+		var bloomCount = Math.floor(client_Drawing.syncRandom.next() * 4) + 1;
+		var _g = 0;
+		while(_g < bloomCount) {
+			++_g;
+			var bloomX = x1 + client_Drawing.syncRandom.next() * (x2 - x1) + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 1.2;
+			var bloomY = y1 + client_Drawing.syncRandom.next() * (y2 - y1) + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 1.2;
+			var bloomSize = effectiveSize * (0.4 + client_Drawing.syncRandom.next() * 0.6) * waterLoad;
+			var _g1 = 0;
+			while(_g1 < 4) {
+				var ring = _g1++;
+				client_Drawing.ctx.globalCompositeOperation = "destination-out";
+				client_Drawing.ctx.fillStyle = "rgba(0,0,0," + baseAlpha * 0.25 * (waterLoad * (1 - ring * 0.2)) / 4 + ")";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.arc(bloomX,bloomY,bloomSize * (ring + 1) / 4,0,Math.PI * 2);
+				client_Drawing.ctx.fill();
+			}
+			client_Drawing.ctx.globalCompositeOperation = "multiply";
+			client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha * 0.3 * waterLoad + ")";
+			client_Drawing.ctx.lineWidth = 1.5;
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(bloomX,bloomY,bloomSize * 0.9,0,Math.PI * 2);
+			client_Drawing.ctx.stroke();
+		}
+		client_Drawing.ctx.globalCompositeOperation = "multiply";
+	}
+	var coreSteps = Math.max(3,Math.floor(distance / 1.2));
+	var _g = 0;
+	var _g1 = coreSteps | 0;
+	while(_g < _g1) {
+		var i = _g++;
+		var t = i / coreSteps;
+		var nextT = Math.min(1.0,(i + 1) / coreSteps);
+		var flowVariation = Math.sin(t * Math.PI * 4) * 0.2 + 1;
+		var strokeIntensity = waterLoad * flowVariation * (0.8 + client_Drawing.syncRandom.next() * 0.3);
+		client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + baseAlpha * strokeIntensity + ")";
+		client_Drawing.ctx.lineWidth = effectiveSize * (0.7 + strokeIntensity * 0.4);
+		client_Drawing.ctx.lineCap = "round";
+		client_Drawing.ctx.lineJoin = "round";
+		client_Drawing.ctx.beginPath();
+		client_Drawing.ctx.moveTo(x1 + t * (x2 - x1),y1 + t * (y2 - y1));
+		client_Drawing.ctx.lineTo(x1 + nextT * (x2 - x1),y1 + nextT * (y2 - y1));
+		client_Drawing.ctx.stroke();
+	}
+	if(waterLoad > 0.8 && client_Drawing.syncRandom.next() < 0.4) {
+		var dropletCount = Math.floor(client_Drawing.syncRandom.next() * 3) + 1;
+		var _g = 0;
+		while(_g < dropletCount) {
+			++_g;
+			var dropletX = x1 + client_Drawing.syncRandom.next() * (x2 - x1) + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 1.8;
+			var dropletY = y1 + client_Drawing.syncRandom.next() * (y2 - y1) + (client_Drawing.syncRandom.next() - 0.5) * effectiveSize * 1.8;
+			var dropletSize = client_Drawing.syncRandom.next() * effectiveSize * 0.2 + 1.0;
+			var dropletAlpha = baseAlpha * 0.5 * client_Drawing.syncRandom.next() * waterLoad;
+			var dropletGradient = client_Drawing.ctx.createRadialGradient(dropletX - dropletSize * 0.3,dropletY - dropletSize * 0.3,0,dropletX,dropletY,dropletSize);
+			dropletGradient.addColorStop(0,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + dropletAlpha * 0.3 + ")");
+			dropletGradient.addColorStop(0.7,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + dropletAlpha + ")");
+			dropletGradient.addColorStop(1,"rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + dropletAlpha * 1.2 + ")");
+			client_Drawing.ctx.fillStyle = dropletGradient;
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(dropletX,dropletY,dropletSize,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+			client_Drawing.ctx.fillStyle = "rgba(255, 255, 255, " + dropletAlpha * 0.15 + ")";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(dropletX - dropletSize * 0.4,dropletY - dropletSize * 0.4,dropletSize * 0.3,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+		}
+	}
+	if(waterLoad > 0.6) {
+		var bleedingSteps = Math.floor(distance / 2.5) + 2;
+		var _g = 0;
+		var _g1 = bleedingSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / bleedingSteps;
+			var bleedX = x1 + t * (x2 - x1);
+			var bleedY = y1 + t * (y2 - y1);
+			var bleedDirections = Math.floor(client_Drawing.syncRandom.next() * 3) + 2;
+			var _g2 = 0;
+			while(_g2 < bleedDirections) {
+				++_g2;
+				var bleedAngle = client_Drawing.syncRandom.next() * Math.PI * 2;
+				var bleedDistance = client_Drawing.syncRandom.next() * effectiveSize * 0.6 * waterLoad;
+				var bleedEndX = bleedX + Math.cos(bleedAngle) * bleedDistance;
+				var bleedEndY = bleedY + Math.sin(bleedAngle) * bleedDistance;
+				var bleedAlpha = baseAlpha * 0.3 * waterLoad * client_Drawing.syncRandom.next();
+				var bleedSize = client_Drawing.syncRandom.next() * 2.5 + 0.8;
+				client_Drawing.ctx.strokeStyle = "rgba(" + rgbColor.r + ", " + rgbColor.g + ", " + rgbColor.b + ", " + bleedAlpha + ")";
+				client_Drawing.ctx.lineWidth = bleedSize;
+				client_Drawing.ctx.lineCap = "round";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.moveTo(bleedX,bleedY);
+				client_Drawing.ctx.lineTo(bleedEndX,bleedEndY);
+				client_Drawing.ctx.stroke();
+			}
+		}
+	}
+};
+client_Drawing.drawEraser = function(x1,y1,x2,y2,size,pressure) {
+	var effectiveSize = size;
+	var baseIntensity = 1.0;
+	if(client_Drawing.pressureSensitivity && client_Drawing.supportsPressure && client_Drawing.currentPointerType == "pen") {
+		effectiveSize = size * (0.1 + pressure);
+		baseIntensity = 0.3 + pressure * 0.8;
+	}
+	var distance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+	var strokeVelocity = distance / Math.max(1,new Date().getTime() - client_Drawing.lastBrushTime);
+	client_Drawing.ctx.globalCompositeOperation = "destination-out";
+	if(client_Drawing.brushHardness >= 0.8) {
+		var hardIntensity = baseIntensity * client_Drawing.brushHardness;
+		var _g = 0;
+		while(_g < 2) {
+			var layer = _g++;
+			client_Drawing.ctx.strokeStyle = "rgba(0, 0, 0, " + hardIntensity * (1 - layer * 0.1) + ")";
+			client_Drawing.ctx.lineWidth = effectiveSize * (1 - layer * 0.05);
+			client_Drawing.ctx.lineCap = "round";
+			client_Drawing.ctx.lineJoin = "round";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.moveTo(x1,y1);
+			client_Drawing.ctx.lineTo(x2,y2);
+			client_Drawing.ctx.stroke();
+		}
+	} else {
+		var softLayers = Math.ceil((1 - client_Drawing.brushHardness) * 8) + 3;
+		var _g = 0;
+		var _g1 = softLayers | 0;
+		while(_g < _g1) {
+			var layerRatio = _g++ / (softLayers - 1);
+			var layerIntensity = baseIntensity * Math.pow(1 - layerRatio,1.8) / softLayers;
+			var layerSize = effectiveSize * (1.0 + layerRatio * (1 - client_Drawing.brushHardness) * 0.8);
+			var centerX = (x1 + x2) / 2;
+			var centerY = (y1 + y2) / 2;
+			var gradient = client_Drawing.ctx.createRadialGradient(centerX,centerY,0,centerX,centerY,layerSize / 2);
+			gradient.addColorStop(0,"rgba(0, 0, 0, " + layerIntensity + ")");
+			gradient.addColorStop(0.6,"rgba(0, 0, 0, " + layerIntensity * 0.7 + ")");
+			gradient.addColorStop(0.9,"rgba(0, 0, 0, " + layerIntensity * 0.3 + ")");
+			gradient.addColorStop(1,"rgba(0, 0, 0, 0)");
+			client_Drawing.ctx.strokeStyle = gradient;
+			client_Drawing.ctx.lineWidth = layerSize;
+			client_Drawing.ctx.lineCap = "round";
+			client_Drawing.ctx.lineJoin = "round";
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.moveTo(x1,y1);
+			client_Drawing.ctx.lineTo(x2,y2);
+			client_Drawing.ctx.stroke();
+		}
+	}
+	if(client_Drawing.brushTexture < 0.9 && pressure > 0.5) {
+		var crumbSteps = Math.floor(distance / 2.5) + 2;
+		var _g = 0;
+		var _g1 = crumbSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / crumbSteps;
+			var crumbCenterX = x1 + t * (x2 - x1);
+			var crumbCenterY = y1 + t * (y2 - y1);
+			var crumbIntensity = (1 - client_Drawing.brushTexture) * pressure;
+			var crumbClusterCount = Math.floor(crumbIntensity * 4) + 1;
+			var _g2 = 0;
+			while(_g2 < crumbClusterCount) {
+				++_g2;
+				var scatterAngle = client_Drawing.syncRandom.next() * Math.PI * 2;
+				var scatterDistance = client_Drawing.syncRandom.next() * (effectiveSize * 0.6 * crumbIntensity);
+				var clusterX = crumbCenterX + Math.cos(scatterAngle) * scatterDistance;
+				var clusterY = crumbCenterY + Math.sin(scatterAngle) * scatterDistance;
+				var crumbsPerCluster = Math.floor(client_Drawing.syncRandom.next() * 4) + 2;
+				var _g3 = 0;
+				while(_g3 < crumbsPerCluster) {
+					++_g3;
+					var crumbX = clusterX + (client_Drawing.syncRandom.next() - 0.5) * 3;
+					var crumbY = clusterY + (client_Drawing.syncRandom.next() - 0.5) * 3;
+					var crumbSize = client_Drawing.syncRandom.next() * 2.0 + 0.3;
+					var crumbShape = client_Drawing.syncRandom.next();
+					var crumbOpacity = baseIntensity * 0.4 * crumbIntensity * client_Drawing.syncRandom.next();
+					if(crumbShape < 0.7) {
+						client_Drawing.ctx.fillStyle = "rgba(0, 0, 0, " + crumbOpacity + ")";
+						client_Drawing.ctx.beginPath();
+						client_Drawing.ctx.arc(crumbX,crumbY,crumbSize,0,Math.PI * 2);
+						client_Drawing.ctx.fill();
+					} else {
+						client_Drawing.ctx.strokeStyle = "rgba(0, 0, 0, " + crumbOpacity + ")";
+						client_Drawing.ctx.lineWidth = crumbSize;
+						client_Drawing.ctx.lineCap = "round";
+						client_Drawing.ctx.beginPath();
+						client_Drawing.ctx.moveTo(crumbX - crumbSize * 0.5,crumbY);
+						client_Drawing.ctx.lineTo(crumbX + crumbSize * 0.5,crumbY);
+						client_Drawing.ctx.stroke();
+					}
+				}
+			}
+		}
+	}
+	if(client_Drawing.brushTexture < 0.8) {
+		var selectiveSteps = Math.floor(distance / 1.2) + 3;
+		var _g = 0;
+		var _g1 = selectiveSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / selectiveSteps;
+			var selX = x1 + t * (x2 - x1);
+			var selY = y1 + t * (y2 - y1);
+			var selectiveChance = (1 - client_Drawing.brushTexture) * 0.8;
+			if(client_Drawing.syncRandom.next() < selectiveChance) {
+				var resistanceType = client_Drawing.syncRandom.next();
+				if(resistanceType < 0.3) {
+					var stubborness = 0.1 + client_Drawing.syncRandom.next() * 0.2;
+					var selectiveSize = effectiveSize * (0.2 + client_Drawing.syncRandom.next() * 0.3);
+					client_Drawing.ctx.fillStyle = "rgba(0, 0, 0, " + baseIntensity * stubborness + ")";
+					client_Drawing.ctx.beginPath();
+					client_Drawing.ctx.arc(selX,selY,selectiveSize,0,Math.PI * 2);
+					client_Drawing.ctx.fill();
+				} else if(resistanceType < 0.7) {
+					var selectiveSize1 = effectiveSize * (0.4 + client_Drawing.syncRandom.next() * 0.5);
+					var tmp = "rgba(0, 0, 0, " + baseIntensity * (0.7 + client_Drawing.syncRandom.next() * 0.4);
+					client_Drawing.ctx.fillStyle = tmp + ")";
+					client_Drawing.ctx.beginPath();
+					client_Drawing.ctx.arc(selX,selY,selectiveSize1,0,Math.PI * 2);
+					client_Drawing.ctx.fill();
+				} else {
+					var fiberCount = Math.floor(client_Drawing.syncRandom.next() * 3) + 1;
+					var _g2 = 0;
+					while(_g2 < fiberCount) {
+						++_g2;
+						var fiberAngle = client_Drawing.syncRandom.next() * Math.PI * 2;
+						var fiberLength = client_Drawing.syncRandom.next() * effectiveSize * 0.3;
+						var fiberX1 = selX + Math.cos(fiberAngle) * fiberLength * 0.5;
+						var fiberY1 = selY + Math.sin(fiberAngle) * fiberLength * 0.5;
+						var fiberX2 = selX - Math.cos(fiberAngle) * fiberLength * 0.5;
+						var fiberY2 = selY - Math.sin(fiberAngle) * fiberLength * 0.5;
+						var fiberIntensity = baseIntensity * 0.3 * client_Drawing.syncRandom.next();
+						var fiberThickness = client_Drawing.syncRandom.next() * 1.5 + 0.3;
+						client_Drawing.ctx.strokeStyle = "rgba(0, 0, 0, " + fiberIntensity + ")";
+						client_Drawing.ctx.lineWidth = fiberThickness;
+						client_Drawing.ctx.lineCap = "round";
+						client_Drawing.ctx.beginPath();
+						client_Drawing.ctx.moveTo(fiberX1,fiberY1);
+						client_Drawing.ctx.lineTo(fiberX2,fiberY2);
+						client_Drawing.ctx.stroke();
+					}
+				}
+			}
+		}
+	}
+	if(pressure > 0.8 && strokeVelocity > 0.15) {
+		var heatSteps = Math.floor(distance / 3) + 1;
+		var _g = 0;
+		var _g1 = heatSteps | 0;
+		while(_g < _g1) {
+			var t = _g++ / heatSteps;
+			var heatX = x1 + t * (x2 - x1);
+			var heatY = y1 + t * (y2 - y1);
+			var heatEffect = pressure * strokeVelocity * 0.6;
+			var heatRadius = effectiveSize * 0.8 * heatEffect;
+			var heatIntensity = baseIntensity * 0.3 * heatEffect;
+			var heatGradient = client_Drawing.ctx.createRadialGradient(heatX,heatY,0,heatX,heatY,heatRadius);
+			heatGradient.addColorStop(0,"rgba(0, 0, 0, " + heatIntensity + ")");
+			heatGradient.addColorStop(0.8,"rgba(0, 0, 0, " + heatIntensity * 0.5 + ")");
+			heatGradient.addColorStop(1,"rgba(0, 0, 0, 0)");
+			client_Drawing.ctx.fillStyle = heatGradient;
+			client_Drawing.ctx.beginPath();
+			client_Drawing.ctx.arc(heatX,heatY,heatRadius,0,Math.PI * 2);
+			client_Drawing.ctx.fill();
+		}
+	}
+	if(client_Drawing.brushTexture < 0.6 && client_Drawing.syncRandom.next() < 0.4) {
+		var edgeWearCount = Math.floor(distance / 4) + 1;
+		var _g = 0;
+		var _g1 = edgeWearCount | 0;
+		while(_g < _g1) {
+			var t = _g++ / edgeWearCount;
+			var wearX = x1 + t * (x2 - x1);
+			var wearY = y1 + t * (y2 - y1);
+			var wearRadius = effectiveSize * 0.3;
+			var wearIntensity = baseIntensity * (1 - client_Drawing.brushTexture) * 0.4;
+			var wearPoints = Math.floor(client_Drawing.syncRandom.next() * 5) + 3;
+			var _g2 = 0;
+			while(_g2 < wearPoints) {
+				var pointAngle = _g2++ / wearPoints * Math.PI * 2;
+				var pointRadius = wearRadius * (0.7 + client_Drawing.syncRandom.next() * 0.6);
+				var pointX = wearX + Math.cos(pointAngle) * pointRadius;
+				var pointY = wearY + Math.sin(pointAngle) * pointRadius;
+				var pointSize = client_Drawing.syncRandom.next() * 1.8 + 0.4;
+				var tmp = "rgba(0, 0, 0, " + wearIntensity * client_Drawing.syncRandom.next();
+				client_Drawing.ctx.fillStyle = tmp + ")";
+				client_Drawing.ctx.beginPath();
+				client_Drawing.ctx.arc(pointX,pointY,pointSize,0,Math.PI * 2);
+				client_Drawing.ctx.fill();
+			}
+		}
 	}
 };
 var client_IPlayer = function() { };
@@ -3046,7 +4378,7 @@ client_Main.prototype = {
 			client_Drawing.onDrawMove(data.drawMove.x,data.drawMove.y,data.drawMove.clientName);
 			break;
 		case "DrawStart":
-			client_Drawing.onDrawStart(data.drawStart.x,data.drawStart.y,data.drawStart.color,data.drawStart.size,data.drawStart.tool,data.drawStart.clientName);
+			client_Drawing.onDrawStart(data.drawStart.x,data.drawStart.y,data.drawStart.color,data.drawStart.size,data.drawStart.tool,data.drawStart.clientName,data.drawStart.seed);
 			break;
 		case "Dump":
 			client_Utils.saveFile("dump.json","application/json",data.dump.data);
@@ -7659,8 +8991,17 @@ client_Drawing.lastY = 0.0;
 client_Drawing.currentColor = "#FF0000";
 client_Drawing.currentSize = 3.0;
 client_Drawing.currentTool = "pen";
-client_Drawing.currentBackgroundMode = "transparent";
-client_Drawing.currentBackgroundColor = "#FFFFFF";
+client_Drawing.brushOpacity = 1.0;
+client_Drawing.brushFlow = 1.0;
+client_Drawing.brushHardness = 1.0;
+client_Drawing.brushSpacing = 0.1;
+client_Drawing.brushScatter = 0.0;
+client_Drawing.brushTexture = 1.0;
+client_Drawing.brushDynamics = true;
+client_Drawing.lastBrushX = 0.0;
+client_Drawing.lastBrushY = 0.0;
+client_Drawing.brushVelocity = 0.0;
+client_Drawing.lastBrushTime = 0.0;
 client_Drawing.supportsPressure = false;
 client_Drawing.currentPressure = 1.0;
 client_Drawing.currentTiltX = 0.0;
@@ -7673,11 +9014,15 @@ client_Drawing.userCursors = new haxe_ds_StringMap();
 client_Drawing.userDrawingStates = new haxe_ds_StringMap();
 client_Drawing.lastCursorSendTime = 0;
 client_Drawing.cursorThrottleInterval = 33;
+client_Drawing.currentBackgroundMode = "transparent";
+client_Drawing.currentBackgroundColor = "#FFFFFF";
 client_Drawing.incomingColor = "#FF0000";
 client_Drawing.incomingSize = 3.0;
 client_Drawing.incomingTool = "pen";
 client_Drawing.incomingLastX = 0.0;
 client_Drawing.incomingLastY = 0.0;
+client_Drawing.syncRandom = new client_SeededRandom(12345);
+client_Drawing.currentStrokeSeed = 0;
 client_Drawing.isDragging = false;
 client_Drawing.dragOffsetX = 0.0;
 client_Drawing.dragOffsetY = 0.0;
