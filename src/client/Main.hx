@@ -73,6 +73,11 @@ class Main {
 	var currentFfzQuery = "";
 	var isFfzLoading = false;
 	var hasMoreFfzEmotes = true;
+
+	var currentSeventvPage = 1;
+	var currentSeventvQuery = "";
+	var isSeventvLoading = false;
+	var hasMoreSeventvEmotes = true;
 	// TTS variables
 	var isTtsEnabled = true;
 	var ttsVolume = 1.0;
@@ -279,6 +284,7 @@ class Main {
 
 		// FrankerFaceZ panel initialization
 		initFfzPanel();
+		init7tvPanel();
 	}
 
 	function initFfzPanel():Void {
@@ -497,6 +503,310 @@ class Main {
 			return emote.urls[4] ?? emote.urls[2] ?? emote.urls[1];
 		}
 
+		return null;
+	}
+
+	function init7tvPanel():Void {
+		final seventvBtn = getEl("#seventvbtn");
+		final seventvWrap = getEl("#seventv-wrap");
+		final smilesBtnWrap = getEl("#smilesbtn");
+		final smilesWrap = getEl("#smiles-wrap");
+		final ffzBtn = getEl("#ffzbtn");
+		final ffzWrap = getEl("#ffz-wrap");
+
+		seventvBtn.onclick = e -> {
+			if (!seventvBtn.classList.contains("active")) {
+				// Hide smiles panel if it's visible
+				if (smilesWrap.style.display != "none") {
+					smilesWrap.style.display = "none";
+					smilesBtnWrap.classList.remove("active");
+				}
+
+				// Hide FFZ panel if it's visible
+				if (ffzWrap.style.display != "none") {
+					ffzWrap.style.display = "none";
+					ffzBtn.classList.remove("active");
+				}
+
+				// Show 7TV panel
+				seventvWrap.style.display = "";
+				seventvBtn.classList.add("active");
+				seventvWrap.style.height = "16rem";
+
+				// Focus on the search input
+				final searchInput:InputElement = getEl("#seventv-search");
+				searchInput.focus();
+
+				// Initial search with empty query to show recent emotes
+				search7TVEmotes("");
+			} else {
+				seventvWrap.style.height = "0";
+				seventvBtn.classList.remove("active");
+				seventvWrap.addEventListener("transitionend", e -> {
+					if (e.propertyName == "height") seventvWrap.style.display = "none";
+				}, {once: true});
+			}
+		};
+
+		// Search button functionality
+		final searchBtn = getEl("#seventv-search-btn");
+		searchBtn.onclick = e -> {
+			final searchInput:InputElement = getEl("#seventv-search");
+			search7TVEmotes(searchInput.value);
+		};
+
+		// Search input on enter key
+		final searchInput:InputElement = getEl("#seventv-search");
+		searchInput.onkeydown = (e:KeyboardEvent) -> {
+			if (e.keyCode == KeyCode.Return) {
+				search7TVEmotes(searchInput.value);
+				e.preventDefault();
+			}
+		};
+
+		// Add scroll event listener for infinite scroll
+		final listEl = getEl("#seventv-list");
+		listEl.onscroll = (e:Event) -> {
+			if (isSeventvLoading || !hasMoreSeventvEmotes) return;
+
+			final scrollPosition = listEl.scrollTop + listEl.clientHeight;
+			final scrollThreshold = listEl.scrollHeight * 0.8; // Load more when 80% scrolled
+
+			if (scrollPosition >= scrollThreshold) {
+				loadMore7tvEmotes();
+			}
+		};
+	}
+
+	function search7TVEmotes(query:String):Void {
+		// Reset pagination variables on new search
+		currentSeventvPage = 1;
+		currentSeventvQuery = query;
+		hasMoreSeventvEmotes = true;
+
+		// Show loading indicator
+		final loadingEl = getEl("#seventv-loading");
+		final listEl = getEl("#seventv-list");
+		loadingEl.style.display = "block";
+		listEl.innerHTML = "";
+
+		// Fetch first page of emotes
+		fetch7tvEmotes(query, 1, true);
+	}
+
+	function loadMore7tvEmotes():Void {
+		if (isSeventvLoading || !hasMoreSeventvEmotes) return;
+
+		currentSeventvPage++;
+		final loadingEl = getEl("#seventv-loading");
+		loadingEl.style.display = "block";
+
+		fetch7tvEmotes(currentSeventvQuery, currentSeventvPage, false);
+	}
+
+	function fetch7tvEmotes(query:String, page:Int, clearList:Bool):Void {
+		isSeventvLoading = true;
+
+		if (query.length > 0) {
+			// Use GraphQL for search
+			fetch7tvSearchEmotes(query, page, clearList);
+		} else {
+			// Get global emotes for trending (only first time)
+			fetch7tvGlobalEmotes(page, clearList);
+		}
+	}
+
+	function fetch7tvGlobalEmotes(page:Int, clearList:Bool):Void {
+		final apiUrl = "https://7tv.io/v3/emote-sets/global";
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("GET", apiUrl, true);
+		xhr.onload = () -> {
+			final loadingEl = getEl("#seventv-loading");
+			final listEl = getEl("#seventv-list");
+			loadingEl.style.display = "none";
+			isSeventvLoading = false;
+
+			if (xhr.status == 200) {
+				try {
+					final data = haxe.Json.parse(xhr.responseText);
+
+					// Clear list if this is a new search
+					if (clearList) {
+						listEl.innerHTML = "";
+					}
+
+					// Global emote set response has direct emotes array
+					if (data.emotes != null) {
+						final emotes = cast(data.emotes, Array<Dynamic>);
+						
+						// Disable pagination for global emotes (it's a fixed set)
+						hasMoreSeventvEmotes = false;
+
+						for (emote in emotes) {
+							if (emote != null) {
+								final emoteUrl = getBest7tvEmoteUrl(emote);
+
+								if (emoteUrl != null) {
+									final imgEl:js.html.ImageElement = cast document.createElement("img");
+									imgEl.className = "seventv-emote";
+									imgEl.src = emoteUrl;
+									imgEl.alt = emote.name;
+									imgEl.title = emote.name;
+
+									imgEl.onclick = e -> {
+										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+										emoteMessage(emoteHtml);
+									};
+
+									listEl.appendChild(imgEl);
+								}
+							}
+						}
+
+						if (emotes.length == 0 && clearList) {
+							listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
+						}
+					} else if (clearList) {
+						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
+					}
+				} catch (e) {
+					if (clearList) {
+						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error loading emotes: ${e}</div>';
+					}
+				}
+			} else {
+				if (clearList) {
+					listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error: ${xhr.status}</div>';
+				}
+			}
+		};
+		xhr.onerror = () -> {
+			final loadingEl = getEl("#seventv-loading");
+			final listEl = getEl("#seventv-list");
+			loadingEl.style.display = "none";
+			isSeventvLoading = false;
+
+			if (clearList) {
+				listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Network error</div>';
+			}
+		};
+		xhr.send();
+	}
+
+	function fetch7tvSearchEmotes(query:String, page:Int, clearList:Bool):Void {
+		final apiUrl = "https://7tv.io/v3/gql";
+		
+		// GraphQL query for searching emotes
+		final graphqlQuery = '{"query":"query SearchEmotes($$query: String!, $$page: Int, $$limit: Int) { emotes(query: $$query, page: $$page, limit: $$limit) { count items { id name host { url files { name format } } } } }","variables":{"query":"${query}","page":${page - 1},"limit":20}}';
+
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("POST", apiUrl, true);
+		xhr.setRequestHeader("Content-Type", "application/json");
+		xhr.onload = () -> {
+			final loadingEl = getEl("#seventv-loading");
+			final listEl = getEl("#seventv-list");
+			loadingEl.style.display = "none";
+			isSeventvLoading = false;
+
+			if (xhr.status == 200) {
+				try {
+					final data = haxe.Json.parse(xhr.responseText);
+
+					// Clear list if this is a new search
+					if (clearList) {
+						listEl.innerHTML = "";
+					}
+
+					// GraphQL response structure
+					if (data.data != null && data.data.emotes != null && data.data.emotes.items != null) {
+						final emotes = cast(data.data.emotes.items, Array<Dynamic>);
+						
+						// Enable pagination if we got exactly 20 emotes
+						hasMoreSeventvEmotes = emotes.length == 20;
+
+						for (emote in emotes) {
+							if (emote != null) {
+								final emoteUrl = getBest7tvEmoteUrl(emote);
+
+								if (emoteUrl != null) {
+									final imgEl:js.html.ImageElement = cast document.createElement("img");
+									imgEl.className = "seventv-emote";
+									imgEl.src = emoteUrl;
+									imgEl.alt = emote.name;
+									imgEl.title = emote.name;
+
+									imgEl.onclick = e -> {
+										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+										emoteMessage(emoteHtml);
+									};
+
+									listEl.appendChild(imgEl);
+								}
+							}
+						}
+
+						if (emotes.length == 0 && clearList) {
+							listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
+						}
+
+						// Add "no more emotes" message when we reach the end
+						if (!hasMoreSeventvEmotes && listEl.children.length > 0 && !clearList) {
+							final endMessage = document.createDivElement();
+							endMessage.style.gridColumn = "1/-1";
+							endMessage.style.textAlign = "center";
+							endMessage.style.color = "var(--midground)";
+							endMessage.style.padding = "1rem";
+							endMessage.textContent = "No more emotes to load";
+							listEl.appendChild(endMessage);
+						}
+					} else if (clearList) {
+						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
+					}
+				} catch (e) {
+					if (clearList) {
+						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error loading emotes: ${e}</div>';
+					}
+				}
+			} else {
+				if (clearList) {
+					listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error: ${xhr.status}</div>';
+				}
+			}
+		};
+		xhr.onerror = () -> {
+			final loadingEl = getEl("#seventv-loading");
+			final listEl = getEl("#seventv-list");
+			loadingEl.style.display = "none";
+			isSeventvLoading = false;
+
+			if (clearList) {
+				listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Network error</div>';
+			}
+		};
+		xhr.send(graphqlQuery);
+	}
+
+	function getBest7tvEmoteUrl(emote:Dynamic):Null<String> {
+		// 7TV emotes from GraphQL have host.url and host.files structure
+		if (emote.host != null && emote.host.url != null && emote.host.files != null) {
+			final baseUrl = emote.host.url;
+			final files = emote.host.files;
+			
+			// Try to get the best size (2x is usually good quality)
+			if (files.length > 0) {
+				// Look for 2x size first, then fallback to 1x
+				for (file in cast(files, Array<Dynamic>)) {
+					if (file.name != null && Std.string(file.name).indexOf("2x") != -1) {
+						return "https:" + baseUrl + "/" + file.name;
+					}
+				}
+				// Fallback to first available
+				final firstFile = files[0];
+				if (firstFile.name != null) {
+					return "https:" + baseUrl + "/" + firstFile.name;
+				}
+			}
+		}
 		return null;
 	}
 
@@ -1863,6 +2173,9 @@ class Main {
 			case "random":
 				fetchRandomEmote();
 				return true;
+			case "random7tv":
+				fetchRandom7tvEmote();
+				return true;
 			case "volume":
 				var v = Std.parseFloat(args[0]);
 				if (Math.isNaN(v)) v = 1;
@@ -1931,6 +2244,47 @@ class Main {
 		};
 		xhr.onerror = () -> {
 			serverMessage('Network error while fetching emotes');
+		};
+		xhr.send();
+	}
+
+	function fetchRandom7tvEmote():Void {
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("GET", "https://7tv.io/v3/emote-sets/global", true);
+		xhr.onload = () -> {
+			if (xhr.status == 200) {
+				try {
+					final data = haxe.Json.parse(xhr.responseText);
+					if (data.emotes != null && data.emotes.length > 0) {
+						// Pick a random emote from the response
+						final randomIndex = Math.floor(Math.random() * data.emotes.length);
+						final emote = data.emotes[randomIndex];
+
+						if (emote != null) {
+							final emoteUrl = getBest7tvEmoteUrl(emote);
+
+							if (emoteUrl != null) {
+								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+								// Use the emoteMessage function to broadcast to all users
+								emoteMessage(emoteHtml);
+							} else {
+								serverMessage('Error loading 7TV emote: No URL available');
+							}
+						} else {
+							serverMessage('Error loading 7TV emote data');
+						}
+					} else {
+						serverMessage('No 7TV emotes found');
+					}
+				} catch (e) {
+					serverMessage('Error parsing 7TV emote data: ${e}');
+				}
+			} else {
+				serverMessage('Error fetching 7TV emotes: ${xhr.status}');
+			}
+		};
+		xhr.onerror = () -> {
+			serverMessage('Network error while fetching 7TV emotes');
 		};
 		xhr.send();
 	}

@@ -2299,6 +2299,10 @@ var client_Main = function() {
 	this.danmakuEmoteAnimations = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
 	this.ttsVolume = 1.0;
 	this.isTtsEnabled = true;
+	this.hasMoreSeventvEmotes = true;
+	this.isSeventvLoading = false;
+	this.currentSeventvQuery = "";
+	this.currentSeventvPage = 1;
 	this.hasMoreFfzEmotes = true;
 	this.isFfzLoading = false;
 	this.currentFfzQuery = "";
@@ -2540,6 +2544,7 @@ client_Main.prototype = {
 		};
 		window.document.querySelector("#customembed-content").onkeydown = window.document.querySelector("#customembed-title").onkeydown;
 		this.initFfzPanel();
+		this.init7tvPanel();
 	}
 	,initFfzPanel: function() {
 		var _gthis = this;
@@ -2706,6 +2711,252 @@ client_Main.prototype = {
 				return tmp1;
 			} else {
 				return emote.urls[1];
+			}
+		}
+		return null;
+	}
+	,init7tvPanel: function() {
+		var _gthis = this;
+		var seventvBtn = window.document.querySelector("#seventvbtn");
+		var seventvWrap = window.document.querySelector("#seventv-wrap");
+		var smilesBtnWrap = window.document.querySelector("#smilesbtn");
+		var smilesWrap = window.document.querySelector("#smiles-wrap");
+		var ffzBtn = window.document.querySelector("#ffzbtn");
+		var ffzWrap = window.document.querySelector("#ffz-wrap");
+		seventvBtn.onclick = function(e) {
+			if(!seventvBtn.classList.contains("active")) {
+				if(smilesWrap.style.display != "none") {
+					smilesWrap.style.display = "none";
+					smilesBtnWrap.classList.remove("active");
+				}
+				if(ffzWrap.style.display != "none") {
+					ffzWrap.style.display = "none";
+					ffzBtn.classList.remove("active");
+				}
+				seventvWrap.style.display = "";
+				seventvBtn.classList.add("active");
+				seventvWrap.style.height = "16rem";
+				window.document.querySelector("#seventv-search").focus();
+				_gthis.search7TVEmotes("");
+			} else {
+				seventvWrap.style.height = "0";
+				seventvBtn.classList.remove("active");
+				seventvWrap.addEventListener("transitionend",function(e) {
+					if(e.propertyName == "height") {
+						seventvWrap.style.display = "none";
+					}
+				},{ once : true});
+			}
+		};
+		window.document.querySelector("#seventv-search-btn").onclick = function(e) {
+			var searchInput = window.document.querySelector("#seventv-search");
+			_gthis.search7TVEmotes(searchInput.value);
+		};
+		var searchInput = window.document.querySelector("#seventv-search");
+		searchInput.onkeydown = function(e) {
+			if(e.keyCode == 13) {
+				_gthis.search7TVEmotes(searchInput.value);
+				e.preventDefault();
+			}
+		};
+		var listEl = window.document.querySelector("#seventv-list");
+		listEl.onscroll = function(e) {
+			if(_gthis.isSeventvLoading || !_gthis.hasMoreSeventvEmotes) {
+				return;
+			}
+			var scrollPosition = listEl.scrollTop + listEl.clientHeight;
+			var scrollThreshold = listEl.scrollHeight * 0.8;
+			if(scrollPosition >= scrollThreshold) {
+				_gthis.loadMore7tvEmotes();
+			}
+		};
+	}
+	,search7TVEmotes: function(query) {
+		this.currentSeventvPage = 1;
+		this.currentSeventvQuery = query;
+		this.hasMoreSeventvEmotes = true;
+		var loadingEl = window.document.querySelector("#seventv-loading");
+		var listEl = window.document.querySelector("#seventv-list");
+		loadingEl.style.display = "block";
+		listEl.innerHTML = "";
+		this.fetch7tvEmotes(query,1,true);
+	}
+	,loadMore7tvEmotes: function() {
+		if(this.isSeventvLoading || !this.hasMoreSeventvEmotes) {
+			return;
+		}
+		this.currentSeventvPage++;
+		window.document.querySelector("#seventv-loading").style.display = "block";
+		this.fetch7tvEmotes(this.currentSeventvQuery,this.currentSeventvPage,false);
+	}
+	,fetch7tvEmotes: function(query,page,clearList) {
+		this.isSeventvLoading = true;
+		if(query.length > 0) {
+			this.fetch7tvSearchEmotes(query,page,clearList);
+		} else {
+			this.fetch7tvGlobalEmotes(page,clearList);
+		}
+	}
+	,fetch7tvGlobalEmotes: function(page,clearList) {
+		var _gthis = this;
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET","https://7tv.io/v3/emote-sets/global",true);
+		xhr.onload = function() {
+			var loadingEl = window.document.querySelector("#seventv-loading");
+			var listEl = window.document.querySelector("#seventv-list");
+			loadingEl.style.display = "none";
+			_gthis.isSeventvLoading = false;
+			if(xhr.status == 200) {
+				try {
+					var data = JSON.parse(xhr.responseText);
+					if(clearList) {
+						listEl.innerHTML = "";
+					}
+					if(data.emotes != null) {
+						var emotes = js_Boot.__cast(data.emotes , Array);
+						_gthis.hasMoreSeventvEmotes = false;
+						var _g = 0;
+						while(_g < emotes.length) {
+							var emote = [emotes[_g]];
+							++_g;
+							if(emote[0] != null) {
+								var emoteUrl = [_gthis.getBest7tvEmoteUrl(emote[0])];
+								if(emoteUrl[0] != null) {
+									var imgEl = window.document.createElement("img");
+									imgEl.className = "seventv-emote";
+									imgEl.src = emoteUrl[0];
+									imgEl.alt = emote[0].name;
+									imgEl.title = emote[0].name;
+									imgEl.onclick = (function(emoteUrl,emote) {
+										return function(e) {
+											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"max-height: 128px;\" />");
+										};
+									})(emoteUrl,emote);
+									listEl.appendChild(imgEl);
+								}
+							}
+						}
+						if(emotes.length == 0 && clearList) {
+							listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
+						}
+					} else if(clearList) {
+						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
+					}
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					if(clearList) {
+						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Error loading emotes: " + Std.string(_g1) + "</div>";
+					}
+				}
+			} else if(clearList) {
+				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Error: " + xhr.status + "</div>";
+			}
+		};
+		xhr.onerror = function() {
+			var loadingEl = window.document.querySelector("#seventv-loading");
+			var listEl = window.document.querySelector("#seventv-list");
+			loadingEl.style.display = "none";
+			_gthis.isSeventvLoading = false;
+			if(clearList) {
+				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Network error</div>";
+			}
+		};
+		xhr.send();
+	}
+	,fetch7tvSearchEmotes: function(query,page,clearList) {
+		var _gthis = this;
+		var xhr = new XMLHttpRequest();
+		xhr.open("POST","https://7tv.io/v3/gql",true);
+		xhr.setRequestHeader("Content-Type","application/json");
+		xhr.onload = function() {
+			var loadingEl = window.document.querySelector("#seventv-loading");
+			var listEl = window.document.querySelector("#seventv-list");
+			loadingEl.style.display = "none";
+			_gthis.isSeventvLoading = false;
+			if(xhr.status == 200) {
+				try {
+					var data = JSON.parse(xhr.responseText);
+					if(clearList) {
+						listEl.innerHTML = "";
+					}
+					if(data.data != null && data.data.emotes != null && data.data.emotes.items != null) {
+						var emotes = js_Boot.__cast(data.data.emotes.items , Array);
+						_gthis.hasMoreSeventvEmotes = emotes.length == 20;
+						var _g = 0;
+						while(_g < emotes.length) {
+							var emote = [emotes[_g]];
+							++_g;
+							if(emote[0] != null) {
+								var emoteUrl = [_gthis.getBest7tvEmoteUrl(emote[0])];
+								if(emoteUrl[0] != null) {
+									var imgEl = window.document.createElement("img");
+									imgEl.className = "seventv-emote";
+									imgEl.src = emoteUrl[0];
+									imgEl.alt = emote[0].name;
+									imgEl.title = emote[0].name;
+									imgEl.onclick = (function(emoteUrl,emote) {
+										return function(e) {
+											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"max-height: 128px;\" />");
+										};
+									})(emoteUrl,emote);
+									listEl.appendChild(imgEl);
+								}
+							}
+						}
+						if(emotes.length == 0 && clearList) {
+							listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
+						}
+						if(!_gthis.hasMoreSeventvEmotes && listEl.children.length > 0 && !clearList) {
+							var endMessage = window.document.createElement("div");
+							endMessage.style.gridColumn = "1/-1";
+							endMessage.style.textAlign = "center";
+							endMessage.style.color = "var(--midground)";
+							endMessage.style.padding = "1rem";
+							endMessage.textContent = "No more emotes to load";
+							listEl.appendChild(endMessage);
+						}
+					} else if(clearList) {
+						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
+					}
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					if(clearList) {
+						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Error loading emotes: " + Std.string(_g1) + "</div>";
+					}
+				}
+			} else if(clearList) {
+				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Error: " + xhr.status + "</div>";
+			}
+		};
+		xhr.onerror = function() {
+			var loadingEl = window.document.querySelector("#seventv-loading");
+			var listEl = window.document.querySelector("#seventv-list");
+			loadingEl.style.display = "none";
+			_gthis.isSeventvLoading = false;
+			if(clearList) {
+				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Network error</div>";
+			}
+		};
+		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "limit: Int) { emotes(query: $" + "query, page: $" + "page, limit: $" + "limit) { count items { id name host { url files { name format } } } } }\",\"variables\":{\"query\":\"" + query + "\",\"page\":" + (page - 1) + ",\"limit\":20}}");
+	}
+	,getBest7tvEmoteUrl: function(emote) {
+		if(emote.host != null && emote.host.url != null && emote.host.files != null) {
+			var baseUrl = emote.host.url;
+			var files = emote.host.files;
+			if(files.length > 0) {
+				var _g = 0;
+				var _g1 = js_Boot.__cast(files , Array);
+				while(_g < _g1.length) {
+					var file = _g1[_g];
+					++_g;
+					if(file.name != null && Std.string(file.name).indexOf("2x") != -1) {
+						return "https:" + baseUrl + "/" + Std.string(file.name);
+					}
+				}
+				var firstFile = files[0];
+				if(firstFile.name != null) {
+					return "https:" + baseUrl + "/" + firstFile.name;
+				}
 			}
 		}
 		return null;
@@ -2957,7 +3208,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 858, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1168, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3189,7 +3440,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1166, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1476, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -3925,6 +4176,9 @@ client_Main.prototype = {
 		case "random":
 			this.fetchRandomEmote();
 			return true;
+		case "random7tv":
+			this.fetchRandom7tvEmote();
+			return true;
 		case "removeBan":case "unban":
 			this.mergeRedundantArgs(args,0,1);
 			this.send({ type : "BanClient", banClient : { name : args[0], time : 0}});
@@ -3991,6 +4245,43 @@ client_Main.prototype = {
 		};
 		xhr.onerror = function() {
 			return _gthis.serverMessage("Network error while fetching emotes");
+		};
+		xhr.send();
+	}
+	,fetchRandom7tvEmote: function() {
+		var _gthis = this;
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET","https://7tv.io/v3/emote-sets/global",true);
+		xhr.onload = function() {
+			if(xhr.status == 200) {
+				try {
+					var data = JSON.parse(xhr.responseText);
+					if(data.emotes != null && data.emotes.length > 0) {
+						var randomIndex = Math.floor(Math.random() * data.emotes.length);
+						var emote = data.emotes[randomIndex];
+						if(emote != null) {
+							var emoteUrl = _gthis.getBest7tvEmoteUrl(emote);
+							if(emoteUrl != null) {
+								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"max-height: 128px;\" />");
+							} else {
+								_gthis.serverMessage("Error loading 7TV emote: No URL available");
+							}
+						} else {
+							_gthis.serverMessage("Error loading 7TV emote data");
+						}
+					} else {
+						_gthis.serverMessage("No 7TV emotes found");
+					}
+				} catch( _g ) {
+					var _g1 = haxe_Exception.caught(_g);
+					_gthis.serverMessage("Error parsing 7TV emote data: " + Std.string(_g1));
+				}
+			} else {
+				_gthis.serverMessage("Error fetching 7TV emotes: " + xhr.status);
+			}
+		};
+		xhr.onerror = function() {
+			return _gthis.serverMessage("Network error while fetching 7TV emotes");
 		};
 		xhr.send();
 	}
