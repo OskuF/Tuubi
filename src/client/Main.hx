@@ -710,15 +710,27 @@ class Main {
 			final baseUrl = emote.host.url;
 			final files = emote.host.files;
 
-			// Try to get the best size (2x is usually good quality)
+			// Try to get the highest quality size (4x for crisp downscaling)
 			if (files.length > 0) {
-				// Look for 2x size first, then fallback to 1x
+				// Look for 4x size first for best quality, then fallback to lower resolutions
+				for (file in cast(files, Array<Dynamic>)) {
+					if (file.name != null && Std.string(file.name).indexOf("4x") != -1) {
+						return "https:" + baseUrl + "/" + file.name;
+					}
+				}
+				// Fallback to 3x if 4x not available
+				for (file in cast(files, Array<Dynamic>)) {
+					if (file.name != null && Std.string(file.name).indexOf("3x") != -1) {
+						return "https:" + baseUrl + "/" + file.name;
+					}
+				}
+				// Fallback to 2x if 3x not available
 				for (file in cast(files, Array<Dynamic>)) {
 					if (file.name != null && Std.string(file.name).indexOf("2x") != -1) {
 						return "https:" + baseUrl + "/" + file.name;
 					}
 				}
-				// Fallback to first available
+				// Final fallback to first available (1x)
 				final firstFile = files[0];
 				if (firstFile.name != null) {
 					return "https:" + baseUrl + "/" + firstFile.name;

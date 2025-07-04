@@ -2879,6 +2879,24 @@ client_Main.prototype = {
 				while(_g < _g1.length) {
 					var file = _g1[_g];
 					++_g;
+					if(file.name != null && Std.string(file.name).indexOf("4x") != -1) {
+						return "https:" + baseUrl + "/" + Std.string(file.name);
+					}
+				}
+				var _g = 0;
+				var _g1 = js_Boot.__cast(files , Array);
+				while(_g < _g1.length) {
+					var file = _g1[_g];
+					++_g;
+					if(file.name != null && Std.string(file.name).indexOf("3x") != -1) {
+						return "https:" + baseUrl + "/" + Std.string(file.name);
+					}
+				}
+				var _g = 0;
+				var _g1 = js_Boot.__cast(files , Array);
+				while(_g < _g1.length) {
+					var file = _g1[_g];
+					++_g;
 					if(file.name != null && Std.string(file.name).indexOf("2x") != -1) {
 						return "https:" + baseUrl + "/" + Std.string(file.name);
 					}
@@ -3138,7 +3156,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1086, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1098, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3370,7 +3388,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1394, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1406, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
