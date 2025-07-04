@@ -2652,7 +2652,7 @@ client_Main.prototype = {
 									imgEl.title = emote[0].name;
 									imgEl.onclick = (function(emoteUrl,emote) {
 										return function(e) {
-											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"max-height: 128px;\" />");
+											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"height: 128px; width: auto;\" />");
 										};
 									})(emoteUrl,emote);
 									listEl.appendChild(imgEl);
@@ -2826,7 +2826,7 @@ client_Main.prototype = {
 									imgEl.title = emote[0].name;
 									imgEl.onclick = (function(emoteUrl,emote) {
 										return function(e) {
-											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"max-height: 128px;\" />");
+											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"height: 128px; width: auto;\" />");
 										};
 									})(emoteUrl,emote);
 									listEl.appendChild(imgEl);
@@ -4155,7 +4155,7 @@ client_Main.prototype = {
 						if(emote != null) {
 							var emoteUrl = _gthis.getBestEmoteUrl(emote);
 							if(emoteUrl != null) {
-								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"max-height: 128px;\" />");
+								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"height: 128px; width: auto;\" />");
 							} else {
 								_gthis.serverMessage("Error loading emote: No URL available");
 							}
@@ -4192,7 +4192,7 @@ client_Main.prototype = {
 						if(emote != null) {
 							var emoteUrl = _gthis.getBest7tvEmoteUrl(emote);
 							if(emoteUrl != null) {
-								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"max-height: 128px;\" />");
+								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"height: 128px; width: auto;\" />");
 							} else {
 								_gthis.serverMessage("Error loading 7TV emote: No URL available");
 							}

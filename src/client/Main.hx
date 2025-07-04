@@ -433,7 +433,7 @@ class Main {
 									// Add click handler to post emote directly to chat
 									imgEl.onclick = e -> {
 										// Create emote HTML to display in chat
-										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="height: 128px; width: auto;" />';
 
 										// Send emote to all users in chat
 										emoteMessage(emoteHtml);
@@ -610,10 +610,9 @@ class Main {
 		fetch7tvSearchEmotes(query, page, clearList);
 	}
 
-
 	function fetch7tvSearchEmotes(query:String, page:Int, clearList:Bool):Void {
 		final apiUrl = "https://7tv.io/v3/gql";
-		
+
 		// GraphQL query for searching emotes
 		final graphqlQuery = '{"query":"query SearchEmotes($$query: String!, $$page: Int, $$limit: Int, $$sort: Sort) { emotes(query: $$query, page: $$page, limit: $$limit, sort: $$sort) { count items { id name host { url files { name format } } } } }","variables":{"query":"${query}","page":${page - 1},"limit":20,"sort":{"value":"age","order":"DESCENDING"}}}';
 
@@ -636,9 +635,10 @@ class Main {
 					}
 
 					// GraphQL response structure
-					if (data.data != null && data.data.emotes != null && data.data.emotes.items != null) {
+					if (data.data != null && data.data.emotes != null
+						&& data.data.emotes.items != null) {
 						final emotes = cast(data.data.emotes.items, Array<Dynamic>);
-						
+
 						// Enable pagination if we got exactly 20 emotes
 						hasMoreSeventvEmotes = emotes.length == 20;
 
@@ -654,7 +654,7 @@ class Main {
 									imgEl.title = emote.name;
 
 									imgEl.onclick = e -> {
-										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="height: 128px; width: auto;" />';
 										emoteMessage(emoteHtml);
 									};
 
@@ -709,7 +709,7 @@ class Main {
 		if (emote.host != null && emote.host.url != null && emote.host.files != null) {
 			final baseUrl = emote.host.url;
 			final files = emote.host.files;
-			
+
 			// Try to get the best size (2x is usually good quality)
 			if (files.length > 0) {
 				// Look for 2x size first, then fallback to 1x
@@ -2141,7 +2141,7 @@ class Main {
 							final emoteUrl = getBestEmoteUrl(emote);
 
 							if (emoteUrl != null) {
-								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="height: 128px; width: auto;" />';
 								// Use the new emoteMessage function to broadcast to all users
 								emoteMessage(emoteHtml);
 							} else {
@@ -2182,7 +2182,7 @@ class Main {
 							final emoteUrl = getBest7tvEmoteUrl(emote);
 
 							if (emoteUrl != null) {
-								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
+								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="height: 128px; width: auto;" />';
 								// Use the emoteMessage function to broadcast to all users
 								emoteMessage(emoteHtml);
 							} else {
