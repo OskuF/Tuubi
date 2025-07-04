@@ -2,6 +2,7 @@ package client;
 
 import Client.ClientData;
 import Types.Config;
+import Types.Emote;
 import Types.GetTimeEvent;
 import Types.Permission;
 import Types.PlayerType;
@@ -18,6 +19,7 @@ import js.Browser;
 import js.html.ButtonElement;
 import js.html.Element;
 import js.html.Event;
+import js.html.ImageElement;
 import js.html.InputElement;
 import js.html.KeyboardEvent;
 import js.html.MouseEvent;
@@ -78,6 +80,11 @@ class Main {
 	var currentSeventvQuery = "";
 	var isSeventvLoading = false;
 	var hasMoreSeventvEmotes = true;
+
+	// App emotes search variables
+	var currentAppEmotesQuery = "";
+	var allAppEmotes:Array<Emote> = [];
+
 	// TTS variables
 	var isTtsEnabled = true;
 	var ttsVolume = 1.0;
@@ -285,6 +292,7 @@ class Main {
 		// FrankerFaceZ panel initialization
 		initFfzPanel();
 		init7tvPanel();
+		initSmilesPanel();
 	}
 
 	function initFfzPanel():Void {
@@ -292,6 +300,8 @@ class Main {
 		final ffzWrap = getEl("#ffz-wrap");
 		final smilesBtnWrap = getEl("#smilesbtn");
 		final smilesWrap = getEl("#smiles-wrap");
+		final seventvBtn = getEl("#seventvbtn");
+		final seventvWrap = getEl("#seventv-wrap");
 
 		ffzBtn.onclick = e -> {
 			if (!ffzBtn.classList.contains("active")) {
@@ -299,6 +309,12 @@ class Main {
 				if (smilesWrap.style.display != "none") {
 					smilesWrap.style.display = "none";
 					smilesBtnWrap.classList.remove("active");
+				}
+
+				// Hide 7TV panel if it's visible
+				if (seventvWrap.style.display != "none") {
+					seventvWrap.style.display = "none";
+					seventvBtn.classList.remove("active");
 				}
 
 				// Show FFZ panel
@@ -578,6 +594,59 @@ class Main {
 		};
 	}
 
+	function initSmilesPanel():Void {
+		final smilesBtn = getEl("#smilesbtn");
+		final smilesWrap = getEl("#smiles-wrap");
+		final ffzBtn = getEl("#ffzbtn");
+		final ffzWrap = getEl("#ffz-wrap");
+		final seventvBtn = getEl("#seventvbtn");
+		final seventvWrap = getEl("#seventv-wrap");
+
+		smilesBtn.onclick = e -> {
+			if (!smilesBtn.classList.contains("active")) {
+				// Hide FFZ panel if it's visible
+				if (ffzWrap.style.display != "none") {
+					ffzWrap.style.display = "none";
+					ffzBtn.classList.remove("active");
+				}
+
+				// Hide 7TV panel if it's visible
+				if (seventvWrap.style.display != "none") {
+					seventvWrap.style.display = "none";
+					seventvBtn.classList.remove("active");
+				}
+
+				// Show smiles panel
+				smilesWrap.style.display = "";
+				smilesBtn.classList.add("active");
+				smilesWrap.style.height = "16rem";
+
+				// Focus on the search input
+				final searchInput:InputElement = getEl("#smiles-search");
+				searchInput.focus();
+
+				// Initialize search on first open
+				searchAppEmotes("");
+			} else {
+				// Hide smiles panel
+				smilesWrap.style.display = "none";
+				smilesBtn.classList.remove("active");
+			}
+		};
+
+		// Search input event listeners
+		final searchInput:InputElement = getEl("#smiles-search");
+		searchInput.onkeyup = (e:KeyboardEvent) -> {
+			searchAppEmotes(searchInput.value);
+		};
+		
+		// Search button event listener
+		final searchBtn = getEl("#smiles-search-btn");
+		searchBtn.onclick = e -> {
+			searchAppEmotes(searchInput.value);
+		};
+	}
+
 	function search7TVEmotes(query:String):Void {
 		// Reset pagination variables on new search
 		currentSeventvPage = 1;
@@ -738,6 +807,51 @@ class Main {
 			}
 		}
 		return null;
+	}
+
+	function searchAppEmotes(query:String):Void {
+		currentAppEmotesQuery = query;
+		
+		// Show loading indicator
+		final loadingEl = getEl("#smiles-loading");
+		final listEl = getEl("#smiles-list");
+		loadingEl.style.display = "block";
+		listEl.innerHTML = "";
+		
+		// Filter emotes based on search query
+		var filteredEmotes = allAppEmotes;
+		if (query.length > 0) {
+			filteredEmotes = allAppEmotes.filter(emote -> {
+				return emote.name.toLowerCase().indexOf(query.toLowerCase()) >= 0;
+			});
+		}
+		
+		// Hide loading indicator
+		loadingEl.style.display = "none";
+		
+		// Display filtered emotes
+		for (emote in filteredEmotes) {
+			final isVideoExt = emote.image.endsWith("mp4") || emote.image.endsWith("webm");
+			final tag = isVideoExt ? "video" : "img";
+			final el = document.createElement(tag);
+			el.className = "smile-preview";
+			el.dataset.src = emote.image;
+			el.title = emote.name;
+			
+			// Set the actual src attribute for display
+			if (isVideoExt) {
+				final videoEl:js.html.VideoElement = cast el;
+				videoEl.src = emote.image;
+				videoEl.autoplay = true;
+				videoEl.loop = true;
+				videoEl.muted = true;
+			} else {
+				final imgEl:js.html.ImageElement = cast el;
+				imgEl.src = emote.image;
+			}
+			
+			listEl.appendChild(el);
+		}
 	}
 
 	public inline function isUser():Bool {
@@ -1618,6 +1732,10 @@ class Main {
 				replace: filter.replace
 			});
 		}
+		
+		// Store all emotes for search functionality
+		allAppEmotes = config.emotes.copy();
+		
 		for (emote in config.emotes) {
 			final isVideoExt = emote.image.endsWith("mp4") || emote.image.endsWith("webm");
 			final tag = isVideoExt ? 'video autoplay="" loop="" muted=""' : "img";
@@ -1633,20 +1751,20 @@ class Main {
 		smilesList.onclick = (e:MouseEvent) -> {
 			final el:Element = cast e.target;
 			if (el == smilesList) return;
-			final form:InputElement = getEl("#chatline");
-			form.value += ' ${el.title}';
-			form.focus();
+
+			// Get emote data
+			final emoteName = el.title;
+			final emoteUrl = el.dataset.src ?? (cast el : js.html.ImageElement).src;
+
+			if (emoteUrl != null) {
+				// Create emote HTML with consistent sizing
+				final emoteHtml = '<img src="${emoteUrl}" alt="${emoteName}" title="${emoteName}" style="height: 128px; width: auto;" />';
+				// Use emoteMessage function for danmaku support and consistent behavior
+				emoteMessage(emoteHtml);
+			}
 		}
+		// Clear the smiles list - it will be populated by the search function when opened
 		smilesList.textContent = "";
-		for (emote in config.emotes) {
-			final isVideoExt = emote.image.endsWith("mp4") || emote.image.endsWith("webm");
-			final tag = isVideoExt ? "video" : "img";
-			final el = document.createElement(tag);
-			el.className = "smile-preview";
-			el.dataset.src = emote.image;
-			el.title = emote.name;
-			smilesList.appendChild(el);
-		}
 	}
 
 	function onLogin(data:Array<ClientData>, clientName:String):Void {

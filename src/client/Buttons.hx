@@ -56,18 +56,40 @@ class Buttons {
 			final wrap = getEl("#smiles-wrap");
 			final list = getEl("#smiles-list");
 			if (list.children.length == 0) return;
-			final isActive = smilesBtn.classList.toggle("active");
-			if (isActive) {
+			
+			if (!smilesBtn.classList.contains("active")) {
+				// Hide FFZ panel if it's visible
+				final ffzWrap = getEl("#ffz-wrap");
+				final ffzBtn = getEl("#ffzbtn");
+				if (ffzWrap.style.display != "none") {
+					ffzWrap.style.display = "none";
+					ffzBtn.classList.remove("active");
+				}
+				
+				// Hide 7TV panel if it's visible
+				final seventvWrap = getEl("#seventv-wrap");
+				final seventvBtn = getEl("#seventvbtn");
+				if (seventvWrap.style.display != "none") {
+					seventvWrap.style.display = "none";
+					seventvBtn.classList.remove("active");
+				}
+				
+				// Show app emotes panel
 				wrap.style.display = "";
 				wrap.style.height = Utils.outerHeight(list) + "px";
+				smilesBtn.classList.add("active");
 			} else {
+				// Hide app emotes panel
+				smilesBtn.classList.remove("active");
 				wrap.style.height = "0";
 				function onTransitionEnd(e:TransitionEvent):Void {
 					if (e.propertyName != "height") return;
 					wrap.style.display = "none";
 					wrap.removeEventListener("transitionend", onTransitionEnd);
 				}
+				wrap.addEventListener("transitionend", onTransitionEnd);
 			}
+			
 			if (list.firstElementChild.dataset.src == null) return;
 			for (child in list.children) {
 				(cast child : ImageElement).src = child.dataset.src;

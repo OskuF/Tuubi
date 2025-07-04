@@ -610,12 +610,25 @@ client_Buttons.init = function(main) {
 		if(list.children.length == 0) {
 			return;
 		}
-		var isActive = smilesBtn.classList.toggle("active");
-		if(isActive) {
+		if(!smilesBtn.classList.contains("active")) {
+			var ffzWrap = window.document.querySelector("#ffz-wrap");
+			var ffzBtn = window.document.querySelector("#ffzbtn");
+			if(ffzWrap.style.display != "none") {
+				ffzWrap.style.display = "none";
+				ffzBtn.classList.remove("active");
+			}
+			var seventvWrap = window.document.querySelector("#seventv-wrap");
+			var seventvBtn = window.document.querySelector("#seventvbtn");
+			if(seventvWrap.style.display != "none") {
+				seventvWrap.style.display = "none";
+				seventvBtn.classList.remove("active");
+			}
 			wrap.style.display = "";
 			var tmp = client_Utils.outerHeight(list);
 			wrap.style.height = tmp + "px";
+			smilesBtn.classList.add("active");
 		} else {
+			smilesBtn.classList.remove("active");
 			wrap.style.height = "0";
 			var onTransitionEnd = null;
 			onTransitionEnd = function(e) {
@@ -625,6 +638,7 @@ client_Buttons.init = function(main) {
 				wrap.style.display = "none";
 				wrap.removeEventListener("transitionend",onTransitionEnd);
 			};
+			wrap.addEventListener("transitionend",onTransitionEnd);
 		}
 		if(list.firstElementChild.dataset.src == null) {
 			return;
@@ -870,7 +884,7 @@ client_Buttons.init = function(main) {
 				try {
 					data = JSON.parse(request.responseText);
 				} catch( _g ) {
-					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 340, className : "client.Buttons", methodName : "init"});
+					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 362, className : "client.Buttons", methodName : "init"});
 					return;
 				}
 				if(data.errorId == null) {
@@ -2299,6 +2313,8 @@ var client_Main = function() {
 	this.danmakuEmoteAnimations = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
 	this.ttsVolume = 1.0;
 	this.isTtsEnabled = true;
+	this.allAppEmotes = [];
+	this.currentAppEmotesQuery = "";
 	this.hasMoreSeventvEmotes = true;
 	this.isSeventvLoading = false;
 	this.currentSeventvQuery = "";
@@ -2545,6 +2561,7 @@ client_Main.prototype = {
 		window.document.querySelector("#customembed-content").onkeydown = window.document.querySelector("#customembed-title").onkeydown;
 		this.initFfzPanel();
 		this.init7tvPanel();
+		this.initSmilesPanel();
 	}
 	,initFfzPanel: function() {
 		var _gthis = this;
@@ -2552,11 +2569,17 @@ client_Main.prototype = {
 		var ffzWrap = window.document.querySelector("#ffz-wrap");
 		var smilesBtnWrap = window.document.querySelector("#smilesbtn");
 		var smilesWrap = window.document.querySelector("#smiles-wrap");
+		var seventvBtn = window.document.querySelector("#seventvbtn");
+		var seventvWrap = window.document.querySelector("#seventv-wrap");
 		ffzBtn.onclick = function(e) {
 			if(!ffzBtn.classList.contains("active")) {
 				if(smilesWrap.style.display != "none") {
 					smilesWrap.style.display = "none";
 					smilesBtnWrap.classList.remove("active");
+				}
+				if(seventvWrap.style.display != "none") {
+					seventvWrap.style.display = "none";
+					seventvBtn.classList.remove("active");
 				}
 				ffzWrap.style.display = "";
 				ffzBtn.classList.add("active");
@@ -2771,6 +2794,42 @@ client_Main.prototype = {
 			}
 		};
 	}
+	,initSmilesPanel: function() {
+		var _gthis = this;
+		var smilesBtn = window.document.querySelector("#smilesbtn");
+		var smilesWrap = window.document.querySelector("#smiles-wrap");
+		var ffzBtn = window.document.querySelector("#ffzbtn");
+		var ffzWrap = window.document.querySelector("#ffz-wrap");
+		var seventvBtn = window.document.querySelector("#seventvbtn");
+		var seventvWrap = window.document.querySelector("#seventv-wrap");
+		smilesBtn.onclick = function(e) {
+			if(!smilesBtn.classList.contains("active")) {
+				if(ffzWrap.style.display != "none") {
+					ffzWrap.style.display = "none";
+					ffzBtn.classList.remove("active");
+				}
+				if(seventvWrap.style.display != "none") {
+					seventvWrap.style.display = "none";
+					seventvBtn.classList.remove("active");
+				}
+				smilesWrap.style.display = "";
+				smilesBtn.classList.add("active");
+				smilesWrap.style.height = "16rem";
+				window.document.querySelector("#smiles-search").focus();
+				_gthis.searchAppEmotes("");
+			} else {
+				smilesWrap.style.display = "none";
+				smilesBtn.classList.remove("active");
+			}
+		};
+		var searchInput = window.document.querySelector("#smiles-search");
+		searchInput.onkeyup = function(e) {
+			_gthis.searchAppEmotes(searchInput.value);
+		};
+		window.document.querySelector("#smiles-search-btn").onclick = function(e) {
+			_gthis.searchAppEmotes(searchInput.value);
+		};
+	}
 	,search7TVEmotes: function(query) {
 		this.currentSeventvPage = 1;
 		this.currentSeventvQuery = query;
@@ -2908,6 +2967,48 @@ client_Main.prototype = {
 			}
 		}
 		return null;
+	}
+	,searchAppEmotes: function(query) {
+		this.currentAppEmotesQuery = query;
+		var loadingEl = window.document.querySelector("#smiles-loading");
+		var listEl = window.document.querySelector("#smiles-list");
+		loadingEl.style.display = "block";
+		listEl.innerHTML = "";
+		var filteredEmotes = this.allAppEmotes;
+		if(query.length > 0) {
+			var _this = this.allAppEmotes;
+			var _g = [];
+			var _g1 = 0;
+			while(_g1 < _this.length) {
+				var v = _this[_g1];
+				++_g1;
+				if(v.name.toLowerCase().indexOf(query.toLowerCase()) >= 0) {
+					_g.push(v);
+				}
+			}
+			filteredEmotes = _g;
+		}
+		loadingEl.style.display = "none";
+		var _g = 0;
+		while(_g < filteredEmotes.length) {
+			var emote = filteredEmotes[_g];
+			++_g;
+			var isVideoExt = StringTools.endsWith(emote.image,"mp4") || StringTools.endsWith(emote.image,"webm");
+			var el = window.document.createElement(isVideoExt ? "video" : "img");
+			el.className = "smile-preview";
+			el.dataset.src = emote.image;
+			el.title = emote.name;
+			if(isVideoExt) {
+				var videoEl = el;
+				videoEl.src = emote.image;
+				videoEl.autoplay = true;
+				videoEl.loop = true;
+				videoEl.muted = true;
+			} else {
+				el.src = emote.image;
+			}
+			listEl.appendChild(el);
+		}
 	}
 	,toggleDanmaku: function() {
 		this.isDanmakuEnabled = !this.isDanmakuEnabled;
@@ -3156,7 +3257,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1098, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1212, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3388,7 +3489,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1406, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1520, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -3673,6 +3774,7 @@ client_Main.prototype = {
 		this.send({ type : "Login", login : { clientName : name, passHash : hash}});
 	}
 	,setConfig: function(config) {
+		var _gthis = this;
 		this.config = config;
 		if(client_Utils.isTouch()) {
 			config.requestLeaderOnPause = false;
@@ -3689,6 +3791,7 @@ client_Main.prototype = {
 			++_g;
 			this.filters.push({ regex : new EReg(filter.regex,filter.flags), replace : filter.replace});
 		}
+		this.allAppEmotes = config.emotes.slice();
 		var _g = 0;
 		var _g1 = config.emotes;
 		while(_g < _g1.length) {
@@ -3705,23 +3808,14 @@ client_Main.prototype = {
 			if(el == smilesList) {
 				return;
 			}
-			var form = window.document.querySelector("#chatline");
-			form.value += " " + el.title;
-			form.focus();
+			var emoteName = el.title;
+			var tmp = el.dataset.src;
+			var emoteUrl = tmp != null ? tmp : el.src;
+			if(emoteUrl != null) {
+				_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emoteName + "\" title=\"" + emoteName + "\" style=\"height: 128px; width: auto;\" />");
+			}
 		};
 		smilesList.textContent = "";
-		var _g = 0;
-		var _g1 = config.emotes;
-		while(_g < _g1.length) {
-			var emote = _g1[_g];
-			++_g;
-			var tag = StringTools.endsWith(emote.image,"mp4") || StringTools.endsWith(emote.image,"webm") ? "video" : "img";
-			var el = window.document.createElement(tag);
-			el.className = "smile-preview";
-			el.dataset.src = emote.image;
-			el.title = emote.name;
-			smilesList.appendChild(el);
-		}
 	}
 	,onLogin: function(data,clientName) {
 		this.updateClients(data);

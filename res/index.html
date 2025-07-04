@@ -350,7 +350,16 @@
         </button>
       </div>
       <div id="smiles-wrap" class="collapsible" style="display: none;">
+        <div id="smiles-search-container">
+          <input id="smiles-search" type="text" placeholder="Search app emotes...">
+          <button id="smiles-search-btn">
+            <ion-icon name="search-circle-outline"></ion-icon>
+          </button>
+        </div>
         <div id="smiles-list"></div>
+        <div id="smiles-loading" style="display: none;">
+          <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+        </div>
       </div>
       <div id="ffz-wrap" class="collapsible" style="display: none;">
         <div id="ffz-search-container">

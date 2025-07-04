@@ -877,6 +877,10 @@ footer#footer {
   margin-left: .5rem;
 }
 
+#chatbox button ion-icon {
+  color: #ffffff;
+}
+
 #chatline {
   flex-grow: 2;
   width: 2rem;
@@ -886,12 +890,24 @@ footer#footer {
 
 #smiles-wrap {
   display: flex;
+  flex-direction: column;
   height: 0;
   width: 100%;
   background: rgba(0, 0, 0, 0.7);
   border-radius: 1rem;
-  overflow-y: scroll;
+  overflow-y: hidden;
   text-align: center;
+}
+
+#smiles-search-container {
+  display: flex;
+  padding: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+#smiles-search {
+  flex-grow: 1;
+  margin-right: 0.5rem;
 }
 
 #smiles-list {
