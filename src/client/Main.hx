@@ -355,13 +355,60 @@ class Main {
 
 		// Add scroll event listener for infinite scroll
 		final listEl = getEl("#ffz-list");
+		var scrollTimeout:Int = 0;
+		var isResizing = false;
+		
+		// Helper function to check if all emotes are visible and auto-load if needed
+		function checkVisibilityAndAutoLoad():Void {
+			if (isFfzLoading || !hasMoreFfzEmotes || isResizing) return;
+			
+			final scrollHeight = listEl.scrollHeight;
+			final clientHeight = listEl.clientHeight;
+			
+			// If all content is visible (no scrollbar), load more emotes
+			if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
+				loadMoreFfzEmotes();
+			}
+		}
+		
+		// Add ResizeObserver to detect layout changes
+		final resizeObserver = js.Syntax.code("new ResizeObserver({0})", (entries, observer) -> {
+			isResizing = true;
+			if (scrollTimeout != 0) {
+				js.Browser.window.clearTimeout(scrollTimeout);
+			}
+			scrollTimeout = js.Browser.window.setTimeout(() -> {
+				isResizing = false;
+				scrollTimeout = 0;
+				// Check if we need to auto-load after resize
+				checkVisibilityAndAutoLoad();
+			}, 100);
+		});
+		js.Syntax.code("{0}.observe({1})", resizeObserver, listEl);
+		
 		listEl.onscroll = (e:Event) -> {
-			if (isFfzLoading || !hasMoreFfzEmotes) return;
+			if (isFfzLoading || !hasMoreFfzEmotes || isResizing) return;
 
-			final scrollPosition = listEl.scrollTop + listEl.clientHeight;
-			final scrollThreshold = listEl.scrollHeight * 0.8; // Load more when 80% scrolled
+			// Add safety checks for layout stability
+			final scrollHeight = listEl.scrollHeight;
+			final clientHeight = listEl.clientHeight;
+			final scrollTop = listEl.scrollTop;
+			
+			// Ensure we have valid dimensions
+			if (scrollHeight <= 0 || clientHeight <= 0) return;
+			
+			// If all content is visible (no scrollbar), auto-load more
+			if (scrollHeight <= clientHeight) {
+				loadMoreFfzEmotes();
+				return;
+			}
+			
+			// Calculate scroll position with improved logic for normal scrolling
+			final scrollPosition = scrollTop + clientHeight;
+			final scrollThreshold = scrollHeight * 0.8; // Load more when 80% scrolled
+			final minScrollDistance = 50; // Minimum scroll distance to prevent false triggers
 
-			if (scrollPosition >= scrollThreshold) {
+			if (scrollPosition >= scrollThreshold && scrollTop >= minScrollDistance) {
 				loadMoreFfzEmotes();
 			}
 		};
@@ -477,6 +524,13 @@ class Main {
 						endMessage.textContent = "No more emotes to load";
 						listEl.appendChild(endMessage);
 					}
+					
+					// Check if we need to auto-load more emotes after this batch
+					js.Browser.window.setTimeout(() -> {
+						if (listEl.scrollHeight <= listEl.clientHeight && hasMoreFfzEmotes && !isFfzLoading) {
+							loadMoreFfzEmotes();
+						}
+					}, 50);
 				} catch (e) {
 					if (clearList) {
 						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error loading emotes: ${e}</div>';
@@ -582,13 +636,60 @@ class Main {
 
 		// Add scroll event listener for infinite scroll
 		final listEl = getEl("#seventv-list");
+		var scrollTimeout:Int = 0;
+		var isResizing = false;
+		
+		// Helper function to check if all emotes are visible and auto-load if needed
+		function checkVisibilityAndAutoLoad():Void {
+			if (isSeventvLoading || !hasMoreSeventvEmotes || isResizing) return;
+			
+			final scrollHeight = listEl.scrollHeight;
+			final clientHeight = listEl.clientHeight;
+			
+			// If all content is visible (no scrollbar), load more emotes
+			if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
+				loadMore7tvEmotes();
+			}
+		}
+		
+		// Add ResizeObserver to detect layout changes
+		final resizeObserver = js.Syntax.code("new ResizeObserver({0})", (entries, observer) -> {
+			isResizing = true;
+			if (scrollTimeout != 0) {
+				js.Browser.window.clearTimeout(scrollTimeout);
+			}
+			scrollTimeout = js.Browser.window.setTimeout(() -> {
+				isResizing = false;
+				scrollTimeout = 0;
+				// Check if we need to auto-load after resize
+				checkVisibilityAndAutoLoad();
+			}, 100);
+		});
+		js.Syntax.code("{0}.observe({1})", resizeObserver, listEl);
+		
 		listEl.onscroll = (e:Event) -> {
-			if (isSeventvLoading || !hasMoreSeventvEmotes) return;
+			if (isSeventvLoading || !hasMoreSeventvEmotes || isResizing) return;
 
-			final scrollPosition = listEl.scrollTop + listEl.clientHeight;
-			final scrollThreshold = listEl.scrollHeight * 0.8; // Load more when 80% scrolled
+			// Add safety checks for layout stability
+			final scrollHeight = listEl.scrollHeight;
+			final clientHeight = listEl.clientHeight;
+			final scrollTop = listEl.scrollTop;
+			
+			// Ensure we have valid dimensions
+			if (scrollHeight <= 0 || clientHeight <= 0) return;
+			
+			// If all content is visible (no scrollbar), auto-load more
+			if (scrollHeight <= clientHeight) {
+				loadMore7tvEmotes();
+				return;
+			}
+			
+			// Calculate scroll position with improved logic for normal scrolling
+			final scrollPosition = scrollTop + clientHeight;
+			final scrollThreshold = scrollHeight * 0.8; // Load more when 80% scrolled
+			final minScrollDistance = 50; // Minimum scroll distance to prevent false triggers
 
-			if (scrollPosition >= scrollThreshold) {
+			if (scrollPosition >= scrollThreshold && scrollTop >= minScrollDistance) {
 				loadMore7tvEmotes();
 			}
 		};
@@ -746,6 +847,13 @@ class Main {
 							endMessage.textContent = "No more emotes to load";
 							listEl.appendChild(endMessage);
 						}
+						
+						// Check if we need to auto-load more emotes after this batch
+						js.Browser.window.setTimeout(() -> {
+							if (listEl.scrollHeight <= listEl.clientHeight && hasMoreSeventvEmotes && !isSeventvLoading) {
+								loadMore7tvEmotes();
+							}
+						}, 50);
 					} else if (clearList) {
 						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
 					}

@@ -2608,13 +2608,46 @@ client_Main.prototype = {
 			}
 		};
 		var listEl = window.document.querySelector("#ffz-list");
-		listEl.onscroll = function(e) {
-			if(_gthis.isFfzLoading || !_gthis.hasMoreFfzEmotes) {
+		var scrollTimeout = 0;
+		var isResizing = false;
+		var checkVisibilityAndAutoLoad = function() {
+			if(_gthis.isFfzLoading || !_gthis.hasMoreFfzEmotes || isResizing) {
 				return;
 			}
-			var scrollPosition = listEl.scrollTop + listEl.clientHeight;
-			var scrollThreshold = listEl.scrollHeight * 0.8;
-			if(scrollPosition >= scrollThreshold) {
+			var scrollHeight = listEl.scrollHeight;
+			var clientHeight = listEl.clientHeight;
+			if(scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
+				_gthis.loadMoreFfzEmotes();
+			}
+		};
+		var resizeObserver = new ResizeObserver(function(entries,observer) {
+			isResizing = true;
+			if(scrollTimeout != 0) {
+				window.clearTimeout(scrollTimeout);
+			}
+			scrollTimeout = window.setTimeout(function() {
+				isResizing = false;
+				scrollTimeout = 0;
+				checkVisibilityAndAutoLoad();
+			},100);
+			return scrollTimeout;
+		});
+		resizeObserver.observe(listEl);
+		listEl.onscroll = function(e) {
+			if(_gthis.isFfzLoading || !_gthis.hasMoreFfzEmotes || isResizing) {
+				return;
+			}
+			var scrollHeight = listEl.scrollHeight;
+			var clientHeight = listEl.clientHeight;
+			var scrollTop = listEl.scrollTop;
+			if(scrollHeight <= 0 || clientHeight <= 0) {
+				return;
+			}
+			if(scrollHeight <= clientHeight) {
+				_gthis.loadMoreFfzEmotes();
+				return;
+			}
+			if(scrollTop + clientHeight >= scrollHeight * 0.8 && scrollTop >= 50) {
 				_gthis.loadMoreFfzEmotes();
 			}
 		};
@@ -2697,6 +2730,11 @@ client_Main.prototype = {
 						endMessage.textContent = "No more emotes to load";
 						listEl.appendChild(endMessage);
 					}
+					window.setTimeout(function() {
+						if(listEl.scrollHeight <= listEl.clientHeight && _gthis.hasMoreFfzEmotes && !_gthis.isFfzLoading) {
+							_gthis.loadMoreFfzEmotes();
+						}
+					},50);
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g);
 					if(clearList) {
@@ -2783,13 +2821,46 @@ client_Main.prototype = {
 			}
 		};
 		var listEl = window.document.querySelector("#seventv-list");
-		listEl.onscroll = function(e) {
-			if(_gthis.isSeventvLoading || !_gthis.hasMoreSeventvEmotes) {
+		var scrollTimeout = 0;
+		var isResizing = false;
+		var checkVisibilityAndAutoLoad = function() {
+			if(_gthis.isSeventvLoading || !_gthis.hasMoreSeventvEmotes || isResizing) {
 				return;
 			}
-			var scrollPosition = listEl.scrollTop + listEl.clientHeight;
-			var scrollThreshold = listEl.scrollHeight * 0.8;
-			if(scrollPosition >= scrollThreshold) {
+			var scrollHeight = listEl.scrollHeight;
+			var clientHeight = listEl.clientHeight;
+			if(scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
+				_gthis.loadMore7tvEmotes();
+			}
+		};
+		var resizeObserver = new ResizeObserver(function(entries,observer) {
+			isResizing = true;
+			if(scrollTimeout != 0) {
+				window.clearTimeout(scrollTimeout);
+			}
+			scrollTimeout = window.setTimeout(function() {
+				isResizing = false;
+				scrollTimeout = 0;
+				checkVisibilityAndAutoLoad();
+			},100);
+			return scrollTimeout;
+		});
+		resizeObserver.observe(listEl);
+		listEl.onscroll = function(e) {
+			if(_gthis.isSeventvLoading || !_gthis.hasMoreSeventvEmotes || isResizing) {
+				return;
+			}
+			var scrollHeight = listEl.scrollHeight;
+			var clientHeight = listEl.clientHeight;
+			var scrollTop = listEl.scrollTop;
+			if(scrollHeight <= 0 || clientHeight <= 0) {
+				return;
+			}
+			if(scrollHeight <= clientHeight) {
+				_gthis.loadMore7tvEmotes();
+				return;
+			}
+			if(scrollTop + clientHeight >= scrollHeight * 0.8 && scrollTop >= 50) {
 				_gthis.loadMore7tvEmotes();
 			}
 		};
@@ -2904,6 +2975,11 @@ client_Main.prototype = {
 							endMessage.textContent = "No more emotes to load";
 							listEl.appendChild(endMessage);
 						}
+						window.setTimeout(function() {
+							if(listEl.scrollHeight <= listEl.clientHeight && _gthis.hasMoreSeventvEmotes && !_gthis.isSeventvLoading) {
+								_gthis.loadMore7tvEmotes();
+							}
+						},50);
 					} else if(clearList) {
 						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
 					}
@@ -3257,7 +3333,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1212, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1320, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3489,7 +3565,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1520, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1628, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
