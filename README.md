@@ -4,7 +4,7 @@
 
 ## Added Features
 
-- FrankerFaceZ emote panel.
+- FrankerFaceZ & 7TV emote panel.
 - Niconico style danmaku subtitling for text and FrankerFaceZ emotes. (Send text and emotes across the screen.)
 - Random emote animations when using danmaku subtitling.
 - Text-to-speech system. Currently supports only Finnish.
