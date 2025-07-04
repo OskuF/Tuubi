@@ -606,98 +606,16 @@ class Main {
 
 	function fetch7tvEmotes(query:String, page:Int, clearList:Bool):Void {
 		isSeventvLoading = true;
-
-		if (query.length > 0) {
-			// Use GraphQL for search
-			fetch7tvSearchEmotes(query, page, clearList);
-		} else {
-			// Get global emotes for trending (only first time)
-			fetch7tvGlobalEmotes(page, clearList);
-		}
+		// Always use GraphQL API with sorting
+		fetch7tvSearchEmotes(query, page, clearList);
 	}
 
-	function fetch7tvGlobalEmotes(page:Int, clearList:Bool):Void {
-		final apiUrl = "https://7tv.io/v3/emote-sets/global";
-		final xhr = new js.html.XMLHttpRequest();
-		xhr.open("GET", apiUrl, true);
-		xhr.onload = () -> {
-			final loadingEl = getEl("#seventv-loading");
-			final listEl = getEl("#seventv-list");
-			loadingEl.style.display = "none";
-			isSeventvLoading = false;
-
-			if (xhr.status == 200) {
-				try {
-					final data = haxe.Json.parse(xhr.responseText);
-
-					// Clear list if this is a new search
-					if (clearList) {
-						listEl.innerHTML = "";
-					}
-
-					// Global emote set response has direct emotes array
-					if (data.emotes != null) {
-						final emotes = cast(data.emotes, Array<Dynamic>);
-						
-						// Disable pagination for global emotes (it's a fixed set)
-						hasMoreSeventvEmotes = false;
-
-						for (emote in emotes) {
-							if (emote != null) {
-								final emoteUrl = getBest7tvEmoteUrl(emote);
-
-								if (emoteUrl != null) {
-									final imgEl:js.html.ImageElement = cast document.createElement("img");
-									imgEl.className = "seventv-emote";
-									imgEl.src = emoteUrl;
-									imgEl.alt = emote.name;
-									imgEl.title = emote.name;
-
-									imgEl.onclick = e -> {
-										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="max-height: 128px;" />';
-										emoteMessage(emoteHtml);
-									};
-
-									listEl.appendChild(imgEl);
-								}
-							}
-						}
-
-						if (emotes.length == 0 && clearList) {
-							listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
-						}
-					} else if (clearList) {
-						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">No emotes found</div>';
-					}
-				} catch (e) {
-					if (clearList) {
-						listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error loading emotes: ${e}</div>';
-					}
-				}
-			} else {
-				if (clearList) {
-					listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Error: ${xhr.status}</div>';
-				}
-			}
-		};
-		xhr.onerror = () -> {
-			final loadingEl = getEl("#seventv-loading");
-			final listEl = getEl("#seventv-list");
-			loadingEl.style.display = "none";
-			isSeventvLoading = false;
-
-			if (clearList) {
-				listEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--midground);">Network error</div>';
-			}
-		};
-		xhr.send();
-	}
 
 	function fetch7tvSearchEmotes(query:String, page:Int, clearList:Bool):Void {
 		final apiUrl = "https://7tv.io/v3/gql";
 		
 		// GraphQL query for searching emotes
-		final graphqlQuery = '{"query":"query SearchEmotes($$query: String!, $$page: Int, $$limit: Int) { emotes(query: $$query, page: $$page, limit: $$limit) { count items { id name host { url files { name format } } } } }","variables":{"query":"${query}","page":${page - 1},"limit":20}}';
+		final graphqlQuery = '{"query":"query SearchEmotes($$query: String!, $$page: Int, $$limit: Int, $$sort: Sort) { emotes(query: $$query, page: $$page, limit: $$limit, sort: $$sort) { count items { id name host { url files { name format } } } } }","variables":{"query":"${query}","page":${page - 1},"limit":20,"sort":{"value":"age","order":"DESCENDING"}}}';
 
 		final xhr = new js.html.XMLHttpRequest();
 		xhr.open("POST", apiUrl, true);

@@ -2791,77 +2791,7 @@ client_Main.prototype = {
 	}
 	,fetch7tvEmotes: function(query,page,clearList) {
 		this.isSeventvLoading = true;
-		if(query.length > 0) {
-			this.fetch7tvSearchEmotes(query,page,clearList);
-		} else {
-			this.fetch7tvGlobalEmotes(page,clearList);
-		}
-	}
-	,fetch7tvGlobalEmotes: function(page,clearList) {
-		var _gthis = this;
-		var xhr = new XMLHttpRequest();
-		xhr.open("GET","https://7tv.io/v3/emote-sets/global",true);
-		xhr.onload = function() {
-			var loadingEl = window.document.querySelector("#seventv-loading");
-			var listEl = window.document.querySelector("#seventv-list");
-			loadingEl.style.display = "none";
-			_gthis.isSeventvLoading = false;
-			if(xhr.status == 200) {
-				try {
-					var data = JSON.parse(xhr.responseText);
-					if(clearList) {
-						listEl.innerHTML = "";
-					}
-					if(data.emotes != null) {
-						var emotes = js_Boot.__cast(data.emotes , Array);
-						_gthis.hasMoreSeventvEmotes = false;
-						var _g = 0;
-						while(_g < emotes.length) {
-							var emote = [emotes[_g]];
-							++_g;
-							if(emote[0] != null) {
-								var emoteUrl = [_gthis.getBest7tvEmoteUrl(emote[0])];
-								if(emoteUrl[0] != null) {
-									var imgEl = window.document.createElement("img");
-									imgEl.className = "seventv-emote";
-									imgEl.src = emoteUrl[0];
-									imgEl.alt = emote[0].name;
-									imgEl.title = emote[0].name;
-									imgEl.onclick = (function(emoteUrl,emote) {
-										return function(e) {
-											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"max-height: 128px;\" />");
-										};
-									})(emoteUrl,emote);
-									listEl.appendChild(imgEl);
-								}
-							}
-						}
-						if(emotes.length == 0 && clearList) {
-							listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
-						}
-					} else if(clearList) {
-						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">No emotes found</div>";
-					}
-				} catch( _g ) {
-					var _g1 = haxe_Exception.caught(_g);
-					if(clearList) {
-						listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Error loading emotes: " + Std.string(_g1) + "</div>";
-					}
-				}
-			} else if(clearList) {
-				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Error: " + xhr.status + "</div>";
-			}
-		};
-		xhr.onerror = function() {
-			var loadingEl = window.document.querySelector("#seventv-loading");
-			var listEl = window.document.querySelector("#seventv-list");
-			loadingEl.style.display = "none";
-			_gthis.isSeventvLoading = false;
-			if(clearList) {
-				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Network error</div>";
-			}
-		};
-		xhr.send();
+		this.fetch7tvSearchEmotes(query,page,clearList);
 	}
 	,fetch7tvSearchEmotes: function(query,page,clearList) {
 		var _gthis = this;
@@ -2937,7 +2867,7 @@ client_Main.prototype = {
 				listEl.innerHTML = "<div style=\"grid-column: 1/-1; text-align: center; color: var(--midground);\">Network error</div>";
 			}
 		};
-		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "limit: Int) { emotes(query: $" + "query, page: $" + "page, limit: $" + "limit) { count items { id name host { url files { name format } } } } }\",\"variables\":{\"query\":\"" + query + "\",\"page\":" + (page - 1) + ",\"limit\":20}}");
+		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "limit: Int, $" + "sort: Sort) { emotes(query: $" + "query, page: $" + "page, limit: $" + "limit, sort: $" + "sort) { count items { id name host { url files { name format } } } } }\",\"variables\":{\"query\":\"" + query + "\",\"page\":" + (page - 1) + ",\"limit\":20,\"sort\":{\"value\":\"age\",\"order\":\"DESCENDING\"}}}");
 	}
 	,getBest7tvEmoteUrl: function(emote) {
 		if(emote.host != null && emote.host.url != null && emote.host.files != null) {
@@ -3208,7 +3138,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1168, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1086, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3440,7 +3370,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1476, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1394, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
