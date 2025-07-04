@@ -1015,6 +1015,21 @@ footer#footer {
   cursor: pointer;
 }
 
+/* Platform Logo Styling */
+.ffz-logo {
+  height: 20px;
+  width: auto;
+  vertical-align: middle;
+  fill: currentColor;
+}
+
+.seventv-logo {
+  height: 20px;
+  width: auto;
+  vertical-align: middle;
+  fill: currentColor;
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }
