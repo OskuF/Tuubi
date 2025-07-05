@@ -1,4 +1,4 @@
-# <img src="./res/img/favicon.svg" height="40" align="top"> Tuubi: SyncTube with extra kick. 🔥
+# <img src="./res/img/favicon.svg" align="top" style="width:40px"> Tuubi: SyncTube with extra kick. 🔥
 
 - Check [SyncTube](https://github.com/RblSb/SyncTube) for setting the project up.
 
