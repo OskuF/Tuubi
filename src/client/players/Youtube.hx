@@ -252,6 +252,11 @@ class Youtube implements IPlayer {
 					isLoaded = true;
 					if (main.lastState.paused) youtube.pauseVideo();
 					player.onCanBePlayed();
+					// Clear random video flag on successful playback
+					if (main.isRandomVideoOperation) {
+						trace('Random video loaded successfully, clearing operation flag');
+						main.isRandomVideoOperation = false;
+					}
 				},
 				onStateChange: e -> {
 					switch (e.data) {
@@ -275,11 +280,21 @@ class Youtube implements IPlayer {
 					
 					switch (errorCode) {
 						case 101: // Video not available in embedded player
-							main.serverMessage('Video cannot be embedded, finding replacement...', false);
-							main.handleRandomVideoPlaybackError(errorCode);
+							if (main.isRandomVideoOperation) {
+								main.serverMessage('Video cannot be embedded, finding replacement...', false);
+								main.handleRandomVideoPlaybackError(errorCode);
+								// Flag will be cleared by handleRandomVideoPlaybackError or replacement success
+							} else {
+								main.serverMessage('Video cannot be embedded (restricted by uploader)', false);
+							}
 						case 150: // Video cannot be embedded
-							main.serverMessage('Video embedding disabled, finding replacement...', false);
-							main.handleRandomVideoPlaybackError(errorCode);
+							if (main.isRandomVideoOperation) {
+								main.serverMessage('Video embedding disabled, finding replacement...', false);
+								main.handleRandomVideoPlaybackError(errorCode);
+								// Flag will be cleared by handleRandomVideoPlaybackError or replacement success
+							} else {
+								main.serverMessage('Video embedding is disabled for this content', false);
+							}
 						case 5: // Video not supported in HTML5 player
 							main.serverMessage('Video format not supported', false);
 						case 2: // Invalid video ID

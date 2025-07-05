@@ -95,12 +95,13 @@ class Main {
 	var lastRandomVideoTime = 0.0;
 	var randomVideoRequestCount = 0;
 	var randomVideoResetTime = 0.0;
-	
+
 	// Search context for error recovery
 	var currentRandomVideoSearch:Array<String> = [];
 	var currentRandomVideoIndex = 0;
 	var currentRandomVideoQuery = "";
 	var currentRandomVideoAttemptCount = 0;
+	public var isRandomVideoOperation = false;
 
 	static function main():Void {
 		new Main();
@@ -368,22 +369,23 @@ class Main {
 		final listEl = getEl("#ffz-list");
 		var scrollTimeout:Int = 0;
 		var isResizing = false;
-		
+
 		// Helper function to check if all emotes are visible and auto-load if needed
 		function checkVisibilityAndAutoLoad():Void {
 			if (isFfzLoading || !hasMoreFfzEmotes || isResizing) return;
-			
+
 			final scrollHeight = listEl.scrollHeight;
 			final clientHeight = listEl.clientHeight;
-			
+
 			// If all content is visible (no scrollbar), load more emotes
 			if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
 				loadMoreFfzEmotes();
 			}
 		}
-		
+
 		// Add ResizeObserver to detect layout changes
-		final resizeObserver = js.Syntax.code("new ResizeObserver({0})", (entries, observer) -> {
+		final resizeObserver = js.Syntax.code("new ResizeObserver({0})", (entries, observer) ->
+		{
 			isResizing = true;
 			if (scrollTimeout != 0) {
 				js.Browser.window.clearTimeout(scrollTimeout);
@@ -396,7 +398,7 @@ class Main {
 			}, 100);
 		});
 		js.Syntax.code("{0}.observe({1})", resizeObserver, listEl);
-		
+
 		listEl.onscroll = (e:Event) -> {
 			if (isFfzLoading || !hasMoreFfzEmotes || isResizing) return;
 
@@ -404,16 +406,16 @@ class Main {
 			final scrollHeight = listEl.scrollHeight;
 			final clientHeight = listEl.clientHeight;
 			final scrollTop = listEl.scrollTop;
-			
+
 			// Ensure we have valid dimensions
 			if (scrollHeight <= 0 || clientHeight <= 0) return;
-			
+
 			// If all content is visible (no scrollbar), auto-load more
 			if (scrollHeight <= clientHeight) {
 				loadMoreFfzEmotes();
 				return;
 			}
-			
+
 			// Calculate scroll position with improved logic for normal scrolling
 			final scrollPosition = scrollTop + clientHeight;
 			final scrollThreshold = scrollHeight * 0.8; // Load more when 80% scrolled
@@ -535,10 +537,11 @@ class Main {
 						endMessage.textContent = "No more emotes to load";
 						listEl.appendChild(endMessage);
 					}
-					
+
 					// Check if we need to auto-load more emotes after this batch
 					js.Browser.window.setTimeout(() -> {
-						if (listEl.scrollHeight <= listEl.clientHeight && hasMoreFfzEmotes && !isFfzLoading) {
+						if (listEl.scrollHeight <= listEl.clientHeight && hasMoreFfzEmotes
+							&& !isFfzLoading) {
 							loadMoreFfzEmotes();
 						}
 					}, 50);
@@ -649,22 +652,23 @@ class Main {
 		final listEl = getEl("#seventv-list");
 		var scrollTimeout:Int = 0;
 		var isResizing = false;
-		
+
 		// Helper function to check if all emotes are visible and auto-load if needed
 		function checkVisibilityAndAutoLoad():Void {
 			if (isSeventvLoading || !hasMoreSeventvEmotes || isResizing) return;
-			
+
 			final scrollHeight = listEl.scrollHeight;
 			final clientHeight = listEl.clientHeight;
-			
+
 			// If all content is visible (no scrollbar), load more emotes
 			if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
 				loadMore7tvEmotes();
 			}
 		}
-		
+
 		// Add ResizeObserver to detect layout changes
-		final resizeObserver = js.Syntax.code("new ResizeObserver({0})", (entries, observer) -> {
+		final resizeObserver = js.Syntax.code("new ResizeObserver({0})", (entries, observer) ->
+		{
 			isResizing = true;
 			if (scrollTimeout != 0) {
 				js.Browser.window.clearTimeout(scrollTimeout);
@@ -677,7 +681,7 @@ class Main {
 			}, 100);
 		});
 		js.Syntax.code("{0}.observe({1})", resizeObserver, listEl);
-		
+
 		listEl.onscroll = (e:Event) -> {
 			if (isSeventvLoading || !hasMoreSeventvEmotes || isResizing) return;
 
@@ -685,16 +689,16 @@ class Main {
 			final scrollHeight = listEl.scrollHeight;
 			final clientHeight = listEl.clientHeight;
 			final scrollTop = listEl.scrollTop;
-			
+
 			// Ensure we have valid dimensions
 			if (scrollHeight <= 0 || clientHeight <= 0) return;
-			
+
 			// If all content is visible (no scrollbar), auto-load more
 			if (scrollHeight <= clientHeight) {
 				loadMore7tvEmotes();
 				return;
 			}
-			
+
 			// Calculate scroll position with improved logic for normal scrolling
 			final scrollPosition = scrollTop + clientHeight;
 			final scrollThreshold = scrollHeight * 0.8; // Load more when 80% scrolled
@@ -751,7 +755,7 @@ class Main {
 		searchInput.onkeyup = (e:KeyboardEvent) -> {
 			searchAppEmotes(searchInput.value);
 		};
-		
+
 		// Search button event listener
 		final searchBtn = getEl("#smiles-search-btn");
 		searchBtn.onclick = e -> {
@@ -858,10 +862,11 @@ class Main {
 							endMessage.textContent = "No more emotes to load";
 							listEl.appendChild(endMessage);
 						}
-						
+
 						// Check if we need to auto-load more emotes after this batch
 						js.Browser.window.setTimeout(() -> {
-							if (listEl.scrollHeight <= listEl.clientHeight && hasMoreSeventvEmotes && !isSeventvLoading) {
+							if (listEl.scrollHeight <= listEl.clientHeight && hasMoreSeventvEmotes
+								&& !isSeventvLoading) {
 								loadMore7tvEmotes();
 							}
 						}, 50);
@@ -930,13 +935,13 @@ class Main {
 
 	function searchAppEmotes(query:String):Void {
 		currentAppEmotesQuery = query;
-		
+
 		// Show loading indicator
 		final loadingEl = getEl("#smiles-loading");
 		final listEl = getEl("#smiles-list");
 		loadingEl.style.display = "block";
 		listEl.innerHTML = "";
-		
+
 		// Filter emotes based on search query
 		var filteredEmotes = allAppEmotes;
 		if (query.length > 0) {
@@ -944,10 +949,10 @@ class Main {
 				return emote.name.toLowerCase().indexOf(query.toLowerCase()) >= 0;
 			});
 		}
-		
+
 		// Hide loading indicator
 		loadingEl.style.display = "none";
-		
+
 		// Display filtered emotes
 		for (emote in filteredEmotes) {
 			final isVideoExt = emote.image.endsWith("mp4") || emote.image.endsWith("webm");
@@ -956,7 +961,7 @@ class Main {
 			el.className = "smile-preview";
 			el.dataset.src = emote.image;
 			el.title = emote.name;
-			
+
 			// Set the actual src attribute for display
 			if (isVideoExt) {
 				final videoEl:js.html.VideoElement = cast el;
@@ -968,7 +973,7 @@ class Main {
 				final imgEl:js.html.ImageElement = cast el;
 				imgEl.src = emote.image;
 			}
-			
+
 			listEl.appendChild(el);
 		}
 	}
@@ -1234,12 +1239,13 @@ class Main {
 	}
 
 	static var cachedWordlist:Array<String>;
-	
+
 	function getWordlist():Array<String> {
 		if (cachedWordlist == null) {
 			final wordlistContent = haxe.Resource.getString("wordlist");
 			if (wordlistContent != null) {
-				cachedWordlist = wordlistContent.split("\n").map(line -> line.trim()).filter(word -> word.length > 0);
+				cachedWordlist = wordlistContent.split("\n").map(line ->
+					line.trim()).filter(word -> word.length > 0);
 			} else {
 				// Fallback to a small array if resource loading fails
 				cachedWordlist = ["music", "funny", "cute", "amazing", "cool", "awesome"];
@@ -1251,7 +1257,7 @@ class Main {
 	function generateRandomSearchQuery():String {
 		// Load words from embedded wordlist resource
 		final words = getWordlist();
-		
+
 		// Pick 1-3 random words
 		final numWords = Math.floor(Math.random() * 3) + 1;
 		final selectedWords = [];
@@ -1261,19 +1267,20 @@ class Main {
 				selectedWords.push(word);
 			}
 		}
-		
+
 		var query = selectedWords.join(" ");
-		
+
 		// Always add a random "before:" date filter to discover content from different eras
 		final currentYear = Date.now().getFullYear();
 		// Random date anywhere from 1 to 15 years ago
 		final year = currentYear - (Math.floor(Math.random() * 15) + 1);
 		final month = Math.floor(Math.random() * 12) + 1;
-		final day = Math.floor(Math.random() * 28) + 1; // Use 1-28 to avoid month length issues
+		final day = Math.floor(Math.random() * 28)
+			+ 1; // Use 1-28 to avoid month length issues
 		final monthStr = month < 10 ? "0" + month : "" + month;
 		final dayStr = day < 10 ? "0" + day : "" + day;
 		query += ' before:$year-$monthStr-$dayStr';
-		
+
 		trace('Generated random search query: "$query"');
 		return query;
 	}
@@ -1282,21 +1289,23 @@ class Main {
 		// Basic rate limiting: max 10 requests per hour, min 2 seconds between requests
 		final now = Date.now().getTime();
 		final hourInMs = 60 * 60 * 1000;
-		
+
 		// Reset counter if an hour has passed
 		if (now - randomVideoResetTime > hourInMs) {
 			randomVideoRequestCount = 0;
 			randomVideoResetTime = now;
 		}
-		
+
 		// Check hourly limit
 		if (randomVideoRequestCount >= 10) {
-			final timeUntilReset = Math.ceil((randomVideoResetTime + hourInMs - now) / 1000 / 60); // Minutes
+			final timeUntilReset = Math.ceil((randomVideoResetTime
+				+ hourInMs
+				- now) / 1000 / 60); // Minutes
 			serverMessage('Random video limit reached (10/hour). Try again in ${timeUntilReset} minutes.', true, false);
 			trace('Rate limit: ${randomVideoRequestCount}/10 requests used. Reset in ${timeUntilReset} minutes.');
 			return;
 		}
-		
+
 		// Check minimum time between requests (2 seconds)
 		final timeSinceLastRequest = now - lastRandomVideoTime;
 		if (timeSinceLastRequest < 2000) {
@@ -1305,24 +1314,35 @@ class Main {
 			trace('Cooldown: ${waitTime} second(s) remaining.');
 			return;
 		}
-		
+
 		lastRandomVideoTime = now;
 		randomVideoRequestCount++;
-		
+
+		// Mark that we're starting a random video operation
+		isRandomVideoOperation = true;
+
+		// Safety timeout to prevent flag getting stuck (10 seconds)
+		Browser.window.setTimeout(() -> {
+			if (isRandomVideoOperation) {
+				trace('Random video operation timeout, clearing flag');
+				isRandomVideoOperation = false;
+			}
+		}, 10000);
+
 		addRandomYoutubeVideoWithRetry(0);
 	}
-	
+
 	function addRandomYoutubeVideoWithRetry(attemptCount:Int):Void {
 		if (attemptCount >= 3) {
 			// After 3 attempts, use fallback popular videos
 			addRandomYoutubeVideoFallback();
 			return;
 		}
-		
+
 		final query = generateRandomSearchQuery();
 		final searchTime = Date.fromTime(Date.now().getTime());
 		trace('Searching YouTube at ${searchTime.toString()} for: "$query"');
-		
+
 		// Use the public method to search for YouTube videos with dedicated API key
 		final randomApiKey = getRandomVideoApiKey();
 		player.searchYoutubeVideos(query, 20, (videoIds:Array<String>) -> {
@@ -1336,12 +1356,12 @@ class Main {
 				}
 				return;
 			}
-			
+
 			// Try to find an embeddable video from the search results
 			tryEmbeddableVideoFromResults(videoIds, query, attemptCount);
 		}, randomApiKey);
 	}
-	
+
 	function tryEmbeddableVideoFromResults(videoIds:Array<String>, query:String, attemptCount:Int):Void {
 		// Shuffle the video IDs to get random selection
 		final shuffledIds = videoIds.copy();
@@ -1351,11 +1371,11 @@ class Main {
 			shuffledIds[i] = shuffledIds[j];
 			shuffledIds[j] = temp;
 		}
-		
+
 		// Try videos one by one until we find an embeddable one
 		tryNextVideoFromList(shuffledIds, 0, query, attemptCount);
 	}
-	
+
 	function tryNextVideoFromList(videoIds:Array<String>, index:Int, query:String, attemptCount:Int):Void {
 		if (index >= videoIds.length) {
 			// No embeddable videos found in this search, retry with different search terms
@@ -1367,12 +1387,12 @@ class Main {
 			}
 			return;
 		}
-		
+
 		final videoId = videoIds[index];
 		final youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
-		
+
 		trace('Testing embeddability for video #${index + 1}: $videoId');
-		
+
 		// Check embeddability directly via YouTube API before adding to playlist
 		checkVideoEmbeddability(videoId, (isEmbeddable:Bool, title:String) -> {
 			if (isEmbeddable) {
@@ -1381,11 +1401,12 @@ class Main {
 				currentRandomVideoIndex = index + 1; // Next video to try if this one fails
 				currentRandomVideoQuery = query;
 				currentRandomVideoAttemptCount = attemptCount;
-				
+
 				// Video is embeddable, add it to the playlist
 				trace('Found embeddable video: $videoId ($title)');
 				addVideo(youtubeUrl, true, true, false, () -> {
 					serverMessage('Added random video from search: "$query"');
+					// Note: Flag will be cleared when video successfully plays or fails
 				});
 			} else {
 				// Video is not embeddable, try the next one
@@ -1394,7 +1415,7 @@ class Main {
 			}
 		});
 	}
-	
+
 	function checkVideoEmbeddability(videoId:String, callback:(isEmbeddable:Bool, title:String) -> Void):Void {
 		final apiKey = getRandomVideoApiKey();
 		if (apiKey == null || apiKey == "") {
@@ -1402,21 +1423,21 @@ class Main {
 			callback(true, "Unknown"); // Default to embeddable if no API key
 			return;
 		}
-		
+
 		final videosUrl = "https://www.googleapis.com/youtube/v3/videos";
 		final params = '?part=snippet,status,contentDetails&fields=items(snippet/title,status/embeddable,status/privacyStatus,contentDetails/regionRestriction,contentDetails/contentRating)&id=$videoId&key=$apiKey';
 		final dataUrl = videosUrl + params;
-		
+
 		final http = new haxe.Http(dataUrl);
 		http.onData = response -> {
 			try {
 				final json = haxe.Json.parse(response);
-				
+
 				// Check for YouTube API errors
 				if (json.error != null) {
 					final errorCode:Int = json.error.code ?? 0;
 					final errorMessage:String = json.error.message ?? "Unknown error";
-					
+
 					if (errorCode == 403) {
 						trace('Random video API quota exhausted: $errorMessage');
 						serverMessage('Random video API quota exhausted. Try again later.', false);
@@ -1429,27 +1450,27 @@ class Main {
 						return;
 					}
 				}
-				
+
 				final items:Array<Dynamic> = json.items ?? [];
-				
+
 				if (items.length == 0) {
 					trace('Video $videoId not found');
 					callback(false, "Not Found");
 					return;
 				}
-				
+
 				final item = items[0];
 				final title:String = item.snippet?.title ?? "Unknown";
 				final embeddable:Bool = item.status?.embeddable ?? true;
 				final privacyStatus:String = item.status?.privacyStatus ?? "public";
 				final regionRestriction = item.contentDetails?.regionRestriction;
 				final contentRating = item.contentDetails?.contentRating;
-				
+
 				// Comprehensive embeddability check
 				final isActuallyEmbeddable = checkComprehensiveEmbeddability(
 					videoId, title, embeddable, privacyStatus, regionRestriction, contentRating
 				);
-				
+
 				trace('Video $videoId comprehensive embeddability: $isActuallyEmbeddable (title: $title)');
 				callback(isActuallyEmbeddable, title);
 			} catch (e:Dynamic) {
@@ -1457,21 +1478,21 @@ class Main {
 				callback(true, "Parse Error"); // Default to embeddable on parse error
 			}
 		};
-		
+
 		http.onError = error -> {
 			trace('Error checking embeddability for $videoId: $error');
 			callback(true, "API Error"); // Default to embeddable on API error
 		};
-		
+
 		http.request();
 	}
-	
+
 	function checkComprehensiveEmbeddability(
-		videoId:String, 
-		title:String, 
-		embeddable:Bool, 
-		privacyStatus:String, 
-		regionRestriction:Dynamic, 
+		videoId:String,
+		title:String,
+		embeddable:Bool,
+		privacyStatus:String,
+		regionRestriction:Dynamic,
 		contentRating:Dynamic
 	):Bool {
 		// If strict checks are disabled, only check basic embeddability
@@ -1483,19 +1504,19 @@ class Main {
 			trace('Video $videoId passed basic embeddability check (title: $title)');
 			return true;
 		}
-		
+
 		// Check basic embeddability
 		if (!embeddable) {
 			trace('Video $videoId rejected: not embeddable (title: $title)');
 			return false;
 		}
-		
+
 		// Check privacy status - only allow public videos
 		if (privacyStatus != "public") {
 			trace('Video $videoId rejected: privacy status is $privacyStatus (title: $title)');
 			return false;
 		}
-		
+
 		// Check age restrictions - only reject if server config doesn't allow age-restricted content
 		if (!config.allowAgeRestrictedVideos && contentRating != null) {
 			final ratingKeys = Reflect.fields(contentRating);
@@ -1504,11 +1525,11 @@ class Main {
 				return false;
 			}
 		}
-		
+
 		// Check regional restrictions - use server's configured region
 		if (regionRestriction != null) {
 			final userRegion = config.youtubeRegion;
-			
+
 			// Check if video is blocked in user's region
 			final blockedDynamic:Array<Dynamic> = regionRestriction.blocked ?? [];
 			final blocked:Array<String> = [for (item in blockedDynamic) Std.string(item)];
@@ -1516,7 +1537,7 @@ class Main {
 				trace('Video $videoId rejected: blocked in region $userRegion (title: $title)');
 				return false;
 			}
-			
+
 			// Check if video is only allowed in specific regions
 			final allowedDynamic:Array<Dynamic> = regionRestriction.allowed ?? [];
 			final allowed:Array<String> = [for (item in allowedDynamic) Std.string(item)];
@@ -1525,28 +1546,29 @@ class Main {
 				return false;
 			}
 		}
-		
+
 		trace('Video $videoId passed all embeddability checks (title: $title)');
 		return true;
 	}
-	
+
 	public function handleRandomVideoPlaybackError(errorCode:Int):Void {
 		trace('Handling random video playback error $errorCode');
-		
+
 		// Remove the failed video from the playlist
 		final currentItem = player.getCurrentItem();
 		if (currentItem != null) {
 			removeVideoItem(currentItem.url);
 			trace('Removed failed video from playlist: ${currentItem.url}');
 		}
-		
+
 		// Try to find a replacement from the current search results
-		if (currentRandomVideoSearch.length > 0 && currentRandomVideoIndex < currentRandomVideoSearch.length) {
+		if (currentRandomVideoSearch.length > 0
+			&& currentRandomVideoIndex < currentRandomVideoSearch.length) {
 			trace('Trying next video from search results (index: $currentRandomVideoIndex)');
 			tryNextVideoFromList(
-				currentRandomVideoSearch, 
-				currentRandomVideoIndex, 
-				currentRandomVideoQuery, 
+				currentRandomVideoSearch,
+				currentRandomVideoIndex,
+				currentRandomVideoQuery,
 				currentRandomVideoAttemptCount
 			);
 		} else {
@@ -1559,19 +1581,19 @@ class Main {
 			}
 		}
 	}
-	
+
 	function addRandomYoutubeVideoFallback():Void {
 		// Fallback to popular/trending searches when API search fails
 		final popularQueries = [
-			"music 2024", "funny animals", "relaxing music", "travel vlog", 
+			"music", "funny animals", "video games", "travel vlog",
 			"cooking tutorial", "science explained", "beautiful nature", "guitar cover",
 			"dance performance", "documentary short", "art tutorial", "tech review"
 		];
-		
+
 		final query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
 		final fallbackTime = Date.fromTime(Date.now().getTime());
 		trace('Fallback search at ${fallbackTime.toString()} for popular query: "$query"');
-		
+
 		final randomApiKey = getRandomVideoApiKey();
 		player.searchYoutubeVideos(query, 10, (videoIds:Array<String>) -> {
 			if (videoIds.length == 0) {
@@ -1579,19 +1601,21 @@ class Main {
 				final knownVideoIds = ["dQw4w9WgXcQ", "kJQP7kiw5Fk", "fJ9rUzIMcZQ", "9bZkp7q19f0"];
 				final randomVideoId = knownVideoIds[Math.floor(Math.random() * knownVideoIds.length)];
 				final youtubeUrl = "https://www.youtube.com/watch?v=" + randomVideoId;
-				
+
 				addVideo(youtubeUrl, true, true, false, () -> {
 					serverMessage("Added popular video (emergency fallback)");
+					// Note: Flag will be cleared when video successfully plays or fails
 				});
 				return;
 			}
-			
+
 			final randomIndex = Math.floor(Math.random() * Math.min(videoIds.length, 5));
 			final selectedVideoId = videoIds[randomIndex];
 			final youtubeUrl = "https://www.youtube.com/watch?v=" + selectedVideoId;
-			
+
 			addVideo(youtubeUrl, true, true, false, () -> {
 				serverMessage('Added trending video: "$query"');
+				// Note: Flag will be cleared when video successfully plays or fails
 			});
 		}, randomApiKey);
 	}
@@ -2214,10 +2238,10 @@ class Main {
 				replace: filter.replace
 			});
 		}
-		
+
 		// Store all emotes for search functionality
 		allAppEmotes = config.emotes.copy();
-		
+
 		for (emote in config.emotes) {
 			final isVideoExt = emote.image.endsWith("mp4") || emote.image.endsWith("webm");
 			final tag = isVideoExt ? 'video autoplay="" loop="" muted=""' : "img";
