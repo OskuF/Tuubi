@@ -91,6 +91,11 @@ class Main {
 	var speechSynthesis:Dynamic;
 	var finnishVoice:Dynamic;
 
+	// Rate limiting for random video searches
+	var lastRandomVideoTime = 0.0;
+	var randomVideoRequestCount = 0;
+	var randomVideoResetTime = 0.0;
+
 	static function main():Void {
 		new Main();
 	}
@@ -1218,6 +1223,151 @@ class Main {
 					},
 					atEnd: atEnd
 				}
+			});
+		});
+	}
+
+	function generateRandomSearchQuery():String {
+		// Load words from wordlist file (we'll simulate this with a smaller array for now)
+		final words = [
+			"music", "funny", "cute", "amazing", "cool", "awesome", "interesting", "science", 
+			"nature", "tech", "art", "dance", "game", "tutorial", "review", "vlog", "travel", 
+			"food", "animal", "space", "documentary", "history", "adventure", "beautiful", 
+			"epic", "creative", "inspire", "relaxing", "energetic", "classic", "modern",
+			"guitar", "piano", "drums", "singing", "concert", "live", "acoustic", "electronic",
+			"cat", "dog", "bird", "ocean", "mountain", "forest", "sunset", "city", "night",
+			"comedy", "drama", "action", "animation", "short", "indie", "vintage", "new"
+		];
+		
+		// Pick 1-3 random words
+		final numWords = Math.floor(Math.random() * 3) + 1;
+		final selectedWords = [];
+		for (i in 0...numWords) {
+			final word = words[Math.floor(Math.random() * words.length)];
+			if (selectedWords.indexOf(word) == -1) {
+				selectedWords.push(word);
+			}
+		}
+		
+		var query = selectedWords.join(" ");
+		
+		// Always add a random "before:" date filter to discover content from different eras
+		final currentYear = Date.now().getFullYear();
+		// Random date anywhere from 1 to 15 years ago
+		final year = currentYear - (Math.floor(Math.random() * 15) + 1);
+		final month = Math.floor(Math.random() * 12) + 1;
+		final day = Math.floor(Math.random() * 28) + 1; // Use 1-28 to avoid month length issues
+		final monthStr = month < 10 ? "0" + month : "" + month;
+		final dayStr = day < 10 ? "0" + day : "" + day;
+		query += ' before:$year-$monthStr-$dayStr';
+		
+		trace('Generated random search query: "$query"');
+		return query;
+	}
+
+	public function addRandomYoutubeVideo():Void {
+		// Basic rate limiting: max 10 requests per hour, min 2 seconds between requests
+		final now = Date.now().getTime();
+		final hourInMs = 60 * 60 * 1000;
+		
+		// Reset counter if an hour has passed
+		if (now - randomVideoResetTime > hourInMs) {
+			randomVideoRequestCount = 0;
+			randomVideoResetTime = now;
+		}
+		
+		// Check hourly limit
+		if (randomVideoRequestCount >= 10) {
+			final timeUntilReset = Math.ceil((randomVideoResetTime + hourInMs - now) / 1000 / 60); // Minutes
+			serverMessage('Random video limit reached (10/hour). Try again in ${timeUntilReset} minutes.', true, false);
+			trace('Rate limit: ${randomVideoRequestCount}/10 requests used. Reset in ${timeUntilReset} minutes.');
+			return;
+		}
+		
+		// Check minimum time between requests (2 seconds)
+		final timeSinceLastRequest = now - lastRandomVideoTime;
+		if (timeSinceLastRequest < 2000) {
+			final waitTime = Math.ceil((2000 - timeSinceLastRequest) / 1000);
+			serverMessage('Please wait ${waitTime} more second(s) before requesting another random video.', true, false);
+			trace('Cooldown: ${waitTime} second(s) remaining.');
+			return;
+		}
+		
+		lastRandomVideoTime = now;
+		randomVideoRequestCount++;
+		
+		addRandomYoutubeVideoWithRetry(0);
+	}
+	
+	function addRandomYoutubeVideoWithRetry(attemptCount:Int):Void {
+		if (attemptCount >= 3) {
+			// After 3 attempts, use fallback popular videos
+			addRandomYoutubeVideoFallback();
+			return;
+		}
+		
+		final query = generateRandomSearchQuery();
+		final searchTime = Date.fromTime(Date.now().getTime());
+		trace('Searching YouTube at ${searchTime.toString()} for: "$query"');
+		
+		// Use the public method to search for YouTube videos
+		player.searchYoutubeVideos(query, 20, (videoIds:Array<String>) -> {
+			if (videoIds.length == 0) {
+				trace('No results found for query: "$query"');
+				// Retry with different search terms
+				if (attemptCount < 2) {
+					addRandomYoutubeVideoWithRetry(attemptCount + 1);
+				} else {
+					addRandomYoutubeVideoFallback();
+				}
+				return;
+			}
+			
+			// Select a random video from the results (prefer videos from positions 1-10 for better quality)
+			final maxIndex = Math.min(videoIds.length, 10);
+			final randomIndex = Math.floor(Math.random() * maxIndex);
+			final selectedVideoId = videoIds[randomIndex];
+			final youtubeUrl = "https://www.youtube.com/watch?v=" + selectedVideoId;
+			
+			trace('Found ${videoIds.length} results, selected video #${randomIndex + 1}: $selectedVideoId');
+			
+			addVideo(youtubeUrl, true, true, false, () -> {
+				serverMessage('Added random video from search: "$query"');
+			});
+		});
+	}
+	
+	function addRandomYoutubeVideoFallback():Void {
+		// Fallback to popular/trending searches when API search fails
+		final popularQueries = [
+			"music 2024", "funny animals", "relaxing music", "travel vlog", 
+			"cooking tutorial", "science explained", "beautiful nature", "guitar cover",
+			"dance performance", "documentary short", "art tutorial", "tech review"
+		];
+		
+		final query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
+		final fallbackTime = Date.fromTime(Date.now().getTime());
+		trace('Fallback search at ${fallbackTime.toString()} for popular query: "$query"');
+		
+		player.searchYoutubeVideos(query, 10, (videoIds:Array<String>) -> {
+			if (videoIds.length == 0) {
+				// Absolute final fallback
+				final knownVideoIds = ["dQw4w9WgXcQ", "kJQP7kiw5Fk", "fJ9rUzIMcZQ", "9bZkp7q19f0"];
+				final randomVideoId = knownVideoIds[Math.floor(Math.random() * knownVideoIds.length)];
+				final youtubeUrl = "https://www.youtube.com/watch?v=" + randomVideoId;
+				
+				addVideo(youtubeUrl, true, true, false, () -> {
+					serverMessage("Added popular video (emergency fallback)");
+				});
+				return;
+			}
+			
+			final randomIndex = Math.floor(Math.random() * Math.min(videoIds.length, 5));
+			final selectedVideoId = videoIds[randomIndex];
+			final youtubeUrl = "https://www.youtube.com/watch?v=" + selectedVideoId;
+			
+			addVideo(youtubeUrl, true, true, false, () -> {
+				serverMessage('Added trending video: "$query"');
 			});
 		});
 	}

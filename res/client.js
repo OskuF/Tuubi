@@ -770,6 +770,9 @@ client_Buttons.init = function(main) {
 		}
 		main.send({ type : "ShufflePlaylist"});
 	};
+	window.document.querySelector("#randomyoutube").onclick = function(e) {
+		main.addRandomYoutubeVideo();
+	};
 	window.document.querySelector("#lockplaylist").onclick = function(e) {
 		if(!main.hasPermission("lockPlaylist")) {
 			return;
@@ -884,7 +887,7 @@ client_Buttons.init = function(main) {
 				try {
 					data = JSON.parse(request.responseText);
 				} catch( _g ) {
-					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 362, className : "client.Buttons", methodName : "init"});
+					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 367, className : "client.Buttons", methodName : "init"});
 					return;
 				}
 				if(data.errorId == null) {
@@ -2311,6 +2314,9 @@ var client_Main = function() {
 	this.danmakuLanes = [];
 	this.isDanmakuEnabled = true;
 	this.danmakuEmoteAnimations = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
+	this.randomVideoResetTime = 0.0;
+	this.randomVideoRequestCount = 0;
+	this.lastRandomVideoTime = 0.0;
 	this.ttsVolume = 1.0;
 	this.isTtsEnabled = true;
 	this.allAppEmotes = [];
@@ -3261,6 +3267,98 @@ client_Main.prototype = {
 			_gthis.send({ type : "AddVideo", addVideo : { item : { url : data.url, title : data.title, author : _gthis.personal.name, duration : data.duration, isTemp : isTemp, doCache : false, playerType : "IframeType"}, atEnd : atEnd}});
 		});
 	}
+	,generateRandomSearchQuery: function() {
+		var words = ["music","funny","cute","amazing","cool","awesome","interesting","science","nature","tech","art","dance","game","tutorial","review","vlog","travel","food","animal","space","documentary","history","adventure","beautiful","epic","creative","inspire","relaxing","energetic","classic","modern","guitar","piano","drums","singing","concert","live","acoustic","electronic","cat","dog","bird","ocean","mountain","forest","sunset","city","night","comedy","drama","action","animation","short","indie","vintage","new"];
+		var numWords = Math.floor(Math.random() * 3) + 1;
+		var selectedWords = [];
+		var _g = 0;
+		while(_g < numWords) {
+			++_g;
+			var word = words[Math.floor(Math.random() * words.length)];
+			if(selectedWords.indexOf(word) == -1) {
+				selectedWords.push(word);
+			}
+		}
+		var query = selectedWords.join(" ");
+		var year = new Date().getFullYear() - (Math.floor(Math.random() * 15) + 1);
+		var month = Math.floor(Math.random() * 12) + 1;
+		var day = Math.floor(Math.random() * 28) + 1;
+		query += " before:" + year + "-" + (month < 10 ? "0" + month : "" + month) + "-" + (day < 10 ? "0" + day : "" + day);
+		haxe_Log.trace("Generated random search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1264, className : "client.Main", methodName : "generateRandomSearchQuery"});
+		return query;
+	}
+	,addRandomYoutubeVideo: function() {
+		var now = new Date().getTime();
+		if(now - this.randomVideoResetTime > 3600000) {
+			this.randomVideoRequestCount = 0;
+			this.randomVideoResetTime = now;
+		}
+		if(this.randomVideoRequestCount >= 10) {
+			var timeUntilReset = Math.ceil((this.randomVideoResetTime + 3600000 - now) / 1000 / 60);
+			this.serverMessage("Random video limit reached (10/hour). Try again in " + timeUntilReset + " minutes.",true,false);
+			haxe_Log.trace("Rate limit: " + this.randomVideoRequestCount + "/10 requests used. Reset in " + timeUntilReset + " minutes.",{ fileName : "src/client/Main.hx", lineNumber : 1283, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+			return;
+		}
+		var timeSinceLastRequest = now - this.lastRandomVideoTime;
+		if(timeSinceLastRequest < 2000) {
+			var waitTime = Math.ceil((2000 - timeSinceLastRequest) / 1000);
+			this.serverMessage("Please wait " + waitTime + " more second(s) before requesting another random video.",true,false);
+			haxe_Log.trace("Cooldown: " + waitTime + " second(s) remaining.",{ fileName : "src/client/Main.hx", lineNumber : 1292, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+			return;
+		}
+		this.lastRandomVideoTime = now;
+		this.randomVideoRequestCount++;
+		this.addRandomYoutubeVideoWithRetry(0);
+	}
+	,addRandomYoutubeVideoWithRetry: function(attemptCount) {
+		var _gthis = this;
+		if(attemptCount >= 3) {
+			this.addRandomYoutubeVideoFallback();
+			return;
+		}
+		var query = this.generateRandomSearchQuery();
+		var searchTime = new Date(new Date().getTime());
+		haxe_Log.trace("Searching YouTube at " + HxOverrides.dateStr(searchTime) + " for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1311, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+		this.player.searchYoutubeVideos(query,20,function(videoIds) {
+			if(videoIds.length == 0) {
+				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1316, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+				if(attemptCount < 2) {
+					_gthis.addRandomYoutubeVideoWithRetry(attemptCount + 1);
+				} else {
+					_gthis.addRandomYoutubeVideoFallback();
+				}
+				return;
+			}
+			var maxIndex = Math.min(videoIds.length,10);
+			var randomIndex = Math.floor(Math.random() * maxIndex);
+			var selectedVideoId = videoIds[randomIndex];
+			haxe_Log.trace("Found " + videoIds.length + " results, selected video #" + (randomIndex + 1) + ": " + selectedVideoId,{ fileName : "src/client/Main.hx", lineNumber : 1332, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+			_gthis.addVideo("https://www.youtube.com/watch?v=" + selectedVideoId,true,true,false,function() {
+				_gthis.serverMessage("Added random video from search: \"" + query + "\"");
+			});
+		});
+	}
+	,addRandomYoutubeVideoFallback: function() {
+		var _gthis = this;
+		var popularQueries = ["music 2024","funny animals","relaxing music","travel vlog","cooking tutorial","science explained","beautiful nature","guitar cover","dance performance","documentary short","art tutorial","tech review"];
+		var query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
+		var fallbackTime = new Date(new Date().getTime());
+		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1350, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
+		this.player.searchYoutubeVideos(query,10,function(videoIds) {
+			if(videoIds.length == 0) {
+				var knownVideoIds = ["dQw4w9WgXcQ","kJQP7kiw5Fk","fJ9rUzIMcZQ","9bZkp7q19f0"];
+				var randomVideoId = knownVideoIds[Math.floor(Math.random() * knownVideoIds.length)];
+				_gthis.addVideo("https://www.youtube.com/watch?v=" + randomVideoId,true,true,false,function() {
+					_gthis.serverMessage("Added popular video (emergency fallback)");
+				});
+				return;
+			}
+			var randomIndex = Math.random();
+			_gthis.addVideo("https://www.youtube.com/watch?v=" + videoIds[Math.floor(randomIndex * Math.min(videoIds.length,5))],true,true,false,function() {
+				_gthis.serverMessage("Added trending video: \"" + query + "\"");
+			});
+		});
+	}
 	,removeVideoItem: function(url) {
 		var _gthis = this;
 		var items = this.player.getItems();
@@ -3333,7 +3431,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1320, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1470, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3565,7 +3663,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1628, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1778, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -5510,6 +5608,12 @@ client_Player.prototype = {
 	,extractYoutubeVideoId: function(url) {
 		return this.youtube.extractVideoId(url);
 	}
+	,searchYoutubeVideos: function(query,maxResults,callback) {
+		if(maxResults == null) {
+			maxResults = 20;
+		}
+		this.youtube.searchVideos(query,maxResults,callback);
+	}
 	,__class__: client_Player
 };
 var client_Settings = function() { };
@@ -7071,6 +7175,44 @@ client_players_Youtube.prototype = {
 	}
 	,unmute: function() {
 		this.youtube.unMute();
+	}
+	,searchVideos: function(query,maxResults,callback) {
+		if(maxResults == null) {
+			maxResults = 20;
+		}
+		var _gthis = this;
+		if(this.apiKey == null) {
+			this.apiKey = this.main.getYoutubeApiKey();
+		}
+		var searchUrl = "https://www.googleapis.com/youtube/v3/search";
+		var dataUrl = searchUrl + ("?part=snippet&type=video&maxResults=" + maxResults + "&q=" + encodeURIComponent(query) + "&key=" + this.apiKey);
+		haxe_Log.trace("YouTube API call: " + (searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + encodeURIComponent(query) + "&key=***"),{ fileName : "src/client/players/Youtube.hx", lineNumber : 327, className : "client.players.Youtube", methodName : "searchVideos"});
+		var http = new haxe_http_HttpJs(dataUrl);
+		http.onData = function(response) {
+			try {
+				var tmp = JSON.parse(response).items;
+				var items = tmp != null ? tmp : [];
+				var videoIds = [];
+				var _g = 0;
+				while(_g < items.length) {
+					var tmp = items[_g++].id;
+					var videoId = tmp != null ? tmp.videoId : null;
+					if(videoId != null && videoId != "") {
+						videoIds.push(videoId);
+					}
+				}
+				haxe_Log.trace("YouTube API returned " + videoIds.length + " video IDs: [" + videoIds.join(", ") + "]",{ fileName : "src/client/players/Youtube.hx", lineNumber : 343, className : "client.players.Youtube", methodName : "searchVideos"});
+				callback(videoIds);
+			} catch( _g ) {
+				_gthis.youtubeApiError({ code : 0, message : "Failed to parse search results"});
+				callback([]);
+			}
+		};
+		http.onError = function(msg) {
+			_gthis.youtubeApiError({ code : 0, message : "Search request failed: " + msg});
+			callback([]);
+		};
+		http.request();
 	}
 	,__class__: client_players_Youtube
 };

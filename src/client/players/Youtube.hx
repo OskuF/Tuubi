@@ -317,4 +317,40 @@ class Youtube implements IPlayer {
 	public function unmute():Void {
 		youtube.unMute();
 	}
+
+	public function searchVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void):Void {
+		if (apiKey == null) apiKey = main.getYoutubeApiKey();
+		final searchUrl = "https://www.googleapis.com/youtube/v3/search";
+		final params = '?part=snippet&type=video&maxResults=$maxResults&q=${StringTools.urlEncode(query)}&key=$apiKey';
+		final dataUrl = searchUrl + params;
+		
+		trace('YouTube API call: ${searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + StringTools.urlEncode(query) + "&key=***"}');
+		
+		final http = new Http(dataUrl);
+		http.onData = response -> {
+			try {
+				final json = Json.parse(response);
+				final items:Array<Dynamic> = json.items ?? [];
+				final videoIds:Array<String> = [];
+				
+				for (item in items) {
+					final videoId = item.id?.videoId;
+					if (videoId != null && videoId != "") {
+						videoIds.push(videoId);
+					}
+				}
+				
+				trace('YouTube API returned ${videoIds.length} video IDs: [${videoIds.join(", ")}]');
+				callback(videoIds);
+			} catch (e:Dynamic) {
+				youtubeApiError({code: 0, message: "Failed to parse search results"});
+				callback([]);
+			}
+		};
+		http.onError = msg -> {
+			youtubeApiError({code: 0, message: "Search request failed: " + msg});
+			callback([]);
+		};
+		http.request();
+	}
 }

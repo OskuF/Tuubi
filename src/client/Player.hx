@@ -783,4 +783,12 @@ class Player {
 	public function extractYoutubeVideoId(url:String):String {
 		return youtube.extractVideoId(url);
 	}
+
+	/**
+	 * Public method to search YouTube videos
+	 * This prevents direct access to the private youtube property
+	 */
+	public function searchYoutubeVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void):Void {
+		youtube.searchVideos(query, maxResults, callback);
+	}
 }

@@ -226,6 +226,11 @@ class Buttons {
 			if (!window.confirm(Lang.get("shufflePlaylistConfirm"))) return;
 			main.send({type: ShufflePlaylist});
 		}
+		
+		final randomYoutube = getEl("#randomyoutube");
+		randomYoutube.onclick = e -> {
+			main.addRandomYoutubeVideo();
+		}
 
 		final lockPlaylist = getEl("#lockplaylist");
 		lockPlaylist.onclick = e -> {
