@@ -3451,28 +3451,37 @@ client_Main.prototype = {
 		http.request();
 	}
 	,checkComprehensiveEmbeddability: function(videoId,title,embeddable,privacyStatus,regionRestriction,contentRating) {
+		if(!this.config.strictEmbeddingChecks) {
+			if(!embeddable) {
+				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1460, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				return false;
+			}
+			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1463, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			return true;
+		}
 		if(!embeddable) {
-			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1459, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1469, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
 		if(privacyStatus != "public") {
-			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1465, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1475, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
-		if(contentRating != null) {
+		if(!this.config.allowAgeRestrictedVideos && contentRating != null) {
 			if(Reflect.fields(contentRating).length > 0) {
-				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1473, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1483, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 		}
 		if(regionRestriction != null) {
+			var userRegion = this.config.youtubeRegion;
 			var tmp = regionRestriction.blocked;
 			var blockedDynamic = tmp != null ? tmp : [];
 			var _g = [];
 			var _g1 = 0;
 			while(_g1 < blockedDynamic.length) _g.push(Std.string(blockedDynamic[_g1++]));
-			if(_g.indexOf("FI") != -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + "FI" + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1486, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			if(_g.indexOf(userRegion) != -1) {
+				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1496, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 			var tmp = regionRestriction.allowed;
@@ -3480,26 +3489,26 @@ client_Main.prototype = {
 			var _g = [];
 			var _g1 = 0;
 			while(_g1 < allowedDynamic.length) _g.push(Std.string(allowedDynamic[_g1++]));
-			if(_g.length > 0 && _g.indexOf("FI") == -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + "FI" + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1494, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			if(_g.length > 0 && _g.indexOf(userRegion) == -1) {
+				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1504, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 		}
-		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1499, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1509, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 		return true;
 	}
 	,handleRandomVideoPlaybackError: function(errorCode) {
-		haxe_Log.trace("Handling random video playback error " + errorCode,{ fileName : "src/client/Main.hx", lineNumber : 1504, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+		haxe_Log.trace("Handling random video playback error " + errorCode,{ fileName : "src/client/Main.hx", lineNumber : 1514, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
 		var currentItem = this.player.getCurrentItem();
 		if(currentItem != null) {
 			this.removeVideoItem(currentItem.url);
-			haxe_Log.trace("Removed failed video from playlist: " + currentItem.url,{ fileName : "src/client/Main.hx", lineNumber : 1510, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+			haxe_Log.trace("Removed failed video from playlist: " + currentItem.url,{ fileName : "src/client/Main.hx", lineNumber : 1520, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
 		}
 		if(this.currentRandomVideoSearch.length > 0 && this.currentRandomVideoIndex < this.currentRandomVideoSearch.length) {
-			haxe_Log.trace("Trying next video from search results (index: " + this.currentRandomVideoIndex + ")",{ fileName : "src/client/Main.hx", lineNumber : 1515, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+			haxe_Log.trace("Trying next video from search results (index: " + this.currentRandomVideoIndex + ")",{ fileName : "src/client/Main.hx", lineNumber : 1525, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
 			this.tryNextVideoFromList(this.currentRandomVideoSearch,this.currentRandomVideoIndex,this.currentRandomVideoQuery,this.currentRandomVideoAttemptCount);
 		} else {
-			haxe_Log.trace("No more videos in current search, starting new search",{ fileName : "src/client/Main.hx", lineNumber : 1524, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+			haxe_Log.trace("No more videos in current search, starting new search",{ fileName : "src/client/Main.hx", lineNumber : 1534, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
 			if(this.currentRandomVideoAttemptCount < 2) {
 				this.addRandomYoutubeVideoWithRetry(this.currentRandomVideoAttemptCount + 1);
 			} else {
@@ -3512,7 +3521,7 @@ client_Main.prototype = {
 		var popularQueries = ["music 2024","funny animals","relaxing music","travel vlog","cooking tutorial","science explained","beautiful nature","guitar cover","dance performance","documentary short","art tutorial","tech review"];
 		var query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
 		var fallbackTime = new Date(new Date().getTime());
-		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1543, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
+		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1553, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
 		this.player.searchYoutubeVideos(query,10,function(videoIds) {
 			if(videoIds.length == 0) {
 				var knownVideoIds = ["dQw4w9WgXcQ","kJQP7kiw5Fk","fJ9rUzIMcZQ","9bZkp7q19f0"];
@@ -3600,7 +3609,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1663, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1673, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3832,7 +3841,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1971, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1981, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;

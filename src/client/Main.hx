@@ -1454,6 +1454,16 @@ class Main {
 		regionRestriction:Dynamic, 
 		contentRating:Dynamic
 	):Bool {
+		// If strict checks are disabled, only check basic embeddability
+		if (!config.strictEmbeddingChecks) {
+			if (!embeddable) {
+				trace('Video $videoId rejected: not embeddable (basic check only) (title: $title)');
+				return false;
+			}
+			trace('Video $videoId passed basic embeddability check (title: $title)');
+			return true;
+		}
+		
 		// Check basic embeddability
 		if (!embeddable) {
 			trace('Video $videoId rejected: not embeddable (title: $title)');
@@ -1466,8 +1476,8 @@ class Main {
 			return false;
 		}
 		
-		// Check age restrictions - reject age-restricted content
-		if (contentRating != null) {
+		// Check age restrictions - only reject if server config doesn't allow age-restricted content
+		if (!config.allowAgeRestrictedVideos && contentRating != null) {
 			final ratingKeys = Reflect.fields(contentRating);
 			if (ratingKeys.length > 0) {
 				trace('Video $videoId rejected: has content rating restrictions (title: $title)');
@@ -1475,9 +1485,9 @@ class Main {
 			}
 		}
 		
-		// Check regional restrictions
+		// Check regional restrictions - use server's configured region
 		if (regionRestriction != null) {
-			final userRegion = "FI"; // Default to Finland based on error message
+			final userRegion = config.youtubeRegion;
 			
 			// Check if video is blocked in user's region
 			final blockedDynamic:Array<Dynamic> = regionRestriction.blocked ?? [];
