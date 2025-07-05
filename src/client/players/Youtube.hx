@@ -346,10 +346,13 @@ class Youtube implements IPlayer {
 		youtube.unMute();
 	}
 
-	public function searchVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void):Void {
-		if (apiKey == null) apiKey = main.getYoutubeApiKey();
+	public function searchVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void, ?customApiKey:String):Void {
+		final effectiveApiKey = customApiKey ?? {
+			if (apiKey == null) apiKey = main.getYoutubeApiKey();
+			apiKey;
+		};
 		final searchUrl = "https://www.googleapis.com/youtube/v3/search";
-		final params = '?part=snippet&type=video&maxResults=$maxResults&q=${StringTools.urlEncode(query)}&key=$apiKey';
+		final params = '?part=snippet&type=video&maxResults=$maxResults&q=${StringTools.urlEncode(query)}&key=$effectiveApiKey';
 		final dataUrl = searchUrl + params;
 		
 		trace('YouTube API call: ${searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + StringTools.urlEncode(query) + "&key=***"}');

@@ -788,7 +788,7 @@ class Player {
 	 * Public method to search YouTube videos
 	 * This prevents direct access to the private youtube property
 	 */
-	public function searchYoutubeVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void):Void {
-		youtube.searchVideos(query, maxResults, callback);
+	public function searchYoutubeVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void, ?customApiKey:String):Void {
+		youtube.searchVideos(query, maxResults, callback, customApiKey);
 	}
 }

@@ -45,6 +45,8 @@ typedef Config = {
 	templateUrl:String,
 	youtubeApiKey:String,
 	youtubePlaylistLimit:Int,
+	randomVideoYoutubeApiKey:String,
+	fallbackToMainApiKey:Bool,
 	youtubeRegion:String,
 	allowAgeRestrictedVideos:Bool,
 	strictEmbeddingChecks:Bool,

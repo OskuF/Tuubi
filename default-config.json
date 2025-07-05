@@ -14,6 +14,8 @@
 	"templateUrl": "https://youtube.com/playlist?list=PL9FiZUDVMu9tc_85frYognMOVFC_-VkSX",
 	"youtubeApiKey": "AIzaSyDTk1OPRI9cDkAK_BKsBcv10DQCHse-QaA",
 	"youtubePlaylistLimit": 50,
+	"randomVideoYoutubeApiKey": "",
+	"fallbackToMainApiKey": true,
 	"youtubeRegion": "FI",
 	"allowAgeRestrictedVideos": false,
 	"strictEmbeddingChecks": true,

@@ -1323,7 +1323,8 @@ class Main {
 		final searchTime = Date.fromTime(Date.now().getTime());
 		trace('Searching YouTube at ${searchTime.toString()} for: "$query"');
 		
-		// Use the public method to search for YouTube videos
+		// Use the public method to search for YouTube videos with dedicated API key
+		final randomApiKey = getRandomVideoApiKey();
 		player.searchYoutubeVideos(query, 20, (videoIds:Array<String>) -> {
 			if (videoIds.length == 0) {
 				trace('No results found for query: "$query"');
@@ -1338,7 +1339,7 @@ class Main {
 			
 			// Try to find an embeddable video from the search results
 			tryEmbeddableVideoFromResults(videoIds, query, attemptCount);
-		});
+		}, randomApiKey);
 	}
 	
 	function tryEmbeddableVideoFromResults(videoIds:Array<String>, query:String, attemptCount:Int):Void {
@@ -1395,9 +1396,9 @@ class Main {
 	}
 	
 	function checkVideoEmbeddability(videoId:String, callback:(isEmbeddable:Bool, title:String) -> Void):Void {
-		final apiKey = getYoutubeApiKey();
+		final apiKey = getRandomVideoApiKey();
 		if (apiKey == null || apiKey == "") {
-			trace('No YouTube API key available for embeddability check');
+			trace('No YouTube API key available for random video embeddability check');
 			callback(true, "Unknown"); // Default to embeddable if no API key
 			return;
 		}
@@ -1410,6 +1411,25 @@ class Main {
 		http.onData = response -> {
 			try {
 				final json = haxe.Json.parse(response);
+				
+				// Check for YouTube API errors
+				if (json.error != null) {
+					final errorCode:Int = json.error.code ?? 0;
+					final errorMessage:String = json.error.message ?? "Unknown error";
+					
+					if (errorCode == 403) {
+						trace('Random video API quota exhausted: $errorMessage');
+						serverMessage('Random video API quota exhausted. Try again later.', false);
+						callback(false, "API Quota Exhausted");
+						return;
+					} else {
+						trace('Random video API error $errorCode: $errorMessage');
+						serverMessage('Random video API error. Using fallback.', false);
+						callback(true, "API Error"); // Default to embeddable on other API errors
+						return;
+					}
+				}
+				
 				final items:Array<Dynamic> = json.items ?? [];
 				
 				if (items.length == 0) {
@@ -1552,6 +1572,7 @@ class Main {
 		final fallbackTime = Date.fromTime(Date.now().getTime());
 		trace('Fallback search at ${fallbackTime.toString()} for popular query: "$query"');
 		
+		final randomApiKey = getRandomVideoApiKey();
 		player.searchYoutubeVideos(query, 10, (videoIds:Array<String>) -> {
 			if (videoIds.length == 0) {
 				// Absolute final fallback
@@ -1572,7 +1593,7 @@ class Main {
 			addVideo(youtubeUrl, true, true, false, () -> {
 				serverMessage('Added trending video: "$query"');
 			});
-		});
+		}, randomApiKey);
 	}
 
 	public function removeVideoItem(url:String) {
@@ -2930,6 +2951,16 @@ class Main {
 
 	public function getYoutubeApiKey():String {
 		return config.youtubeApiKey;
+	}
+
+	public function getRandomVideoApiKey():String {
+		if (config.randomVideoYoutubeApiKey != null && config.randomVideoYoutubeApiKey != "") {
+			return config.randomVideoYoutubeApiKey;
+		}
+		if (config.fallbackToMainApiKey) {
+			return config.youtubeApiKey;
+		}
+		return "";
 	}
 
 	public function getYoutubePlaylistLimit():Int {
