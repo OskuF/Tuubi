@@ -2314,6 +2314,10 @@ var client_Main = function() {
 	this.danmakuLanes = [];
 	this.isDanmakuEnabled = true;
 	this.danmakuEmoteAnimations = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
+	this.currentRandomVideoAttemptCount = 0;
+	this.currentRandomVideoQuery = "";
+	this.currentRandomVideoIndex = 0;
+	this.currentRandomVideoSearch = [];
 	this.randomVideoResetTime = 0.0;
 	this.randomVideoRequestCount = 0;
 	this.lastRandomVideoTime = 0.0;
@@ -3267,8 +3271,36 @@ client_Main.prototype = {
 			_gthis.send({ type : "AddVideo", addVideo : { item : { url : data.url, title : data.title, author : _gthis.personal.name, duration : data.duration, isTemp : isTemp, doCache : false, playerType : "IframeType"}, atEnd : atEnd}});
 		});
 	}
+	,getWordlist: function() {
+		if(client_Main.cachedWordlist == null) {
+			var wordlistContent = haxe_Resource.getString("wordlist");
+			if(wordlistContent != null) {
+				var _this = wordlistContent.split("\n");
+				var result = new Array(_this.length);
+				var _g = 0;
+				var _g1 = _this.length;
+				while(_g < _g1) {
+					var i = _g++;
+					result[i] = StringTools.trim(_this[i]);
+				}
+				var _g = [];
+				var _g1 = 0;
+				while(_g1 < result.length) {
+					var v = result[_g1];
+					++_g1;
+					if(v.length > 0) {
+						_g.push(v);
+					}
+				}
+				client_Main.cachedWordlist = _g;
+			} else {
+				client_Main.cachedWordlist = ["music","funny","cute","amazing","cool","awesome"];
+			}
+		}
+		return client_Main.cachedWordlist;
+	}
 	,generateRandomSearchQuery: function() {
-		var words = ["music","funny","cute","amazing","cool","awesome","interesting","science","nature","tech","art","dance","game","tutorial","review","vlog","travel","food","animal","space","documentary","history","adventure","beautiful","epic","creative","inspire","relaxing","energetic","classic","modern","guitar","piano","drums","singing","concert","live","acoustic","electronic","cat","dog","bird","ocean","mountain","forest","sunset","city","night","comedy","drama","action","animation","short","indie","vintage","new"];
+		var words = this.getWordlist();
 		var numWords = Math.floor(Math.random() * 3) + 1;
 		var selectedWords = [];
 		var _g = 0;
@@ -3284,7 +3316,7 @@ client_Main.prototype = {
 		var month = Math.floor(Math.random() * 12) + 1;
 		var day = Math.floor(Math.random() * 28) + 1;
 		query += " before:" + year + "-" + (month < 10 ? "0" + month : "" + month) + "-" + (day < 10 ? "0" + day : "" + day);
-		haxe_Log.trace("Generated random search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1264, className : "client.Main", methodName : "generateRandomSearchQuery"});
+		haxe_Log.trace("Generated random search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1277, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		return query;
 	}
 	,addRandomYoutubeVideo: function() {
@@ -3296,14 +3328,14 @@ client_Main.prototype = {
 		if(this.randomVideoRequestCount >= 10) {
 			var timeUntilReset = Math.ceil((this.randomVideoResetTime + 3600000 - now) / 1000 / 60);
 			this.serverMessage("Random video limit reached (10/hour). Try again in " + timeUntilReset + " minutes.",true,false);
-			haxe_Log.trace("Rate limit: " + this.randomVideoRequestCount + "/10 requests used. Reset in " + timeUntilReset + " minutes.",{ fileName : "src/client/Main.hx", lineNumber : 1283, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+			haxe_Log.trace("Rate limit: " + this.randomVideoRequestCount + "/10 requests used. Reset in " + timeUntilReset + " minutes.",{ fileName : "src/client/Main.hx", lineNumber : 1296, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 			return;
 		}
 		var timeSinceLastRequest = now - this.lastRandomVideoTime;
 		if(timeSinceLastRequest < 2000) {
 			var waitTime = Math.ceil((2000 - timeSinceLastRequest) / 1000);
 			this.serverMessage("Please wait " + waitTime + " more second(s) before requesting another random video.",true,false);
-			haxe_Log.trace("Cooldown: " + waitTime + " second(s) remaining.",{ fileName : "src/client/Main.hx", lineNumber : 1292, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+			haxe_Log.trace("Cooldown: " + waitTime + " second(s) remaining.",{ fileName : "src/client/Main.hx", lineNumber : 1305, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 			return;
 		}
 		this.lastRandomVideoTime = now;
@@ -3318,10 +3350,10 @@ client_Main.prototype = {
 		}
 		var query = this.generateRandomSearchQuery();
 		var searchTime = new Date(new Date().getTime());
-		haxe_Log.trace("Searching YouTube at " + HxOverrides.dateStr(searchTime) + " for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1311, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+		haxe_Log.trace("Searching YouTube at " + HxOverrides.dateStr(searchTime) + " for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1324, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 		this.player.searchYoutubeVideos(query,20,function(videoIds) {
 			if(videoIds.length == 0) {
-				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1316, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1329, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 				if(attemptCount < 2) {
 					_gthis.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 				} else {
@@ -3329,21 +3361,158 @@ client_Main.prototype = {
 				}
 				return;
 			}
-			var maxIndex = Math.min(videoIds.length,10);
-			var randomIndex = Math.floor(Math.random() * maxIndex);
-			var selectedVideoId = videoIds[randomIndex];
-			haxe_Log.trace("Found " + videoIds.length + " results, selected video #" + (randomIndex + 1) + ": " + selectedVideoId,{ fileName : "src/client/Main.hx", lineNumber : 1332, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
-			_gthis.addVideo("https://www.youtube.com/watch?v=" + selectedVideoId,true,true,false,function() {
-				_gthis.serverMessage("Added random video from search: \"" + query + "\"");
-			});
+			_gthis.tryEmbeddableVideoFromResults(videoIds,query,attemptCount);
 		});
+	}
+	,tryEmbeddableVideoFromResults: function(videoIds,query,attemptCount) {
+		var shuffledIds = videoIds.slice();
+		var _g = 0;
+		var _g1 = shuffledIds.length;
+		while(_g < _g1) {
+			var i = _g++;
+			var j = Math.floor(Math.random() * shuffledIds.length);
+			var temp = shuffledIds[i];
+			shuffledIds[i] = shuffledIds[j];
+			shuffledIds[j] = temp;
+		}
+		this.tryNextVideoFromList(shuffledIds,0,query,attemptCount);
+	}
+	,tryNextVideoFromList: function(videoIds,index,query,attemptCount) {
+		var _gthis = this;
+		if(index >= videoIds.length) {
+			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1361, className : "client.Main", methodName : "tryNextVideoFromList"});
+			if(attemptCount < 2) {
+				this.addRandomYoutubeVideoWithRetry(attemptCount + 1);
+			} else {
+				this.addRandomYoutubeVideoFallback();
+			}
+			return;
+		}
+		var videoId = videoIds[index];
+		var youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
+		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1373, className : "client.Main", methodName : "tryNextVideoFromList"});
+		this.checkVideoEmbeddability(videoId,function(isEmbeddable,title) {
+			if(isEmbeddable) {
+				_gthis.currentRandomVideoSearch = videoIds;
+				_gthis.currentRandomVideoIndex = index + 1;
+				_gthis.currentRandomVideoQuery = query;
+				_gthis.currentRandomVideoAttemptCount = attemptCount;
+				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1385, className : "client.Main", methodName : "tryNextVideoFromList"});
+				_gthis.addVideo(youtubeUrl,true,true,false,function() {
+					_gthis.serverMessage("Added random video from search: \"" + query + "\"");
+				});
+			} else {
+				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1391, className : "client.Main", methodName : "tryNextVideoFromList"});
+				_gthis.tryNextVideoFromList(videoIds,index + 1,query,attemptCount);
+			}
+		});
+	}
+	,checkVideoEmbeddability: function(videoId,callback) {
+		var _gthis = this;
+		var apiKey = this.getYoutubeApiKey();
+		if(apiKey == null || apiKey == "") {
+			haxe_Log.trace("No YouTube API key available for embeddability check",{ fileName : "src/client/Main.hx", lineNumber : 1400, className : "client.Main", methodName : "checkVideoEmbeddability"});
+			callback(true,"Unknown");
+			return;
+		}
+		var http = new haxe_http_HttpJs("https://www.googleapis.com/youtube/v3/videos" + ("?part=snippet,status,contentDetails&fields=items(snippet/title,status/embeddable,status/privacyStatus,contentDetails/regionRestriction,contentDetails/contentRating)&id=" + videoId + "&key=" + apiKey));
+		http.onData = function(response) {
+			try {
+				var tmp = JSON.parse(response).items;
+				var items = tmp != null ? tmp : [];
+				if(items.length == 0) {
+					haxe_Log.trace("Video " + videoId + " not found",{ fileName : "src/client/Main.hx", lineNumber : 1416, className : "client.Main", methodName : "checkVideoEmbeddability"});
+					callback(false,"Not Found");
+					return;
+				}
+				var item = items[0];
+				var tmp = item.snippet;
+				var tmp1 = tmp != null ? tmp.title : null;
+				var title = tmp1 != null ? tmp1 : "Unknown";
+				var tmp = item.status;
+				var tmp1 = tmp != null ? tmp.embeddable : null;
+				var tmp = item.status;
+				var tmp2 = tmp != null ? tmp.privacyStatus : null;
+				var tmp = item.contentDetails;
+				var tmp3 = item.contentDetails;
+				var isActuallyEmbeddable = _gthis.checkComprehensiveEmbeddability(videoId,title,tmp1 != null ? tmp1 : true,tmp2 != null ? tmp2 : "public",tmp != null ? tmp.regionRestriction : null,tmp3 != null ? tmp3.contentRating : null);
+				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1433, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				callback(isActuallyEmbeddable,title);
+			} catch( _g ) {
+				var _g1 = haxe_Exception.caught(_g).unwrap();
+				haxe_Log.trace("Error parsing embeddability response for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1436, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				callback(true,"Parse Error");
+			}
+		};
+		http.onError = function(error) {
+			haxe_Log.trace("Error checking embeddability for " + videoId + ": " + error,{ fileName : "src/client/Main.hx", lineNumber : 1442, className : "client.Main", methodName : "checkVideoEmbeddability"});
+			callback(true,"API Error");
+		};
+		http.request();
+	}
+	,checkComprehensiveEmbeddability: function(videoId,title,embeddable,privacyStatus,regionRestriction,contentRating) {
+		if(!embeddable) {
+			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1459, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			return false;
+		}
+		if(privacyStatus != "public") {
+			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1465, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			return false;
+		}
+		if(contentRating != null) {
+			if(Reflect.fields(contentRating).length > 0) {
+				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1473, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				return false;
+			}
+		}
+		if(regionRestriction != null) {
+			var tmp = regionRestriction.blocked;
+			var blockedDynamic = tmp != null ? tmp : [];
+			var _g = [];
+			var _g1 = 0;
+			while(_g1 < blockedDynamic.length) _g.push(Std.string(blockedDynamic[_g1++]));
+			if(_g.indexOf("FI") != -1) {
+				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + "FI" + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1486, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				return false;
+			}
+			var tmp = regionRestriction.allowed;
+			var allowedDynamic = tmp != null ? tmp : [];
+			var _g = [];
+			var _g1 = 0;
+			while(_g1 < allowedDynamic.length) _g.push(Std.string(allowedDynamic[_g1++]));
+			if(_g.length > 0 && _g.indexOf("FI") == -1) {
+				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + "FI" + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1494, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				return false;
+			}
+		}
+		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1499, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+		return true;
+	}
+	,handleRandomVideoPlaybackError: function(errorCode) {
+		haxe_Log.trace("Handling random video playback error " + errorCode,{ fileName : "src/client/Main.hx", lineNumber : 1504, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+		var currentItem = this.player.getCurrentItem();
+		if(currentItem != null) {
+			this.removeVideoItem(currentItem.url);
+			haxe_Log.trace("Removed failed video from playlist: " + currentItem.url,{ fileName : "src/client/Main.hx", lineNumber : 1510, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+		}
+		if(this.currentRandomVideoSearch.length > 0 && this.currentRandomVideoIndex < this.currentRandomVideoSearch.length) {
+			haxe_Log.trace("Trying next video from search results (index: " + this.currentRandomVideoIndex + ")",{ fileName : "src/client/Main.hx", lineNumber : 1515, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+			this.tryNextVideoFromList(this.currentRandomVideoSearch,this.currentRandomVideoIndex,this.currentRandomVideoQuery,this.currentRandomVideoAttemptCount);
+		} else {
+			haxe_Log.trace("No more videos in current search, starting new search",{ fileName : "src/client/Main.hx", lineNumber : 1524, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+			if(this.currentRandomVideoAttemptCount < 2) {
+				this.addRandomYoutubeVideoWithRetry(this.currentRandomVideoAttemptCount + 1);
+			} else {
+				this.addRandomYoutubeVideoFallback();
+			}
+		}
 	}
 	,addRandomYoutubeVideoFallback: function() {
 		var _gthis = this;
 		var popularQueries = ["music 2024","funny animals","relaxing music","travel vlog","cooking tutorial","science explained","beautiful nature","guitar cover","dance performance","documentary short","art tutorial","tech review"];
 		var query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
 		var fallbackTime = new Date(new Date().getTime());
-		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1350, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
+		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1543, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
 		this.player.searchYoutubeVideos(query,10,function(videoIds) {
 			if(videoIds.length == 0) {
 				var knownVideoIds = ["dQw4w9WgXcQ","kJQP7kiw5Fk","fJ9rUzIMcZQ","9bZkp7q19f0"];
@@ -3431,7 +3600,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1470, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1663, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3663,7 +3832,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1778, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1971, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -6911,7 +7080,7 @@ var client_players_Youtube = function(main,player) {
 	this.isLoaded = false;
 	this.playerEl = window.document.querySelector("#ytapiplayer");
 	this.urlVideoId = "?part=snippet&fields=nextPageToken,items(snippet/resourceId/videoId)";
-	this.urlTitleDuration = "?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)";
+	this.urlTitleDuration = "?part=snippet,contentDetails,status&fields=items(snippet/title,contentDetails/duration,status/embeddable)";
 	this.playlistUrl = "https://www.googleapis.com/youtube/v3/playlistItems";
 	this.videosUrl = "https://www.googleapis.com/youtube/v3/videos";
 	this.main = main;
@@ -6986,7 +7155,14 @@ client_players_Youtube.prototype = {
 				var item = items[_g];
 				++_g;
 				var title = item.snippet.title;
+				var tmp = item.status;
+				var tmp1 = tmp != null ? tmp.embeddable : null;
 				var duration = _gthis.convertTime(item.contentDetails.duration);
+				if(!(tmp1 != null ? tmp1 : true)) {
+					haxe_Log.trace("Skipping non-embeddable video: " + title + " (ID: " + id + ")",{ fileName : "src/client/players/Youtube.hx", lineNumber : 99, className : "client.players.Youtube", methodName : "getVideoData"});
+					callback({ duration : 0});
+					return;
+				}
 				if(duration == 0) {
 					var mute = _gthis.main.isAutoplayAllowed() ? "" : "&mute=1";
 					callback({ duration : 356400, title : title, url : "<iframe src=\"https://www.youtube.com/embed/" + id + "?autoplay=1" + mute + "\" frameborder=\"0\"\r\n\t\t\t\t\t\t\tallow=\"accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture\"\r\n\t\t\t\t\t\t\tallowfullscreen></iframe>", playerType : "IframeType"});
@@ -7071,7 +7247,11 @@ client_players_Youtube.prototype = {
 			callback({ title : "YouTube video", duration : tempYoutube.getDuration()});
 			tempYoutube.destroy();
 		}, onError : function(e) {
-			haxe_Log.trace("Error " + e.data,{ fileName : "src/client/players/Youtube.hx", lineNumber : 200, className : "client.players.Youtube", methodName : "getRemoteDataFallback"});
+			var errorCode = e.data;
+			haxe_Log.trace("YouTube temp player error: " + errorCode,{ fileName : "src/client/players/Youtube.hx", lineNumber : 209, className : "client.players.Youtube", methodName : "getRemoteDataFallback"});
+			if(errorCode == 101 || errorCode == 150) {
+				haxe_Log.trace("Video not embeddable, skipping",{ fileName : "src/client/players/Youtube.hx", lineNumber : 213, className : "client.players.Youtube", methodName : "getRemoteDataFallback"});
+			}
 			if(_gthis.playerEl.contains(video)) {
 				_gthis.playerEl.removeChild(video);
 			}
@@ -7125,7 +7305,26 @@ client_players_Youtube.prototype = {
 		}, onPlaybackRateChange : function(e) {
 			_gthis.player.onRateChange();
 		}, onError : function(e) {
-			haxe_Log.trace("Error " + e.data,{ fileName : "src/client/players/Youtube.hx", lineNumber : 259, className : "client.players.Youtube", methodName : "loadVideo"});
+			var errorCode = e.data;
+			haxe_Log.trace("YouTube player error: " + errorCode,{ fileName : "src/client/players/Youtube.hx", lineNumber : 274, className : "client.players.Youtube", methodName : "loadVideo"});
+			switch(errorCode) {
+			case 2:
+				_gthis.main.serverMessage("Video not found or unavailable",false);
+				break;
+			case 5:
+				_gthis.main.serverMessage("Video format not supported",false);
+				break;
+			case 101:
+				_gthis.main.serverMessage("Video cannot be embedded, finding replacement...",false);
+				_gthis.main.handleRandomVideoPlaybackError(errorCode);
+				break;
+			case 150:
+				_gthis.main.serverMessage("Video embedding disabled, finding replacement...",false);
+				_gthis.main.handleRandomVideoPlaybackError(errorCode);
+				break;
+			default:
+				_gthis.main.serverMessage("Video playback error (code: " + errorCode + ")",false);
+			}
 		}}});
 	}
 	,removeVideo: function() {
@@ -7186,7 +7385,7 @@ client_players_Youtube.prototype = {
 		}
 		var searchUrl = "https://www.googleapis.com/youtube/v3/search";
 		var dataUrl = searchUrl + ("?part=snippet&type=video&maxResults=" + maxResults + "&q=" + encodeURIComponent(query) + "&key=" + this.apiKey);
-		haxe_Log.trace("YouTube API call: " + (searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + encodeURIComponent(query) + "&key=***"),{ fileName : "src/client/players/Youtube.hx", lineNumber : 327, className : "client.players.Youtube", methodName : "searchVideos"});
+		haxe_Log.trace("YouTube API call: " + (searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + encodeURIComponent(query) + "&key=***"),{ fileName : "src/client/players/Youtube.hx", lineNumber : 355, className : "client.players.Youtube", methodName : "searchVideos"});
 		var http = new haxe_http_HttpJs(dataUrl);
 		http.onData = function(response) {
 			try {
@@ -7201,7 +7400,7 @@ client_players_Youtube.prototype = {
 						videoIds.push(videoId);
 					}
 				}
-				haxe_Log.trace("YouTube API returned " + videoIds.length + " video IDs: [" + videoIds.join(", ") + "]",{ fileName : "src/client/players/Youtube.hx", lineNumber : 343, className : "client.players.Youtube", methodName : "searchVideos"});
+				haxe_Log.trace("YouTube API returned " + videoIds.length + " video IDs: [" + videoIds.join(", ") + "]",{ fileName : "src/client/players/Youtube.hx", lineNumber : 371, className : "client.players.Youtube", methodName : "searchVideos"});
 				callback(videoIds);
 			} catch( _g ) {
 				_gthis.youtubeApiError({ code : 0, message : "Failed to parse search results"});
@@ -7281,6 +7480,23 @@ haxe_Log.trace = function(v,infos) {
 	if(typeof(console) != "undefined" && console.log != null) {
 		console.log(str);
 	}
+};
+var haxe_Resource = function() { };
+haxe_Resource.__name__ = true;
+haxe_Resource.getString = function(name) {
+	var _g = 0;
+	var _g1 = haxe_Resource.content;
+	while(_g < _g1.length) {
+		var x = _g1[_g];
+		++_g;
+		if(x.name == name) {
+			if(x.str != null) {
+				return x.str;
+			}
+			return haxe_crypto_Base64.decode(x.data).toString();
+		}
+	}
+	return null;
 };
 var haxe_Timer = function(time_ms) {
 	var me = this;
@@ -7446,6 +7662,15 @@ haxe_crypto_Base64.encode = function(bytes,complement) {
 	}
 	return str;
 };
+haxe_crypto_Base64.decode = function(str,complement) {
+	if(complement == null) {
+		complement = true;
+	}
+	if(complement) {
+		while(HxOverrides.cca(str,str.length - 1) == 61) str = HxOverrides.substr(str,0,-1);
+	}
+	return new haxe_crypto_BaseCode(haxe_crypto_Base64.BYTES).decodeBytes(haxe_io_Bytes.ofString(str));
+};
 var haxe_crypto_BaseCode = function(base) {
 	var len = base.length;
 	var nbits = 1;
@@ -7479,6 +7704,45 @@ haxe_crypto_BaseCode.prototype = {
 		}
 		if(curbits > 0) {
 			out.b[pout++] = base.b[buf << nbits - curbits & mask];
+		}
+		return out;
+	}
+	,initTable: function() {
+		var tbl = [];
+		var _g = 0;
+		while(_g < 256) tbl[_g++] = -1;
+		var _g = 0;
+		var _g1 = this.base.length;
+		while(_g < _g1) {
+			var i = _g++;
+			tbl[this.base.b[i]] = i;
+		}
+		this.tbl = tbl;
+	}
+	,decodeBytes: function(b) {
+		var nbits = this.nbits;
+		if(this.tbl == null) {
+			this.initTable();
+		}
+		var tbl = this.tbl;
+		var size = b.length * nbits >> 3;
+		var out = new haxe_io_Bytes(new ArrayBuffer(size));
+		var buf = 0;
+		var curbits = 0;
+		var pin = 0;
+		var pout = 0;
+		while(pout < size) {
+			while(curbits < 8) {
+				curbits += nbits;
+				buf <<= nbits;
+				var i = tbl[b.b[pin++]];
+				if(i == -1) {
+					throw haxe_Exception.thrown("BaseCode : invalid encoded char");
+				}
+				buf |= i;
+			}
+			curbits -= 8;
+			out.b[pout++] = buf >> curbits & 255;
 		}
 		return out;
 	}
@@ -8195,6 +8459,7 @@ var Float = Number;
 var Bool = Boolean;
 var Class = { };
 var Enum = { };
+haxe_Resource.content = [{ name : "wordlist", data : "YWR2ZW50dXJlDQphbWF6aW5nDQphbmNpZW50DQphbmltYWwNCmFydA0KYXdlc29tZQ0KYmVhdXRpZnVsDQpiZXN0DQpiaWdnZXN0DQpibHVlDQpicmlnaHQNCmNhdA0KY2hhbGxlbmdlDQpjaXR5DQpjbGFzc2ljDQpjb29sDQpjcmF6eQ0KY3V0ZQ0KZGFuY2UNCmRhcmsNCmRvY3VtZW50YXJ5DQpkb2cNCmRyYWdvbg0KZHJlYW0NCmVwaWMNCmV4cGxvcmUNCmZhbWlseQ0KZmFtb3VzDQpmYW50YXN5DQpmYXN0DQpmaXJlDQpmaXNoDQpmbG93ZXINCmZvcmVzdA0KZnVuDQpmdW5ueQ0KZnV0dXJlDQpnYW1lDQpncmVlbg0KZ3VpZGUNCmhhcHB5DQpoaWxhcmlvdXMNCmhpc3RvcnkNCmhvbWUNCmhvdXNlDQppbmNyZWRpYmxlDQppbnNwaXJlDQpqb3VybmV5DQpsYWtlDQpsZWFybg0KbGlmZQ0KbGlnaHQNCmxpdmUNCmxvdmUNCm1hZ2ljDQptb2Rlcm4NCm1vdW50YWluDQptdXNpYw0KbXlzdGVyeQ0KbmF0dXJlDQpuZXcNCm5pZ2h0DQpvY2Vhbg0Kb2xkDQpwZWFjZWZ1bA0KcGVyZmVjdA0KcGxhbmV0DQpwbGF5DQpwb3dlcg0KcmVkDQpyZWxheA0KcmV2aWV3DQpzY2llbmNlDQpzZWENCnNlY3JldA0Kc2t5DQpzbm93DQpzcGFjZQ0Kc3RvcnkNCnN0cm9uZw0Kc3VtbWVyDQpzdW4NCnN1bnNldA0Kc3dlZXQNCnRlY2hub2xvZ3kNCnRpbWUNCnRyYXZlbA0KdHJlZQ0KdHV0b3JpYWwNCnVuaXZlcnNlDQp2aWRlbw0KdmludGFnZQ0Kd2F0ZXINCndoaXRlDQp3aWxkDQp3aW50ZXINCndvcmxkDQp5ZWxsb3cNCmFjb3VzdGljDQphY3Rpb24NCmFkdmVudHVyZQ0KYWxidW0NCmFsdGVybmF0aXZlDQphbWJpZW50DQphbmltYXRpb24NCmFydA0KYXJ0aXN0DQpiYW5kDQpiYXNzDQpiZWF0DQpiZWF1dGlmdWwNCmJlc3QNCmJsdWVzDQpicmVha2JlYXQNCmNoaWxsDQpjbGFzc2ljDQpjbGFzc2ljYWwNCmNvbXBpbGF0aW9uDQpjb21wb3NpdGlvbg0KY291bnRyeQ0KY292ZXINCmNyZWF0aXZlDQpjdWx0dXJlDQpkYW5jZQ0KZGVlcA0KZG9jdW1lbnRhcnkNCmR1YnN0ZXANCmVsZWN0cm9uaWMNCmVwaWMNCmV4cGVyaW1lbnRhbA0KZm9saw0KZnVuaw0KZnVzaW9uDQpnYW1pbmcNCmdlbnJlDQpndWl0YXINCmhhcm1vbnkNCmhpcGhvcA0KaG91c2UNCmluZGllDQppbnN0cnVtZW50DQpqYXp6DQpsaXZlDQpsb2ZpDQpseXJpY3MNCm1lbG9keQ0KbWV0YWwNCm1peA0KbWl4aW5nDQptb2Rlcm4NCm5vc3RhbGdpYw0Kb2ZmaWNpYWwNCm9yY2hlc3RyYQ0Kb3JpZ2luYWwNCnBlcmZvcm1hbmNlDQpwaWFubw0KcG9wDQpwcm9ncmVzc2l2ZQ0KcHVuaw0KcmFkaW8NCnJhcA0KcmVjb3JkDQpyZWdnYWUNCnJlbWl4DQpyaHl0aG0NCnJvY2sNCnNlc3Npb24NCnNsb3cNCnNtb290aA0Kc291bA0Kc291bmQNCnNvdW5kdHJhY2sNCnN0dWRpbw0Kc3R5bGUNCnN5bnRoDQp0ZWNobm8NCnRyYW5jZQ0KdHJhcA0KdW5kZXJncm91bmQNCnZpZGVvDQp2aW50YWdlDQp2b2NhbA0KYWNvdXN0aWMNCmFjdGlvbg0KYWR2ZW50dXJlDQphbGJ1bQ0KYWx0ZXJuYXRpdmUNCmFtYmllbnQNCmFuaW1hdGlvbg0KYXJ0DQphcnRpc3QNCmJhbmQNCmJhc3MNCmJlYXQNCmJlYXV0aWZ1bA0KYmVzdA0KYmx1ZXMNCmJyZWFrYmVhdA0KY2hpbGwNCmNsYXNzaWMNCmNsYXNzaWNhbA0KY29tcGlsYXRpb24NCmNvbXBvc2l0aW9uDQpjb3VudHJ5DQpjb3Zlcg0KY3JlYXRpdmUNCmN1bHR1cmUNCmRhbmNlDQpkZWVwDQpkb2N1bWVudGFyeQ0KZHVic3RlcA0KZWxlY3Ryb25pYw0KZXBpYw0KZXhwZXJpbWVudGFsDQpmb2xrDQpmdW5rDQpmdXNpb24NCmdhbWluZw0KZ2VucmUNCmd1aXRhcg0KaGFybW9ueQ0KaGlwaG9wDQpob3VzZQ0KaW5kaWUNCmluc3RydW1lbnQNCmphenoNCmxpdmUNCmxvZmkNCmx5cmljcw0KbWVsb2R5DQptZXRhbA0KbWl4DQptaXhpbmcNCm1vZGVybg0Kbm9zdGFsZ2ljDQpvZmZpY2lhbA0Kb3JjaGVzdHJhDQpvcmlnaW5hbA0KcGVyZm9ybWFuY2UNCnBpYW5vDQpwb3ANCnByb2dyZXNzaXZlDQpwdW5rDQpyYWRpbw0KcmFwDQpyZWNvcmQNCnJlZ2dhZQ0KcmVtaXgNCnJoeXRobQ0Kcm9jaw0Kc2Vzc2lvbg0Kc2xvdw0Kc21vb3RoDQpzb3VsDQpzb3VuZA0Kc291bmR0cmFjaw0Kc3R1ZGlvDQpzdHlsZQ0Kc3ludGgNCnRlY2hubw0KdHJhbmNlDQp0cmFwDQp1bmRlcmdyb3VuZA0KdmlkZW8NCnZpbnRhZ2UNCnZvY2FsDQpidWlsZA0KY29kZQ0KY29tcHV0ZXINCmNyZWF0ZQ0KZGVzaWduDQpkZXZlbG9wDQpkaWdpdGFsDQplZGl0DQplbmdpbmVlcg0KZml4DQpnYW1lDQpoYWNrDQppbnN0YWxsDQppbnRlcm5ldA0KbGVhcm4NCm1hY2hpbmUNCm5ldHdvcmsNCnByb2dyYW0NCnJvYm90DQpzb2Z0d2FyZQ0Kc3lzdGVtDQp0ZWNoDQp0b29sDQp0dXRvcmlhbA0KdXBncmFkZQ0Kd2ViDQp3ZWJzaXRlDQphbmNpZW50DQphcmNoYWVvbG9neQ0KYmlvbG9neQ0KY2hlbWlzdHJ5DQpkaW5vc2F1cg0KZGlzY292ZXJ5DQplYXJ0aA0KZXZvbHV0aW9uDQpleHBlcmltZW50DQpmYWN0cw0KZ2FsYXh5DQpoaXN0b3J5DQprbm93bGVkZ2UNCmxlYXJuDQptZWRpY2luZQ0KbmF0dXJlDQpwaHlzaWNzDQpwbGFuZXQNCnJlc2VhcmNoDQpzY2llbmNlDQpzcGFjZQ0Kc3R1ZHkNCnRoZW9yeQ0KdW5pdmVyc2UNCmFzdHJvbm9teQ0KYnJpZ2h0DQpjbG91ZA0KY29sZA0KY29sb3INCmNvb2wNCmRhcmsNCmRheQ0KZWFydGgNCmZpcmUNCmZvZw0KZm9yZXN0DQpob3QNCmljZQ0KbGlnaHQNCm1vb24NCm1vdW50YWluDQpuaWdodA0Kb2NlYW4NCnJhaW4NCnJhaW5ib3cNCnJpdmVyDQpzZWFzb24NCnNreQ0Kc25vdw0Kc3Rhcg0Kc3Rvcm0NCnN1bg0Kc3Vuc2V0DQp0ZW1wZXJhdHVyZQ0KdGh1bmRlcg0KdHJlZQ0Kd2FybQ0Kd2F0ZXINCndlYXRoZXINCndpbmQNCndpbnRlcg0KYnVpbGQNCmNhcg0KY2l0eQ0KZGVzaWduDQpkcml2ZQ0KZmFzdA0KZmx5aW5nDQpmdXR1cmUNCmlubm92YXRpb24NCm1hY2hpbmUNCm1vZGVybg0KbW90b3INCm1vdmUNCm5ldw0KcGxhbmUNCnJvYm90DQpyb2NrZXQNCnNoaXANCnNwZWVkDQp0ZWNobm9sb2d5DQp0cmFpbg0KdHJhbnNwb3J0DQp0cmF2ZWwNCnRydWNrDQp2ZWhpY2xlDQp3aGVlbA0KYWR2ZW50dXJlDQpiZWFjaA0KY2FtcGluZw0KY2l0eQ0KY291bnRyeQ0KY3VsdHVyZQ0KZGVzdGluYXRpb24NCmV4cGxvcmUNCmZsaWdodA0KZ3VpZGUNCmhvbGlkYXkNCmhvdGVsDQpqb3VybmV5DQpsYW5kc2NhcGUNCm1hcA0KbW91bnRhaW4NCm5hdHVyZQ0Kb2NlYW4NCnBhc3Nwb3J0DQpwYXRoDQpwaG90bw0KcGxhY2UNCnJvYWQNCnNpZ2h0c2VlaW5nDQp0b3VyaXNtDQp0b3VyaXN0DQp0cmF2ZWwNCnRyaXANCnZhY2F0aW9uDQp2aWV3DQp2aXNpdA0Kdm95YWdlDQp3YWxrDQp3b3JsZA0KYW1hemluZw0KYXJ0DQpiZWF1dGlmdWwNCmJlc3QNCmNoYWxsZW5nZQ0KY29vbA0KY3JlYXRlDQpjcmVhdGl2ZQ0KZGFuY2UNCmRlc2lnbg0KZHJhdw0KZW50ZXJ0YWlubWVudA0KZXBpYw0KZXhwcmVzc2lvbg0KZnVuDQpnYWxsZXJ5DQppbnNwaXJlDQptYXN0ZXJwaWVjZQ0KbW9kZXJuDQptdXNldW0NCnBhaW50DQpwZXJmb3JtYW5jZQ0KcGhvdG8NCnBpY3R1cmUNCnBvcnRyYWl0DQpzY3VscHR1cmUNCnNrZXRjaA0Kc3RyZWV0DQpzdHVkaW8NCnN0eWxlDQp0YWxlbnQNCnRlY2huaXF1ZQ0KdmlzaW9uDQp2aXN1YWwNCndvcmsNCmJpcnRoZGF5DQpjZWxlYnJhdGUNCmNlcmVtb255DQpjaHJpc3RtYXMNCmNvbmNlcnQNCmRhbmNlDQpldmVudA0KZmFtaWx5DQpmZXN0aXZhbA0KZnJpZW5kcw0KZnVuDQpnaWZ0DQpob2xpZGF5DQpqb3kNCmxhdWdoDQptdXNpYw0KbmV3DQpwYXJ0eQ0KcGVvcGxlDQpwaG90bw0Kc3BlY2lhbA0Kc3VycHJpc2UNCnRyYWRpdGlvbg0Kd2VkZGluZw0KYW1hemluZw0KYXRobGV0ZQ0KYmFsbA0KYmFzZWJhbGwNCmJhc2tldGJhbGwNCmNoYW1waW9uDQpjb21wZXRlDQpjb21wZXRpdGlvbg0KZXhlcmNpc2UNCmZhbg0KZmFzdA0KZmlnaHQNCmZpdG5lc3MNCmZvb3RiYWxsDQpnYW1lDQpnb2xmDQpneW0NCmhlYWx0aA0KaG9ja2V5DQptYXRjaA0Kb2x5bXBpY3MNCnBsYXkNCnBsYXllcg0KcmFjZQ0KcnVuDQpzb2NjZXINCnNwb3J0DQpzdHJvbmcNCnRlYW0NCnRlbm5pcw0KdHJhaW5pbmcNCnZpY3RvcnkNCndpbg0Kd29ya291dA0KYWN0b3INCmF3YXJkDQpjYW1lcmENCmNlbGVicml0eQ0KY2luZW1hDQpjbGFzc2ljDQpjb21lZHkNCmRpcmVjdG9yDQpkcmFtYQ0KZW50ZXJ0YWlubWVudA0KZXBpYw0KZmFtb3VzDQpmYW50YXN5DQpmZXN0aXZhbA0KZmlsbQ0KaG9sbHl3b29kDQpob3Jyb3INCmluZGVwZW5kZW50DQpsZWdlbmQNCm1vdmllDQptdXNpYw0Kb3JpZ2luYWwNCnBvcHVsYXINCnByZW1pZXJlDQpwcm9kdWNlcg0Kcm9tYW5jZQ0Kc2NlbmUNCnNjcmVlbg0Kc2NyaXB0DQpzaG93DQpzdGFyDQpzdG9yeQ0KdGhlYXRlcg0KdGhyaWxsZXINCnRyYWlsZXINCmFjdG9yDQpjb21lZHkNCmRyYW1hDQplbnRlcnRhaW5tZW50DQplcGlzb2RlDQpmYW1vdXMNCmZpY3Rpb24NCmZpbG0NCmZ1bm55DQpnYW1lDQptb3ZpZQ0KbXVzaWMNCnBvcHVsYXINCnJlYWxpdHkNCnNlcmllcw0Kc2hvdw0Kc2l0Y29tDQpzdG9yeQ0KdGVsZXZpc2lvbg0KdGhlYXRlcg0KdGhyaWxsZXINCmFtYXppbmcNCmJlYXV0aWZ1bA0KYmVzdA0KYnJpZ2h0DQpjbGFzc2ljDQpjb2xvcg0KY29vbA0KY3JlYXRpdmUNCmN1dGUNCmRhcmsNCmRlc2lnbg0KZWxlZ2FudA0KZXBpYw0KZmFzaGlvbg0KZnVubnkNCmdvcmdlb3VzDQpoYXBweQ0KaW5zcGlyZQ0KbGlnaHQNCmxvdmVseQ0KbW9kZXJuDQpuYXR1cmFsDQpwZXJmZWN0DQpwcmV0dHkNCnJlZA0Kc2ltcGxlDQpzb2Z0DQpzcGVjaWFsDQpzdHlsZQ0Kc3dlZXQNCnVuaXF1ZQ0KdmludGFnZQ0Kd29uZGVyZnVsDQpib29rDQpjaGFwdGVyDQpjbGFzc2ljDQpjcmVhdGUNCmVkdWNhdGlvbg0KZmljdGlvbg0KaGlzdG9yeQ0KaW5mb3JtYXRpb24NCmtub3dsZWRnZQ0KbGVhcm4NCmxpYnJhcnkNCmxpdGVyYXR1cmUNCm1hZ2F6aW5lDQpub3ZlbA0KcGFnZQ0KcG9ldHJ5DQpwdWJsaXNoDQpyZWFkDQpyZXNlYXJjaA0KcmV2aWV3DQpzY2llbmNlDQpzdG9yeQ0Kc3R1ZHkNCnRlYWNoDQp0ZXh0DQp3b3Jkcw0Kd3JpdGUNCmF1dGhvcg0KY2hhcmFjdGVyDQpjaGlsZHJlbg0KY2xhc3NpYw0KY29tZWR5DQpkcmFtYQ0KZWR1Y2F0aW9uDQplcGlzb2RlDQpmYWlyeQ0KZmFtaWx5DQpmYW50YXN5DQpmaWN0aW9uDQpmaWxtDQpmdW5ueQ0KaGlzdG9yeQ0Ka2lkcw0KbGVnZW5kDQpsaXRlcmF0dXJlDQptb3ZpZQ0KbXlzdGVyeQ0Kbm92ZWwNCm9yaWdpbmFsDQpwb3B1bGFyDQpyb21hbmNlDQpzZXJpZXMNCnN0b3J5DQp0YWxlDQp0ZWVuDQp0ZWxldmlzaW9uDQp5b3VuZw0KYWR1bHQNCmJhYnkNCmNoaWxkDQpjaGlsZHJlbg0KZGV2ZWxvcG1lbnQNCmVkdWNhdGlvbg0KZmFtaWx5DQpmdW4NCmdhbWUNCmdyb3d0aA0KaGFwcHkNCmhlbHANCmtpZA0KbGVhcm4NCmxpZmUNCmxvdmUNCnBhcmVudA0KcGxheQ0Kc2Nob29sDQpzdG9yeQ0KdGVhY2gNCnRlZW4NCnRvZGRsZXINCnlvdW5nDQpjYXJlDQpkb2N0b3INCmVtZXJnZW5jeQ0KZXhlcmNpc2UNCmZpdG5lc3MNCmZvb2QNCmhlYWx0aHkNCmhlbHANCmhvc3BpdGFsDQpsaWZlDQptZWRpY2luZQ0KbWVudGFsDQpudXRyaXRpb24NCnBoeXNpY2FsDQpwcmV2ZW50aW9uDQpyZWNvdmVyeQ0Kc2FmZXR5DQpzdXJnZXJ5DQp0cmVhdG1lbnQNCndlbGxuZXNzDQpiYWtlDQpicmVha2Zhc3QNCmNha2UNCmNoZWYNCmNob2NvbGF0ZQ0KY29vaw0KY3Vpc2luZQ0KZGVsaWNpb3VzDQpkZXNzZXJ0DQpkaWV0DQpkaW5uZXINCmVhdA0KZmxhdm9yDQpmcmVzaA0KZnJ1aXQNCmhlYWx0aHkNCmluZ3JlZGllbnQNCmtpdGNoZW4NCmx1bmNoDQptZWFsDQpudXRyaXRpb24NCm9yZ2FuaWMNCnJlY2lwZQ0KcmVzdGF1cmFudA0Kc25hY2sNCnNwaWNlDQpzd2VldA0KdGFzdGUNCnZlZ2V0YWJsZQ0KYW5pbWFsDQpiaXJkDQpidXR0ZXJmbHkNCmNhdA0KY3JlYXR1cmUNCmN1dGUNCmRvZw0KZG9tZXN0aWMNCmVsZXBoYW50DQplbmRhbmdlcmVkDQpmYW1pbHkNCmZhcm0NCmZpc2gNCmZvcmVzdA0KZnVubnkNCmhhYml0YXQNCmhvcnNlDQppbnNlY3QNCmp1bmdsZQ0KbGlmZQ0KbWFtbWFsDQpuYXR1cmUNCm9jZWFuDQpwZXQNCnJhcmUNCnJlc2N1ZQ0Kc2FmYXJpDQpzcGVjaWVzDQp3YXRlcg0Kd2lsZA0Kd2lsZGxpZmUNCnpvbw0KYWdyaWN1bHR1cmUNCmJlYXV0aWZ1bA0KYmxvb20NCmJvdGFueQ0KYnJhbmNoDQpjYXJlDQpjb2xvcg0KZWFydGgNCmVudmlyb25tZW50DQpmbG93ZXINCmZvcmVzdA0KZnJlc2gNCmdhcmRlbg0KZ3JlZW4NCmdyb3cNCmhlcmINCmxlYWYNCmxpZmUNCm5hdHVyYWwNCm5hdHVyZQ0Kb3JnYW5pYw0KcGxhbnQNCnJvb3QNCnNlYXNvbg0Kc2VlZA0Kc29pbA0Kc3ByaW5nDQpzdW1tZXINCnRyZWUNCnZlZ2V0YWJsZQ0Kd2F0ZXINCmFpcg0KYmVhdXRpZnVsDQpjbGltYXRlDQpjb25zZXJ2YXRpb24NCmVhcnRoDQplY29sb2d5DQplY29zeXN0ZW0NCmVuZXJneQ0KZW52aXJvbm1lbnQNCmZvcmVzdA0KZnJlc2gNCmdyZWVuDQpsaWZlDQpuYXR1cmFsDQpuYXR1cmUNCm9jZWFuDQpvcmdhbmljDQpwbGFuZXQNCnBvbGx1dGlvbg0KcmVjeWNsZQ0KcmVuZXdhYmxlDQpyZXNvdXJjZQ0Kc2Vhc29uDQpzb2xhcg0Kc3VzdGFpbmFiaWxpdHkNCnRyZWUNCndhdGVyDQp3ZWF0aGVyDQp3aWxkDQp3aWxkbGlmZQ0KYW5jaWVudA0KYXJ0aWZhY3QNCmJhdHRsZQ0KY2VudHVyeQ0KY2l2aWxpemF0aW9uDQpjdWx0dXJlDQpkaXNjb3ZlcnkNCmVtcGlyZQ0KZXZlbnQNCmV4cGxvcmUNCmZhY3QNCmZhbW91cw0KaGVybw0KaGlzdG9yaWNhbA0Ka2luZ2RvbQ0KbGVhcm4NCmxlZ2VuZA0KbWVtb3J5DQptb251bWVudA0KbXVzZXVtDQpvbGQNCnBhc3QNCnBlcmlvZA0KcmVsaWMNCnJlc2VhcmNoDQpyZXZvbHV0aW9uDQpzdG9yeQ0KdGltZQ0KdHJhZGl0aW9uDQp3YXINCndvcmxkDQp5ZWFyDQphc3Ryb25vbXkNCmF0b20NCmJpb2xvZ3kNCmNoZW1pc3RyeQ0KZGF0YQ0KZGlzY292ZXJ5DQplYXJ0aA0KZW5lcmd5DQpleHBlcmltZW50DQpmYWN0DQpmb3JtdWxhDQpmdXR1cmUNCmdhbGF4eQ0KaHlwb3RoZXNpcw0KaW52ZW50aW9uDQpsYWJvcmF0b3J5DQpsZWFybg0KbWVkaWNpbmUNCm5hdHVyZQ0KcGh5c2ljcw0KcGxhbmV0DQpyZXNlYXJjaA0Kc29sYXINCnNwYWNlDQpzdGFyDQpzdHVkeQ0KdGVjaG5vbG9neQ0KdGhlb3J5DQp1bml2ZXJzZQ0KYWNhZGVteQ0KYXJ0DQpib29rDQpjbGFzcw0KY29sbGVnZQ0KY291cnNlDQpkZWdyZWUNCmVkdWNhdGlvbg0KZXhhbQ0KZ3JhZHVhdGUNCmhlbHANCmhvbWV3b3JrDQprbm93bGVkZ2UNCmxhbmd1YWdlDQpsZWFybg0KbGVjdHVyZQ0KbGVzc29uDQpsaWJyYXJ5DQptYXRoDQpwcm9mZXNzb3INCnJlYWQNCnJlc2VhcmNoDQpzY2hvb2wNCnNjaWVuY2UNCnN0dWRlbnQNCnN0dWR5DQp0ZWFjaGVyDQp0ZXN0DQp0dXRvcg0KdW5pdmVyc2l0eQ0Kd3JpdGUNCmNoaWxkDQpkZXZlbG9wbWVudA0KZWR1Y2F0aW9uDQpmYW1pbHkNCmZ1bg0KZ2FtZQ0KZ3Jvd3RoDQpoYXBweQ0KaGVscA0Ka2lkDQpsZWFybg0KbGlmZQ0KbG92ZQ0KcGFyZW50DQpwbGF5DQpzY2hvb2wNCnN0b3J5DQp0ZWFjaA0KdGVlbg0KdG9kZGxlcg0KeW91bmcNCmFkdWx0DQpiYWJ5DQpjYXJlDQpjaGFsbGVuZ2UNCmRldmVsb3BtZW50DQplZHVjYXRpb24NCmZhbWlseQ0KZnVuDQpnYW1lDQpncm93dGgNCmhhcHB5DQpoZWxwDQpraWQNCmxlYXJuDQpsaWZlDQpsb3ZlDQpwYXJlbnQNCnBsYXkNCnNjaG9vbA0Kc3RvcnkNCnRlYWNoDQp0ZWVuDQp0b2RkbGVyDQp5b3VuZw0KYW1hemluZw0KYW5pbWUNCmFwcA0KYXdlc29tZQ0KY2hhbGxlbmdlDQpjbGFzc2ljDQpjb29sDQpjcmVhdGl2ZQ0KZGVzaWduDQpkZXZlbG9wDQpkaWdpdGFsDQplcGljDQpmYW50YXN5DQpmdW4NCmZ1bm55DQpnYW1lDQpnYW1pbmcNCmhvcnJvcg0KaW5kaWUNCmxldmVsDQptb2JpbGUNCm11bHRpcGxheWVyDQpvbmxpbmUNCnBsYXkNCnBsYXllcg0KcG9wdWxhcg0KcHV6emxlDQpxdWVzdA0KcmV2aWV3DQpyb2xlDQpzaW11bGF0aW9uDQpzdHJhdGVneQ0KdGVhbQ0KdGVjaG5vbG9neQ0KdGVzdA0KdHV0b3JpYWwNCnZpZGVvDQp2aXJ0dWFsDQp3aW4NCmFuY2llbnQNCmNhc3RsZQ0KY2l0eQ0KY291bnRyeQ0KY3VsdHVyZQ0KZGVzdGluYXRpb24NCmV4cGxvcmUNCmZhbW91cw0KZ2VvZ3JhcGh5DQpndWlkZQ0KaGlzdG9yaWNhbA0Kam91cm5leQ0KbGFuZG1hcmsNCmxvY2F0aW9uDQptYXANCm1vdW50YWluDQpuYXR1cmUNCm9jZWFuDQpwbGFjZQ0KcmVnaW9uDQp0b3VyaXNtDQp0cmF2ZWwNCnZpc2l0DQp3b3JsZA0KYW1hemluZw0KYXJ0DQpiZWF1dGlmdWwNCmJlc3QNCmJyaWdodA0KY2xhc3NpYw0KY29sb3INCmNvb2wNCmNyZWF0aXZlDQpjdXRlDQpkYXJrDQpkZXNpZ24NCmVsZWdhbnQNCmVwaWMNCmZhc2hpb24NCmZ1bm55DQpnb3JnZW91cw0KaGFwcHkNCmluc3BpcmUNCmxpZ2h0DQpsb3ZlbHkNCm1vZGVybg0KbmF0dXJhbA0KcGVyZmVjdA0KcHJldHR5DQpyZWQNCnNpbXBsZQ0Kc29mdA0Kc3BlY2lhbA0Kc3R5bGUNCnN3ZWV0DQp1bmlxdWUNCnZpbnRhZ2UNCndvbmRlcmZ1bA0KY2FyZQ0KZG9jdG9yDQplbWVyZ2VuY3kNCmV4ZXJjaXNlDQpmaXRuZXNzDQpmb29kDQpoZWFsdGh5DQpoZWxwDQpob3NwaXRhbA0KbGlmZQ0KbWVkaWNpbmUNCm1lbnRhbA0KbnV0cml0aW9uDQpwaHlzaWNhbA0KcHJldmVudGlvbg0KcmVjb3ZlcnkNCnNhZmV0eQ0Kc3VyZ2VyeQ0KdHJlYXRtZW50DQp3ZWxsbmVzcw0KYW1hemluZw0KYmVhdXRpZnVsDQpiZXN0DQpicmlnaHQNCmNsYXNzaWMNCmNvbG9yDQpjb29sDQpjcmVhdGl2ZQ0KY3V0ZQ0KZGFyaw0KZGVzaWduDQplbGVnYW50DQplcGljDQpmYXNoaW9uDQpmdW5ueQ0KZ29yZ2VvdXMNCmhhcHB5DQppbnNwaXJlDQpsaWdodA0KbG92ZWx5DQptb2Rlcm4NCm5hdHVyYWwNCnBlcmZlY3QNCnByZXR0eQ0KcmVkDQpzaW1wbGUNCnNvZnQNCnNwZWNpYWwNCnN0eWxlDQpzd2VldA0KdW5pcXVlDQp2aW50YWdlDQp3b25kZXJmdWwNCmFtYXppbmcNCmFydA0KYmVhdXRpZnVsDQpiZXN0DQpjaGFsbGVuZ2UNCmNvb2wNCmNyZWF0ZQ0KY3JlYXRpdmUNCmRhbmNlDQpkZXNpZ24NCmRyYXcNCmVudGVydGFpbm1lbnQNCmVwaWMNCmV4cHJlc3Npb24NCmZ1bg0KZ2FsbGVyeQ0KaW5zcGlyZQ0KbWFzdGVycGllY2UNCm1vZGVybg0KbXVzZXVtDQpwYWludA0KcGVyZm9ybWFuY2UNCnBob3RvDQpwaWN0dXJlDQpwb3J0cmFpdA0Kc2N1bHB0dXJlDQpza2V0Y2gNCnN0cmVldA0Kc3R1ZGlvDQpzdHlsZQ0KdGFsZW50DQp0ZWNobmlxdWUNCnZpc2lvbg0KdmlzdWFsDQp3b3JrDQpiaXJ0aGRheQ0KY2VsZWJyYXRlDQpjZXJlbW9ueQ0KY2hyaXN0bWFzDQpjb25jZXJ0DQpkYW5jZQ0KZXZlbnQNCmZhbWlseQ0KZmVzdGl2YWwNCmZyaWVuZHMNCmZ1bg0KZ2lmdA0KaG9saWRheQ0Kam95DQpsYXVnaA0KbXVzaWMNCm5ldw0KcGFydHkNCnBlb3BsZQ0KcGhvdG8NCnNwZWNpYWwNCnN1cnByaXNlDQp0cmFkaXRpb24NCndlZGRpbmcNCmFtYXppbmcNCmF0aGxldGUNCmJhbGwNCmJhc2ViYWxsDQpiYXNrZXRiYWxsDQpjaGFtcGlvbg0KY29tcGV0ZQ0KY29tcGV0aXRpb24NCmV4ZXJjaXNlDQpmYW4NCmZhc3QNCmZpZ2h0DQpmaXRuZXNzDQpmb290YmFsbA0KZ2FtZQ0KZ29sZg0KZ3ltDQpoZWFsdGgNCmhvY2tleQ0KbWF0Y2gNCm9seW1waWNzDQpwbGF5DQpwbGF5ZXINCnJhY2UNCnJ1bg0Kc29jY2VyDQpzcG9ydA0Kc3Ryb25nDQp0ZWFtDQp0ZW5uaXMNCnRyYWluaW5nDQp2aWN0b3J5DQp3aW4NCndvcmtvdXQNCmFjdG9yDQphd2FyZA0KY2FtZXJhDQpjZWxlYnJpdHkNCmNpbmVtYQ0KY2xhc3NpYw0KY29tZWR5DQpkaXJlY3Rvcg0KZHJhbWENCmVudGVydGFpbm1lbnQNCmVwaWMNCmZhbW91cw0KZmFudGFzeQ0KZmVzdGl2YWwNCmZpbG0NCmhvbGx5d29vZA0KaG9ycm9yDQppbmRlcGVuZGVudA0KbGVnZW5kDQptb3ZpZQ0KbXVzaWMNCm9yaWdpbmFsDQpwb3B1bGFyDQpwcmVtaWVyZQ0KcHJvZHVjZXINCnJvbWFuY2UNCnNjZW5lDQpzY3JlZW4NCnNjcmlwdA0Kc2hvdw0Kc3Rhcg0Kc3RvcnkNCnRoZWF0ZXINCnRocmlsbGVyDQp0cmFpbGVyDQphY3Rvcg0KY29tZWR5DQpkcmFtYQ0KZW50ZXJ0YWlubWVudA0KZXBpc29kZQ0KZmFtb3VzDQpmaWN0aW9uDQpmaWxtDQpmdW5ueQ0KZ2FtZQ0KbW92aWUNCm11c2ljDQpwb3B1bGFyDQpyZWFsaXR5DQpzZXJpZXMNCnNob3cNCnNpdGNvbQ0Kc3RvcnkNCnRlbGV2aXNpb24NCnRoZWF0ZXINCnRocmlsbGVyDQphbWF6aW5nDQpiZWF1dGlmdWwNCmJlc3QNCmJyaWdodA0KY2xhc3NpYw0KY29sb3INCmNvb2wNCmNyZWF0aXZlDQpjdXRlDQpkYXJrDQpkZXNpZ24NCmVsZWdhbnQNCmVwaWMNCmZhc2hpb24NCmZ1bm55DQpnb3JnZW91cw0KaGFwcHkNCmluc3BpcmUNCmxpZ2h0DQpsb3ZlbHkNCm1vZGVybg0KbmF0dXJhbA0KcGVyZmVjdA0KcHJldHR5DQpyZWQNCnNpbXBsZQ0Kc29mdA0Kc3BlY2lhbA0Kc3R5bGUNCnN3ZWV0DQp1bmlxdWUNCnZpbnRhZ2UNCndvbmRlcmZ1bA"}];
 js_Boot.__toStr = ({ }).toString;
 if(ArrayBuffer.prototype.slice == null) {
 	ArrayBuffer.prototype.slice = js_lib__$ArrayBuffer_ArrayBufferCompat.sliceImpl;

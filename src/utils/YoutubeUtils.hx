@@ -21,7 +21,8 @@ typedef YoutubeVideoDetails = {
 	isCrawlable:Bool,
 	channelId:String,
 	author:String,
-	allowRatings:Bool
+	allowRatings:Bool,
+	?embeddable:Bool
 }
 
 typedef YoutubeVideoFormat = {

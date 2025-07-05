@@ -16,7 +16,7 @@ import utils.YoutubeUtils;
 class Youtube implements IPlayer {
 	final videosUrl = "https://www.googleapis.com/youtube/v3/videos";
 	final playlistUrl = "https://www.googleapis.com/youtube/v3/playlistItems";
-	final urlTitleDuration = "?part=snippet,contentDetails&fields=items(snippet/title,contentDetails/duration)";
+	final urlTitleDuration = "?part=snippet,contentDetails,status&fields=items(snippet/title,contentDetails/duration,status/embeddable)";
 	final urlVideoId = "?part=snippet&fields=nextPageToken,items(snippet/resourceId/videoId)";
 	final main:Main;
 	final player:Player;
@@ -91,7 +91,16 @@ class Youtube implements IPlayer {
 			for (item in items) {
 				final title:String = item.snippet.title;
 				final duration:String = item.contentDetails.duration;
+				final embeddable:Bool = item.status?.embeddable ?? true; // Default to true if field missing
 				final duration = convertTime(duration);
+				
+				// Check if video is embeddable
+				if (!embeddable) {
+					trace('Skipping non-embeddable video: $title (ID: $id)');
+					callback({duration: 0}); // Signal that video should be skipped
+					return;
+				}
+				
 				// duration is PT0S for streams
 				if (duration == 0) {
 					final mute = main.isAutoplayAllowed() ? "" : "&mute=1";
@@ -196,8 +205,14 @@ class Youtube implements IPlayer {
 					tempYoutube.destroy();
 				},
 				onError: e -> {
-					// TODO message error codes
-					trace('Error ${e.data}');
+					final errorCode = e.data;
+					trace('YouTube temp player error: $errorCode');
+					
+					// Handle specific embedding errors
+					if (errorCode == 101 || errorCode == 150) {
+						trace('Video not embeddable, skipping');
+					}
+					
 					if (playerEl.contains(video)) playerEl.removeChild(video);
 					callback({duration: 0});
 					tempYoutube.destroy();
@@ -255,10 +270,23 @@ class Youtube implements IPlayer {
 					player.onRateChange();
 				},
 				onError: e -> {
-					// TODO message error codes
-					trace('Error ${e.data}');
-					// final item = player.getCurrentItem() ?? return;
-					// rawSourceFallback(item.url);
+					final errorCode = e.data;
+					trace('YouTube player error: $errorCode');
+					
+					switch (errorCode) {
+						case 101: // Video not available in embedded player
+							main.serverMessage('Video cannot be embedded, finding replacement...', false);
+							main.handleRandomVideoPlaybackError(errorCode);
+						case 150: // Video cannot be embedded
+							main.serverMessage('Video embedding disabled, finding replacement...', false);
+							main.handleRandomVideoPlaybackError(errorCode);
+						case 5: // Video not supported in HTML5 player
+							main.serverMessage('Video format not supported', false);
+						case 2: // Invalid video ID
+							main.serverMessage('Video not found or unavailable', false);
+						default:
+							main.serverMessage('Video playback error (code: $errorCode)', false);
+					}
 				}
 			}
 		});

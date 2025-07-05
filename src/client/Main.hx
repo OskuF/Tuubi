@@ -95,6 +95,12 @@ class Main {
 	var lastRandomVideoTime = 0.0;
 	var randomVideoRequestCount = 0;
 	var randomVideoResetTime = 0.0;
+	
+	// Search context for error recovery
+	var currentRandomVideoSearch:Array<String> = [];
+	var currentRandomVideoIndex = 0;
+	var currentRandomVideoQuery = "";
+	var currentRandomVideoAttemptCount = 0;
 
 	static function main():Void {
 		new Main();
@@ -1227,17 +1233,24 @@ class Main {
 		});
 	}
 
+	static var cachedWordlist:Array<String>;
+	
+	function getWordlist():Array<String> {
+		if (cachedWordlist == null) {
+			final wordlistContent = haxe.Resource.getString("wordlist");
+			if (wordlistContent != null) {
+				cachedWordlist = wordlistContent.split("\n").map(line -> line.trim()).filter(word -> word.length > 0);
+			} else {
+				// Fallback to a small array if resource loading fails
+				cachedWordlist = ["music", "funny", "cute", "amazing", "cool", "awesome"];
+			}
+		}
+		return cachedWordlist;
+	}
+
 	function generateRandomSearchQuery():String {
-		// Load words from wordlist file (we'll simulate this with a smaller array for now)
-		final words = [
-			"music", "funny", "cute", "amazing", "cool", "awesome", "interesting", "science", 
-			"nature", "tech", "art", "dance", "game", "tutorial", "review", "vlog", "travel", 
-			"food", "animal", "space", "documentary", "history", "adventure", "beautiful", 
-			"epic", "creative", "inspire", "relaxing", "energetic", "classic", "modern",
-			"guitar", "piano", "drums", "singing", "concert", "live", "acoustic", "electronic",
-			"cat", "dog", "bird", "ocean", "mountain", "forest", "sunset", "city", "night",
-			"comedy", "drama", "action", "animation", "short", "indie", "vintage", "new"
-		];
+		// Load words from embedded wordlist resource
+		final words = getWordlist();
 		
 		// Pick 1-3 random words
 		final numWords = Math.floor(Math.random() * 3) + 1;
@@ -1323,18 +1336,198 @@ class Main {
 				return;
 			}
 			
-			// Select a random video from the results (prefer videos from positions 1-10 for better quality)
-			final maxIndex = Math.min(videoIds.length, 10);
-			final randomIndex = Math.floor(Math.random() * maxIndex);
-			final selectedVideoId = videoIds[randomIndex];
-			final youtubeUrl = "https://www.youtube.com/watch?v=" + selectedVideoId;
-			
-			trace('Found ${videoIds.length} results, selected video #${randomIndex + 1}: $selectedVideoId');
-			
-			addVideo(youtubeUrl, true, true, false, () -> {
-				serverMessage('Added random video from search: "$query"');
-			});
+			// Try to find an embeddable video from the search results
+			tryEmbeddableVideoFromResults(videoIds, query, attemptCount);
 		});
+	}
+	
+	function tryEmbeddableVideoFromResults(videoIds:Array<String>, query:String, attemptCount:Int):Void {
+		// Shuffle the video IDs to get random selection
+		final shuffledIds = videoIds.copy();
+		for (i in 0...shuffledIds.length) {
+			final j = Math.floor(Math.random() * shuffledIds.length);
+			final temp = shuffledIds[i];
+			shuffledIds[i] = shuffledIds[j];
+			shuffledIds[j] = temp;
+		}
+		
+		// Try videos one by one until we find an embeddable one
+		tryNextVideoFromList(shuffledIds, 0, query, attemptCount);
+	}
+	
+	function tryNextVideoFromList(videoIds:Array<String>, index:Int, query:String, attemptCount:Int):Void {
+		if (index >= videoIds.length) {
+			// No embeddable videos found in this search, retry with different search terms
+			trace('No embeddable videos found in search results for: "$query"');
+			if (attemptCount < 2) {
+				addRandomYoutubeVideoWithRetry(attemptCount + 1);
+			} else {
+				addRandomYoutubeVideoFallback();
+			}
+			return;
+		}
+		
+		final videoId = videoIds[index];
+		final youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
+		
+		trace('Testing embeddability for video #${index + 1}: $videoId');
+		
+		// Check embeddability directly via YouTube API before adding to playlist
+		checkVideoEmbeddability(videoId, (isEmbeddable:Bool, title:String) -> {
+			if (isEmbeddable) {
+				// Store search context for potential error recovery
+				currentRandomVideoSearch = videoIds;
+				currentRandomVideoIndex = index + 1; // Next video to try if this one fails
+				currentRandomVideoQuery = query;
+				currentRandomVideoAttemptCount = attemptCount;
+				
+				// Video is embeddable, add it to the playlist
+				trace('Found embeddable video: $videoId ($title)');
+				addVideo(youtubeUrl, true, true, false, () -> {
+					serverMessage('Added random video from search: "$query"');
+				});
+			} else {
+				// Video is not embeddable, try the next one
+				trace('Video $videoId ($title) is not embeddable, trying next...');
+				tryNextVideoFromList(videoIds, index + 1, query, attemptCount);
+			}
+		});
+	}
+	
+	function checkVideoEmbeddability(videoId:String, callback:(isEmbeddable:Bool, title:String) -> Void):Void {
+		final apiKey = getYoutubeApiKey();
+		if (apiKey == null || apiKey == "") {
+			trace('No YouTube API key available for embeddability check');
+			callback(true, "Unknown"); // Default to embeddable if no API key
+			return;
+		}
+		
+		final videosUrl = "https://www.googleapis.com/youtube/v3/videos";
+		final params = '?part=snippet,status,contentDetails&fields=items(snippet/title,status/embeddable,status/privacyStatus,contentDetails/regionRestriction,contentDetails/contentRating)&id=$videoId&key=$apiKey';
+		final dataUrl = videosUrl + params;
+		
+		final http = new haxe.Http(dataUrl);
+		http.onData = response -> {
+			try {
+				final json = haxe.Json.parse(response);
+				final items:Array<Dynamic> = json.items ?? [];
+				
+				if (items.length == 0) {
+					trace('Video $videoId not found');
+					callback(false, "Not Found");
+					return;
+				}
+				
+				final item = items[0];
+				final title:String = item.snippet?.title ?? "Unknown";
+				final embeddable:Bool = item.status?.embeddable ?? true;
+				final privacyStatus:String = item.status?.privacyStatus ?? "public";
+				final regionRestriction = item.contentDetails?.regionRestriction;
+				final contentRating = item.contentDetails?.contentRating;
+				
+				// Comprehensive embeddability check
+				final isActuallyEmbeddable = checkComprehensiveEmbeddability(
+					videoId, title, embeddable, privacyStatus, regionRestriction, contentRating
+				);
+				
+				trace('Video $videoId comprehensive embeddability: $isActuallyEmbeddable (title: $title)');
+				callback(isActuallyEmbeddable, title);
+			} catch (e:Dynamic) {
+				trace('Error parsing embeddability response for $videoId: $e');
+				callback(true, "Parse Error"); // Default to embeddable on parse error
+			}
+		};
+		
+		http.onError = error -> {
+			trace('Error checking embeddability for $videoId: $error');
+			callback(true, "API Error"); // Default to embeddable on API error
+		};
+		
+		http.request();
+	}
+	
+	function checkComprehensiveEmbeddability(
+		videoId:String, 
+		title:String, 
+		embeddable:Bool, 
+		privacyStatus:String, 
+		regionRestriction:Dynamic, 
+		contentRating:Dynamic
+	):Bool {
+		// Check basic embeddability
+		if (!embeddable) {
+			trace('Video $videoId rejected: not embeddable (title: $title)');
+			return false;
+		}
+		
+		// Check privacy status - only allow public videos
+		if (privacyStatus != "public") {
+			trace('Video $videoId rejected: privacy status is $privacyStatus (title: $title)');
+			return false;
+		}
+		
+		// Check age restrictions - reject age-restricted content
+		if (contentRating != null) {
+			final ratingKeys = Reflect.fields(contentRating);
+			if (ratingKeys.length > 0) {
+				trace('Video $videoId rejected: has content rating restrictions (title: $title)');
+				return false;
+			}
+		}
+		
+		// Check regional restrictions
+		if (regionRestriction != null) {
+			final userRegion = "FI"; // Default to Finland based on error message
+			
+			// Check if video is blocked in user's region
+			final blockedDynamic:Array<Dynamic> = regionRestriction.blocked ?? [];
+			final blocked:Array<String> = [for (item in blockedDynamic) Std.string(item)];
+			if (blocked.indexOf(userRegion) != -1) {
+				trace('Video $videoId rejected: blocked in region $userRegion (title: $title)');
+				return false;
+			}
+			
+			// Check if video is only allowed in specific regions
+			final allowedDynamic:Array<Dynamic> = regionRestriction.allowed ?? [];
+			final allowed:Array<String> = [for (item in allowedDynamic) Std.string(item)];
+			if (allowed.length > 0 && allowed.indexOf(userRegion) == -1) {
+				trace('Video $videoId rejected: not allowed in region $userRegion (title: $title)');
+				return false;
+			}
+		}
+		
+		trace('Video $videoId passed all embeddability checks (title: $title)');
+		return true;
+	}
+	
+	public function handleRandomVideoPlaybackError(errorCode:Int):Void {
+		trace('Handling random video playback error $errorCode');
+		
+		// Remove the failed video from the playlist
+		final currentItem = player.getCurrentItem();
+		if (currentItem != null) {
+			removeVideoItem(currentItem.url);
+			trace('Removed failed video from playlist: ${currentItem.url}');
+		}
+		
+		// Try to find a replacement from the current search results
+		if (currentRandomVideoSearch.length > 0 && currentRandomVideoIndex < currentRandomVideoSearch.length) {
+			trace('Trying next video from search results (index: $currentRandomVideoIndex)');
+			tryNextVideoFromList(
+				currentRandomVideoSearch, 
+				currentRandomVideoIndex, 
+				currentRandomVideoQuery, 
+				currentRandomVideoAttemptCount
+			);
+		} else {
+			// No more videos in current search, try a new search
+			trace('No more videos in current search, starting new search');
+			if (currentRandomVideoAttemptCount < 2) {
+				addRandomYoutubeVideoWithRetry(currentRandomVideoAttemptCount + 1);
+			} else {
+				addRandomYoutubeVideoFallback();
+			}
+		}
 	}
 	
 	function addRandomYoutubeVideoFallback():Void {
