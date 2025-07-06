@@ -4337,6 +4337,9 @@ server_HttpServer.prototype = {
 		res.setHeader("content-type",this.getMimeType(ext));
 		if(this.cache != null && req.method == "POST") {
 			switch(url.pathname) {
+			case "/api/youtube-search":
+				this.handleYouTubeSearch(req,res);
+				break;
 			case "/setup":
 				this.finishSetup(req,res);
 				break;
@@ -4422,10 +4425,10 @@ server_HttpServer.prototype = {
 			fileName = null;
 		}
 		var ext = haxe_io_Path.extension(fileName).toLowerCase();
-		haxe_Log.trace("Trying to upload new file to the cache: " + fileName + ", extension: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 175, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
+		haxe_Log.trace("Trying to upload new file to the cache: " + fileName + ", extension: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 179, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
 		if(!this.isAllowedFileType(ext)) {
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,400),{ info : "Invalid file type. Filetype is not on the whitelist."});
-			haxe_Log.trace("Filetype not allowed: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 179, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
+			haxe_Log.trace("Filetype not allowed: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 183, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
 			return;
 		}
 		var name = this.cache.getFreeFileName(fileName);
@@ -4501,7 +4504,7 @@ server_HttpServer.prototype = {
 			}
 		});
 		stream.on("error",function(err) {
-			haxe_Log.trace(err,{ fileName : "src/server/HttpServer.hx", lineNumber : 248, className : "server.HttpServer", methodName : "uploadFile"});
+			haxe_Log.trace(err,{ fileName : "src/server/HttpServer.hx", lineNumber : 252, className : "server.HttpServer", methodName : "uploadFile"});
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,500),{ info : "File write stream error."});
 			var _this = _gthis.uploadingFilesSizes;
 			if(Object.prototype.hasOwnProperty.call(_this.h,filePath)) {
@@ -4514,7 +4517,7 @@ server_HttpServer.prototype = {
 			_gthis.cache.remove(name);
 		});
 		req.on("error",function(err) {
-			haxe_Log.trace("Request Error:",{ fileName : "src/server/HttpServer.hx", lineNumber : 255, className : "server.HttpServer", methodName : "uploadFile", customParams : [err]});
+			haxe_Log.trace("Request Error:",{ fileName : "src/server/HttpServer.hx", lineNumber : 259, className : "server.HttpServer", methodName : "uploadFile", customParams : [err]});
 			stream.destroy();
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,500),{ info : "File request error."});
 			var _this = _gthis.uploadingFilesSizes;
@@ -4546,7 +4549,7 @@ server_HttpServer.prototype = {
 			var jsonParser = new JsonParser_$f3c29c0813c93ee49a61ccf072b8a177();
 			var jsonData = jsonParser.fromJson(body);
 			if(jsonParser.errors.length > 0) {
-				haxe_Log.trace(json2object_ErrorUtils.convertErrorArray(jsonParser.errors),{ fileName : "src/server/HttpServer.hx", lineNumber : 286, className : "server.HttpServer", methodName : "finishSetup"});
+				haxe_Log.trace(json2object_ErrorUtils.convertErrorArray(jsonParser.errors),{ fileName : "src/server/HttpServer.hx", lineNumber : 290, className : "server.HttpServer", methodName : "finishSetup"});
 				tools_HttpServerTools.json(tools_HttpServerTools.status(res,400),{ success : false, errors : []});
 				return;
 			}
@@ -4571,6 +4574,67 @@ server_HttpServer.prototype = {
 			}
 			_gthis.main.addAdmin(name,password);
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,200),{ success : true});
+		});
+	}
+	,handleYouTubeSearch: function(req,res) {
+		var body = "";
+		req.on("data",function(chunk) {
+			body += chunk;
+			return body;
+		});
+		req.on("end",function() {
+			try {
+				var data = JSON.parse(body);
+				var query = data.query;
+				var tmp = data.maxResults;
+				var maxResults = tmp != null ? tmp : 20;
+				if(query == null || StringTools.trim(query) == "") {
+					tools_HttpServerTools.status(res,400);
+					tools_HttpServerTools.json(res,{ success : false, error : "Query parameter is required"});
+					return;
+				}
+				haxe_Log.trace("YouTube Search API: Searching for \"" + query + "\" with max results " + maxResults,{ fileName : "src/server/HttpServer.hx", lineNumber : 359, className : "server.HttpServer", methodName : "handleYouTubeSearch"});
+				
+					var youtubeSearch = require('youtube-search-without-api-key');
+					var HttpServerTools = tools_HttpServerTools;
+					
+					youtubeSearch.search(query, {limit: maxResults}).then(function(results) {
+						var videoIds = [];
+						
+						console.log('Raw search results:', results[0]);
+						
+						for (var i = 0; i < results.length; i++) {
+							var result = results[i];
+							// Extract video ID from nested structure: result.id.videoId
+							var videoId = result.id?.videoId || result.videoId || result.url?.split('v=')[1]?.split('&')[0];
+							if (videoId && typeof videoId === 'string') {
+								videoIds.push(videoId);
+							}
+						}
+						
+						console.log('YouTube Search API: Found ' + videoIds.length + ' video IDs');
+						
+						HttpServerTools.status(res, 200);
+						HttpServerTools.json(res, {
+							success: true,
+							videoIds: videoIds,
+							count: videoIds.length
+						});
+					}).catch(function(error) {
+						console.log('YouTube Search API error:', error);
+						HttpServerTools.status(res, 500);
+						HttpServerTools.json(res, {
+							success: false,
+							error: 'Search request failed'
+						});
+					});
+				;
+			} catch( _g ) {
+				var e = haxe_Exception.caught(_g).unwrap();
+				haxe_Log.trace("YouTube Search API parse error: " + Std.string(e),{ fileName : "src/server/HttpServer.hx", lineNumber : 399, className : "server.HttpServer", methodName : "handleYouTubeSearch"});
+				tools_HttpServerTools.status(res,400);
+				tools_HttpServerTools.json(res,{ success : false, error : "Invalid request format"});
+			}
 		});
 	}
 	,getPath: function(dir,url) {

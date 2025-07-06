@@ -5,6 +5,7 @@ import Types.VideoData;
 import Types.VideoDataRequest;
 import Types.VideoItem;
 import client.Main.getEl;
+import client.YoutubeCrawler;
 import haxe.Http;
 import haxe.Json;
 import js.Browser.document;
@@ -362,41 +363,12 @@ class Youtube implements IPlayer {
 	}
 
 	public function searchVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void, ?customApiKey:String):Void {
-		final effectiveApiKey = customApiKey ?? {
-			if (apiKey == null) apiKey = main.getYoutubeApiKey();
-			apiKey;
-		};
-		final searchUrl = "https://www.googleapis.com/youtube/v3/search";
-		final params = '?part=snippet&type=video&maxResults=$maxResults&q=${StringTools.urlEncode(query)}&key=$effectiveApiKey';
-		final dataUrl = searchUrl + params;
+		trace('YouTube Crawler: Searching for "$query" with max results $maxResults');
 		
-		trace('YouTube API call: ${searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + StringTools.urlEncode(query) + "&key=***"}');
-		
-		final http = new Http(dataUrl);
-		http.onData = response -> {
-			try {
-				final json = Json.parse(response);
-				final items:Array<Dynamic> = json.items ?? [];
-				final videoIds:Array<String> = [];
-				
-				for (item in items) {
-					final videoId = item.id?.videoId;
-					if (videoId != null && videoId != "") {
-						videoIds.push(videoId);
-					}
-				}
-				
-				trace('YouTube API returned ${videoIds.length} video IDs: [${videoIds.join(", ")}]');
-				callback(videoIds);
-			} catch (e:Dynamic) {
-				youtubeApiError({code: 0, message: "Failed to parse search results"});
-				callback([]);
-			}
-		};
-		http.onError = msg -> {
-			youtubeApiError({code: 0, message: "Search request failed: " + msg});
-			callback([]);
-		};
-		http.request();
+		// Use crawler instead of API
+		YoutubeCrawler.searchVideos(query, maxResults, (videoIds:Array<String>) -> {
+			trace('YouTube Crawler returned ${videoIds.length} video IDs: [${videoIds.join(", ")}]');
+			callback(videoIds);
+		});
 	}
 }

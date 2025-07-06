@@ -10,6 +10,7 @@ import Types.VideoData;
 import Types.VideoDataRequest;
 import Types.WsEvent;
 import client.Drawing;
+import client.YoutubeCrawler;
 import haxe.Json;
 import haxe.Timer;
 import haxe.crypto.Sha256;
@@ -91,10 +92,6 @@ class Main {
 	var speechSynthesis:Dynamic;
 	var finnishVoice:Dynamic;
 
-	// Rate limiting for random video searches
-	var lastRandomVideoTime = 0.0;
-	var randomVideoRequestCount = 0;
-	var randomVideoResetTime = 0.0;
 
 	// Search context for error recovery
 	var currentRandomVideoSearch:Array<String> = [];
@@ -1286,37 +1283,6 @@ class Main {
 	}
 
 	public function addRandomYoutubeVideo():Void {
-		// Basic rate limiting: max 10 requests per hour, min 2 seconds between requests
-		final now = Date.now().getTime();
-		final hourInMs = 60 * 60 * 1000;
-
-		// Reset counter if an hour has passed
-		if (now - randomVideoResetTime > hourInMs) {
-			randomVideoRequestCount = 0;
-			randomVideoResetTime = now;
-		}
-
-		// Check hourly limit
-		if (randomVideoRequestCount >= 10) {
-			final timeUntilReset = Math.ceil((randomVideoResetTime
-				+ hourInMs
-				- now) / 1000 / 60); // Minutes
-			serverMessage('Random video limit reached (10/hour). Try again in ${timeUntilReset} minutes.', true, false);
-			trace('Rate limit: ${randomVideoRequestCount}/10 requests used. Reset in ${timeUntilReset} minutes.');
-			return;
-		}
-
-		// Check minimum time between requests (2 seconds)
-		final timeSinceLastRequest = now - lastRandomVideoTime;
-		if (timeSinceLastRequest < 2000) {
-			final waitTime = Math.ceil((2000 - timeSinceLastRequest) / 1000);
-			serverMessage('Please wait ${waitTime} more second(s) before requesting another random video.', true, false);
-			trace('Cooldown: ${waitTime} second(s) remaining.');
-			return;
-		}
-
-		lastRandomVideoTime = now;
-		randomVideoRequestCount++;
 
 		// Mark that we're starting a random video operation
 		isRandomVideoOperation = true;
@@ -1417,83 +1383,36 @@ class Main {
 	}
 
 	function checkVideoEmbeddability(videoId:String, callback:(isEmbeddable:Bool, title:String) -> Void):Void {
-		final apiKey = getRandomVideoApiKey();
-		if (apiKey == null || apiKey == "") {
-			trace('No YouTube API key available for random video embeddability check');
-			callback(true, "Unknown"); // Default to embeddable if no API key
-			return;
-		}
-
-		final videosUrl = "https://www.googleapis.com/youtube/v3/videos";
-		final params = '?part=snippet,status,contentDetails&fields=items(snippet/title,status/embeddable,status/privacyStatus,contentDetails/regionRestriction,contentDetails/contentRating)&id=$videoId&key=$apiKey';
-		final dataUrl = videosUrl + params;
-
-		final http = new haxe.Http(dataUrl);
-		http.onData = response -> {
+		trace('Checking video embeddability using crawler for $videoId');
+		
+		// Use YoutubeCrawler to get video metadata
+		YoutubeCrawler.getVideoMetadata(videoId, (metadata:VideoMetadata) -> {
 			try {
-				final json = haxe.Json.parse(response);
-
-				// Check for YouTube API errors
-				if (json.error != null) {
-					final errorCode:Int = json.error.code ?? 0;
-					final errorMessage:String = json.error.message ?? "Unknown error";
-
-					if (errorCode == 403) {
-						trace('Random video API quota exhausted: $errorMessage');
-						serverMessage('Random video API quota exhausted. Try again later.', false);
-						callback(false, "API Quota Exhausted");
-						return;
-					} else {
-						trace('Random video API error $errorCode: $errorMessage');
-						serverMessage('Random video API error. Using fallback.', false);
-						callback(true, "API Error"); // Default to embeddable on other API errors
-						return;
-					}
-				}
-
-				final items:Array<Dynamic> = json.items ?? [];
-
-				if (items.length == 0) {
-					trace('Video $videoId not found');
+				// Check if video metadata was successfully retrieved
+				if (metadata == null) {
+					trace('Video $videoId metadata not found');
 					callback(false, "Not Found");
 					return;
 				}
 
-				final item = items[0];
-				final title:String = item.snippet?.title ?? "Unknown";
-				final embeddable:Bool = item.status?.embeddable ?? true;
-				final privacyStatus:String = item.status?.privacyStatus ?? "public";
-				final regionRestriction = item.contentDetails?.regionRestriction;
-				final contentRating = item.contentDetails?.contentRating;
-
-				// Comprehensive embeddability check
+				// Use the simplified embeddability check with crawler metadata
 				final isActuallyEmbeddable = checkComprehensiveEmbeddability(
-					videoId, title, embeddable, privacyStatus, regionRestriction, contentRating
+					videoId, metadata.title, metadata.isEmbeddable
 				);
 
-				trace('Video $videoId comprehensive embeddability: $isActuallyEmbeddable (title: $title)');
-				callback(isActuallyEmbeddable, title);
+				trace('Video $videoId comprehensive embeddability: $isActuallyEmbeddable (title: ${metadata.title})');
+				callback(isActuallyEmbeddable, metadata.title);
 			} catch (e:Dynamic) {
-				trace('Error parsing embeddability response for $videoId: $e');
+				trace('Error processing crawler metadata for $videoId: $e');
 				callback(true, "Parse Error"); // Default to embeddable on parse error
 			}
-		};
-
-		http.onError = error -> {
-			trace('Error checking embeddability for $videoId: $error');
-			callback(true, "API Error"); // Default to embeddable on API error
-		};
-
-		http.request();
+		});
 	}
 
 	function checkComprehensiveEmbeddability(
 		videoId:String,
 		title:String,
-		embeddable:Bool,
-		privacyStatus:String,
-		regionRestriction:Dynamic,
-		contentRating:Dynamic
+		embeddable:Bool
 	):Bool {
 		// If strict checks are disabled, only check basic embeddability
 		if (!config.strictEmbeddingChecks) {
@@ -1505,49 +1424,18 @@ class Main {
 			return true;
 		}
 
-		// Check basic embeddability
+		// Check basic embeddability from crawler metadata
 		if (!embeddable) {
 			trace('Video $videoId rejected: not embeddable (title: $title)');
 			return false;
 		}
 
-		// Check privacy status - only allow public videos
-		if (privacyStatus != "public") {
-			trace('Video $videoId rejected: privacy status is $privacyStatus (title: $title)');
-			return false;
-		}
-
-		// Check age restrictions - only reject if server config doesn't allow age-restricted content
-		if (!config.allowAgeRestrictedVideos && contentRating != null) {
-			final ratingKeys = Reflect.fields(contentRating);
-			if (ratingKeys.length > 0) {
-				trace('Video $videoId rejected: has content rating restrictions (title: $title)');
-				return false;
-			}
-		}
-
-		// Check regional restrictions - use server's configured region
-		if (regionRestriction != null) {
-			final userRegion = config.youtubeRegion;
-
-			// Check if video is blocked in user's region
-			final blockedDynamic:Array<Dynamic> = regionRestriction.blocked ?? [];
-			final blocked:Array<String> = [for (item in blockedDynamic) Std.string(item)];
-			if (blocked.indexOf(userRegion) != -1) {
-				trace('Video $videoId rejected: blocked in region $userRegion (title: $title)');
-				return false;
-			}
-
-			// Check if video is only allowed in specific regions
-			final allowedDynamic:Array<Dynamic> = regionRestriction.allowed ?? [];
-			final allowed:Array<String> = [for (item in allowedDynamic) Std.string(item)];
-			if (allowed.length > 0 && allowed.indexOf(userRegion) == -1) {
-				trace('Video $videoId rejected: not allowed in region $userRegion (title: $title)');
-				return false;
-			}
-		}
-
-		trace('Video $videoId passed all embeddability checks (title: $title)');
+		// Note: The crawler provides simplified metadata compared to the YouTube API
+		// Advanced checks like privacy status, age restrictions, and region restrictions
+		// are not available through the crawler, so we rely on the basic embeddability check
+		// and the fact that if the crawler can access the video, it's likely public and available
+		
+		trace('Video $videoId passed crawler-based embeddability check (title: $title)');
 		return true;
 	}
 

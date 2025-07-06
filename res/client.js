@@ -2319,9 +2319,6 @@ var client_Main = function() {
 	this.currentRandomVideoQuery = "";
 	this.currentRandomVideoIndex = 0;
 	this.currentRandomVideoSearch = [];
-	this.randomVideoResetTime = 0.0;
-	this.randomVideoRequestCount = 0;
-	this.lastRandomVideoTime = 0.0;
 	this.ttsVolume = 1.0;
 	this.isTtsEnabled = true;
 	this.allAppEmotes = [];
@@ -3317,35 +3314,15 @@ client_Main.prototype = {
 		var month = Math.floor(Math.random() * 12) + 1;
 		var day = Math.floor(Math.random() * 28) + 1;
 		query += " before:" + year + "-" + (month < 10 ? "0" + month : "" + month) + "-" + (day < 10 ? "0" + day : "" + day);
-		haxe_Log.trace("Generated random search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1284, className : "client.Main", methodName : "generateRandomSearchQuery"});
+		haxe_Log.trace("Generated random search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1281, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		return query;
 	}
 	,addRandomYoutubeVideo: function() {
 		var _gthis = this;
-		var now = new Date().getTime();
-		if(now - this.randomVideoResetTime > 3600000) {
-			this.randomVideoRequestCount = 0;
-			this.randomVideoResetTime = now;
-		}
-		if(this.randomVideoRequestCount >= 10) {
-			var timeUntilReset = Math.ceil((this.randomVideoResetTime + 3600000 - now) / 1000 / 60);
-			this.serverMessage("Random video limit reached (10/hour). Try again in " + timeUntilReset + " minutes.",true,false);
-			haxe_Log.trace("Rate limit: " + this.randomVideoRequestCount + "/10 requests used. Reset in " + timeUntilReset + " minutes.",{ fileName : "src/client/Main.hx", lineNumber : 1305, className : "client.Main", methodName : "addRandomYoutubeVideo"});
-			return;
-		}
-		var timeSinceLastRequest = now - this.lastRandomVideoTime;
-		if(timeSinceLastRequest < 2000) {
-			var waitTime = Math.ceil((2000 - timeSinceLastRequest) / 1000);
-			this.serverMessage("Please wait " + waitTime + " more second(s) before requesting another random video.",true,false);
-			haxe_Log.trace("Cooldown: " + waitTime + " second(s) remaining.",{ fileName : "src/client/Main.hx", lineNumber : 1314, className : "client.Main", methodName : "addRandomYoutubeVideo"});
-			return;
-		}
-		this.lastRandomVideoTime = now;
-		this.randomVideoRequestCount++;
 		this.isRandomVideoOperation = true;
 		window.setTimeout(function() {
 			if(_gthis.isRandomVideoOperation) {
-				haxe_Log.trace("Random video operation timeout, clearing flag",{ fileName : "src/client/Main.hx", lineNumber : 1327, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+				haxe_Log.trace("Random video operation timeout, clearing flag",{ fileName : "src/client/Main.hx", lineNumber : 1293, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 				_gthis.isRandomVideoOperation = false;
 			}
 		},10000);
@@ -3359,11 +3336,11 @@ client_Main.prototype = {
 		}
 		var query = this.generateRandomSearchQuery();
 		var searchTime = new Date(new Date().getTime());
-		haxe_Log.trace("Searching YouTube at " + HxOverrides.dateStr(searchTime) + " for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1344, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+		haxe_Log.trace("Searching YouTube at " + HxOverrides.dateStr(searchTime) + " for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1310, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 		var randomApiKey = this.getRandomVideoApiKey();
 		this.player.searchYoutubeVideos(query,20,function(videoIds) {
 			if(videoIds.length == 0) {
-				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1350, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1316, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 				if(attemptCount < 2) {
 					_gthis.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 				} else {
@@ -3390,7 +3367,7 @@ client_Main.prototype = {
 	,tryNextVideoFromList: function(videoIds,index,query,attemptCount) {
 		var _gthis = this;
 		if(index >= videoIds.length) {
-			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1382, className : "client.Main", methodName : "tryNextVideoFromList"});
+			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1348, className : "client.Main", methodName : "tryNextVideoFromList"});
 			if(attemptCount < 2) {
 				this.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 			} else {
@@ -3400,143 +3377,71 @@ client_Main.prototype = {
 		}
 		var videoId = videoIds[index];
 		var youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
-		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1394, className : "client.Main", methodName : "tryNextVideoFromList"});
+		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1360, className : "client.Main", methodName : "tryNextVideoFromList"});
 		this.checkVideoEmbeddability(videoId,function(isEmbeddable,title) {
 			if(isEmbeddable) {
 				_gthis.currentRandomVideoSearch = videoIds;
 				_gthis.currentRandomVideoIndex = index + 1;
 				_gthis.currentRandomVideoQuery = query;
 				_gthis.currentRandomVideoAttemptCount = attemptCount;
-				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1406, className : "client.Main", methodName : "tryNextVideoFromList"});
+				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1372, className : "client.Main", methodName : "tryNextVideoFromList"});
 				_gthis.addVideo(youtubeUrl,true,true,false,function() {
 					_gthis.serverMessage("Added random video from search: \"" + query + "\"");
 				});
 			} else {
-				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1413, className : "client.Main", methodName : "tryNextVideoFromList"});
+				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1379, className : "client.Main", methodName : "tryNextVideoFromList"});
 				_gthis.tryNextVideoFromList(videoIds,index + 1,query,attemptCount);
 			}
 		});
 	}
 	,checkVideoEmbeddability: function(videoId,callback) {
 		var _gthis = this;
-		var apiKey = this.getRandomVideoApiKey();
-		if(apiKey == null || apiKey == "") {
-			haxe_Log.trace("No YouTube API key available for random video embeddability check",{ fileName : "src/client/Main.hx", lineNumber : 1422, className : "client.Main", methodName : "checkVideoEmbeddability"});
-			callback(true,"Unknown");
-			return;
-		}
-		var http = new haxe_http_HttpJs("https://www.googleapis.com/youtube/v3/videos" + ("?part=snippet,status,contentDetails&fields=items(snippet/title,status/embeddable,status/privacyStatus,contentDetails/regionRestriction,contentDetails/contentRating)&id=" + videoId + "&key=" + apiKey));
-		http.onData = function(response) {
+		haxe_Log.trace("Checking video embeddability using crawler for " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1386, className : "client.Main", methodName : "checkVideoEmbeddability"});
+		client_YoutubeCrawler.getVideoMetadata(videoId,function(metadata) {
 			try {
-				var json = JSON.parse(response);
-				if(json.error != null) {
-					var tmp = json.error.code;
-					var errorCode = tmp != null ? tmp : 0;
-					var tmp = json.error.message;
-					var errorMessage = tmp != null ? tmp : "Unknown error";
-					if(errorCode == 403) {
-						haxe_Log.trace("Random video API quota exhausted: " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1442, className : "client.Main", methodName : "checkVideoEmbeddability"});
-						_gthis.serverMessage("Random video API quota exhausted. Try again later.",false);
-						callback(false,"API Quota Exhausted");
-						return;
-					} else {
-						haxe_Log.trace("Random video API error " + errorCode + ": " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1447, className : "client.Main", methodName : "checkVideoEmbeddability"});
-						_gthis.serverMessage("Random video API error. Using fallback.",false);
-						callback(true,"API Error");
-						return;
-					}
-				}
-				var tmp = json.items;
-				var items = tmp != null ? tmp : [];
-				if(items.length == 0) {
-					haxe_Log.trace("Video " + videoId + " not found",{ fileName : "src/client/Main.hx", lineNumber : 1457, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				if(metadata == null) {
+					haxe_Log.trace("Video " + videoId + " metadata not found",{ fileName : "src/client/Main.hx", lineNumber : 1393, className : "client.Main", methodName : "checkVideoEmbeddability"});
 					callback(false,"Not Found");
 					return;
 				}
-				var item = items[0];
-				var tmp = item.snippet;
-				var tmp1 = tmp != null ? tmp.title : null;
-				var title = tmp1 != null ? tmp1 : "Unknown";
-				var tmp = item.status;
-				var tmp1 = tmp != null ? tmp.embeddable : null;
-				var tmp = item.status;
-				var tmp2 = tmp != null ? tmp.privacyStatus : null;
-				var tmp = item.contentDetails;
-				var tmp3 = item.contentDetails;
-				var isActuallyEmbeddable = _gthis.checkComprehensiveEmbeddability(videoId,title,tmp1 != null ? tmp1 : true,tmp2 != null ? tmp2 : "public",tmp != null ? tmp.regionRestriction : null,tmp3 != null ? tmp3.contentRating : null);
-				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1474, className : "client.Main", methodName : "checkVideoEmbeddability"});
-				callback(isActuallyEmbeddable,title);
+				var isActuallyEmbeddable = _gthis.checkComprehensiveEmbeddability(videoId,metadata.title,metadata.isEmbeddable);
+				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + metadata.title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1403, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				callback(isActuallyEmbeddable,metadata.title);
 			} catch( _g ) {
 				var _g1 = haxe_Exception.caught(_g).unwrap();
-				haxe_Log.trace("Error parsing embeddability response for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1477, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				haxe_Log.trace("Error processing crawler metadata for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1406, className : "client.Main", methodName : "checkVideoEmbeddability"});
 				callback(true,"Parse Error");
 			}
-		};
-		http.onError = function(error) {
-			haxe_Log.trace("Error checking embeddability for " + videoId + ": " + error,{ fileName : "src/client/Main.hx", lineNumber : 1483, className : "client.Main", methodName : "checkVideoEmbeddability"});
-			callback(true,"API Error");
-		};
-		http.request();
+		});
 	}
-	,checkComprehensiveEmbeddability: function(videoId,title,embeddable,privacyStatus,regionRestriction,contentRating) {
+	,checkComprehensiveEmbeddability: function(videoId,title,embeddable) {
 		if(!this.config.strictEmbeddingChecks) {
 			if(!embeddable) {
-				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1501, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1420, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
-			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1504, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1423, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return true;
 		}
 		if(!embeddable) {
-			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1510, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1429, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
-		if(privacyStatus != "public") {
-			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1516, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
-			return false;
-		}
-		if(!this.config.allowAgeRestrictedVideos && contentRating != null) {
-			if(Reflect.fields(contentRating).length > 0) {
-				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1524, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
-				return false;
-			}
-		}
-		if(regionRestriction != null) {
-			var userRegion = this.config.youtubeRegion;
-			var tmp = regionRestriction.blocked;
-			var blockedDynamic = tmp != null ? tmp : [];
-			var _g = [];
-			var _g1 = 0;
-			while(_g1 < blockedDynamic.length) _g.push(Std.string(blockedDynamic[_g1++]));
-			if(_g.indexOf(userRegion) != -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1537, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
-				return false;
-			}
-			var tmp = regionRestriction.allowed;
-			var allowedDynamic = tmp != null ? tmp : [];
-			var _g = [];
-			var _g1 = 0;
-			while(_g1 < allowedDynamic.length) _g.push(Std.string(allowedDynamic[_g1++]));
-			if(_g.length > 0 && _g.indexOf(userRegion) == -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1545, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
-				return false;
-			}
-		}
-		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1550, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+		haxe_Log.trace("Video " + videoId + " passed crawler-based embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1438, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 		return true;
 	}
 	,handleRandomVideoPlaybackError: function(errorCode) {
-		haxe_Log.trace("Handling random video playback error " + errorCode,{ fileName : "src/client/Main.hx", lineNumber : 1555, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+		haxe_Log.trace("Handling random video playback error " + errorCode,{ fileName : "src/client/Main.hx", lineNumber : 1443, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
 		var currentItem = this.player.getCurrentItem();
 		if(currentItem != null) {
 			this.removeVideoItem(currentItem.url);
-			haxe_Log.trace("Removed failed video from playlist: " + currentItem.url,{ fileName : "src/client/Main.hx", lineNumber : 1561, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+			haxe_Log.trace("Removed failed video from playlist: " + currentItem.url,{ fileName : "src/client/Main.hx", lineNumber : 1449, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
 		}
 		if(this.currentRandomVideoSearch.length > 0 && this.currentRandomVideoIndex < this.currentRandomVideoSearch.length) {
-			haxe_Log.trace("Trying next video from search results (index: " + this.currentRandomVideoIndex + ")",{ fileName : "src/client/Main.hx", lineNumber : 1567, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+			haxe_Log.trace("Trying next video from search results (index: " + this.currentRandomVideoIndex + ")",{ fileName : "src/client/Main.hx", lineNumber : 1455, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
 			this.tryNextVideoFromList(this.currentRandomVideoSearch,this.currentRandomVideoIndex,this.currentRandomVideoQuery,this.currentRandomVideoAttemptCount);
 		} else {
-			haxe_Log.trace("No more videos in current search, starting new search",{ fileName : "src/client/Main.hx", lineNumber : 1576, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
+			haxe_Log.trace("No more videos in current search, starting new search",{ fileName : "src/client/Main.hx", lineNumber : 1464, className : "client.Main", methodName : "handleRandomVideoPlaybackError"});
 			if(this.currentRandomVideoAttemptCount < 2) {
 				this.addRandomYoutubeVideoWithRetry(this.currentRandomVideoAttemptCount + 1);
 			} else {
@@ -3549,7 +3454,7 @@ client_Main.prototype = {
 		var popularQueries = ["music","funny animals","video games","travel vlog","cooking tutorial","science explained","beautiful nature","guitar cover","dance performance","documentary short","art tutorial","tech review"];
 		var query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
 		var fallbackTime = new Date(new Date().getTime());
-		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1595, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
+		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1483, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
 		var randomApiKey = this.getRandomVideoApiKey();
 		this.player.searchYoutubeVideos(query,10,function(videoIds) {
 			if(videoIds.length == 0) {
@@ -3638,7 +3543,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1718, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1606, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -3870,7 +3775,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2026, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 1914, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -6086,6 +5991,71 @@ client_Utils.createAudioContext = function() {
 	}
 	return new ctx();
 };
+var client_YoutubeCrawler = function() { };
+client_YoutubeCrawler.__name__ = true;
+client_YoutubeCrawler.searchVideos = function(query,maxResults,callback) {
+	if(maxResults == null) {
+		maxResults = 20;
+	}
+	haxe_Log.trace("YouTube crawler: Searching for \"" + query + "\" via server proxy",{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 20, className : "client.YoutubeCrawler", methodName : "searchVideos"});
+	client_YoutubeCrawler.searchViaServerProxy(query,maxResults,callback);
+};
+client_YoutubeCrawler.searchViaServerProxy = function(query,maxResults,callback) {
+	var http = new haxe_http_HttpJs("/api/youtube-search");
+	http.setHeader("Content-Type","application/json");
+	var requestData = { query : query, maxResults : maxResults};
+	http.onData = function(data) {
+		try {
+			var response = JSON.parse(data);
+			if(response.success == true) {
+				var tmp = response.videoIds;
+				var videoIds = tmp != null ? tmp : [];
+				haxe_Log.trace("YouTube crawler: Server returned " + videoIds.length + " video IDs: [" + videoIds.join(", ") + "]",{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 43, className : "client.YoutubeCrawler", methodName : "searchViaServerProxy"});
+				callback(videoIds);
+			} else {
+				var tmp = response.error;
+				haxe_Log.trace("YouTube crawler: Server error: " + (tmp != null ? tmp : "Unknown server error"),{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 47, className : "client.YoutubeCrawler", methodName : "searchViaServerProxy"});
+				client_YoutubeCrawler.searchViaFallback(query,maxResults,callback);
+			}
+		} catch( _g ) {
+			haxe_Log.trace("YouTube crawler: Failed to parse server response: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 52, className : "client.YoutubeCrawler", methodName : "searchViaServerProxy"});
+			client_YoutubeCrawler.searchViaFallback(query,maxResults,callback);
+		}
+	};
+	http.onError = function(error) {
+		haxe_Log.trace("YouTube crawler: Server request failed: " + error,{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 58, className : "client.YoutubeCrawler", methodName : "searchViaServerProxy"});
+		client_YoutubeCrawler.searchViaFallback(query,maxResults,callback);
+	};
+	http.onStatus = function(status) {
+		if(status == 429) {
+			haxe_Log.trace("YouTube crawler: Server rate limit exceeded",{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 64, className : "client.YoutubeCrawler", methodName : "searchViaServerProxy"});
+		} else if(status >= 400) {
+			haxe_Log.trace("YouTube crawler: Server returned status " + status,{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 66, className : "client.YoutubeCrawler", methodName : "searchViaServerProxy"});
+		}
+	};
+	http.setPostData(JSON.stringify(requestData));
+	http.request(true);
+};
+client_YoutubeCrawler.searchViaFallback = function(query,maxResults,callback) {
+	haxe_Log.trace("YouTube crawler: Using fallback search method",{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 78, className : "client.YoutubeCrawler", methodName : "searchViaFallback"});
+	var shuffled = ["dQw4w9WgXcQ","kJQP7kiw5Fk","fJ9rUzIMcZQ","9bZkp7q19f0","JGwWNGJdvx8","pRpeEdMmmQ0","YQHsXMglC9A","hTWKbfoikeg","7PCkvCPvDXk","CD-E-LDc384"].slice();
+	var _g = 0;
+	var _g1 = shuffled.length;
+	while(_g < _g1) {
+		var i = _g++;
+		var j = Math.floor(Math.random() * shuffled.length);
+		var temp = shuffled[i];
+		shuffled[i] = shuffled[j];
+		shuffled[j] = temp;
+	}
+	var result = shuffled.slice(0,Math.floor(Math.min(maxResults,shuffled.length)));
+	haxe_Log.trace("YouTube crawler: Fallback returned " + result.length + " video IDs",{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 105, className : "client.YoutubeCrawler", methodName : "searchViaFallback"});
+	callback(result);
+};
+client_YoutubeCrawler.getVideoMetadata = function(videoId,callback) {
+	haxe_Log.trace("YouTube crawler: Getting metadata for video ID: " + videoId,{ fileName : "src/client/YoutubeCrawler.hx", lineNumber : 115, className : "client.YoutubeCrawler", methodName : "getVideoMetadata"});
+	callback({ videoId : videoId, title : "YouTube Video", duration : 0, isEmbeddable : true, isLive : false});
+};
 var client_players_Iframe = function(main,player) {
 	this.playerEl = window.document.querySelector("#ytapiplayer");
 	this.main = main;
@@ -7206,7 +7176,7 @@ client_players_Youtube.prototype = {
 				var tmp1 = tmp != null ? tmp.embeddable : null;
 				var duration = _gthis.convertTime(item.contentDetails.duration);
 				if(!(tmp1 != null ? tmp1 : true)) {
-					haxe_Log.trace("Skipping non-embeddable video: " + title + " (ID: " + id + ")",{ fileName : "src/client/players/Youtube.hx", lineNumber : 99, className : "client.players.Youtube", methodName : "getVideoData"});
+					haxe_Log.trace("Skipping non-embeddable video: " + title + " (ID: " + id + ")",{ fileName : "src/client/players/Youtube.hx", lineNumber : 100, className : "client.players.Youtube", methodName : "getVideoData"});
 					callback({ duration : 0});
 					return;
 				}
@@ -7295,9 +7265,9 @@ client_players_Youtube.prototype = {
 			tempYoutube.destroy();
 		}, onError : function(e) {
 			var errorCode = e.data;
-			haxe_Log.trace("YouTube temp player error: " + errorCode,{ fileName : "src/client/players/Youtube.hx", lineNumber : 209, className : "client.players.Youtube", methodName : "getRemoteDataFallback"});
+			haxe_Log.trace("YouTube temp player error: " + errorCode,{ fileName : "src/client/players/Youtube.hx", lineNumber : 210, className : "client.players.Youtube", methodName : "getRemoteDataFallback"});
 			if(errorCode == 101 || errorCode == 150) {
-				haxe_Log.trace("Video not embeddable, skipping",{ fileName : "src/client/players/Youtube.hx", lineNumber : 213, className : "client.players.Youtube", methodName : "getRemoteDataFallback"});
+				haxe_Log.trace("Video not embeddable, skipping",{ fileName : "src/client/players/Youtube.hx", lineNumber : 214, className : "client.players.Youtube", methodName : "getRemoteDataFallback"});
 			}
 			if(_gthis.playerEl.contains(video)) {
 				_gthis.playerEl.removeChild(video);
@@ -7332,7 +7302,7 @@ client_players_Youtube.prototype = {
 			}
 			_gthis.player.onCanBePlayed();
 			if(_gthis.main.isRandomVideoOperation) {
-				haxe_Log.trace("Random video loaded successfully, clearing operation flag",{ fileName : "src/client/players/Youtube.hx", lineNumber : 257, className : "client.players.Youtube", methodName : "loadVideo"});
+				haxe_Log.trace("Random video loaded successfully, clearing operation flag",{ fileName : "src/client/players/Youtube.hx", lineNumber : 258, className : "client.players.Youtube", methodName : "loadVideo"});
 				_gthis.main.isRandomVideoOperation = false;
 			}
 		}, onStateChange : function(e) {
@@ -7357,7 +7327,7 @@ client_players_Youtube.prototype = {
 			_gthis.player.onRateChange();
 		}, onError : function(e) {
 			var errorCode = e.data;
-			haxe_Log.trace("YouTube player error: " + errorCode,{ fileName : "src/client/players/Youtube.hx", lineNumber : 279, className : "client.players.Youtube", methodName : "loadVideo"});
+			haxe_Log.trace("YouTube player error: " + errorCode,{ fileName : "src/client/players/Youtube.hx", lineNumber : 280, className : "client.players.Youtube", methodName : "loadVideo"});
 			switch(errorCode) {
 			case 2:
 				_gthis.main.serverMessage("Video not found or unavailable",false);
@@ -7438,46 +7408,11 @@ client_players_Youtube.prototype = {
 		if(maxResults == null) {
 			maxResults = 20;
 		}
-		var _gthis = this;
-		var effectiveApiKey;
-		var tmp = customApiKey;
-		if(tmp != null) {
-			effectiveApiKey = tmp;
-		} else {
-			if(this.apiKey == null) {
-				this.apiKey = this.main.getYoutubeApiKey();
-			}
-			effectiveApiKey = this.apiKey;
-		}
-		var searchUrl = "https://www.googleapis.com/youtube/v3/search";
-		var dataUrl = searchUrl + ("?part=snippet&type=video&maxResults=" + maxResults + "&q=" + encodeURIComponent(query) + "&key=" + effectiveApiKey);
-		haxe_Log.trace("YouTube API call: " + (searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + encodeURIComponent(query) + "&key=***"),{ fileName : "src/client/players/Youtube.hx", lineNumber : 373, className : "client.players.Youtube", methodName : "searchVideos"});
-		var http = new haxe_http_HttpJs(dataUrl);
-		http.onData = function(response) {
-			try {
-				var tmp = JSON.parse(response).items;
-				var items = tmp != null ? tmp : [];
-				var videoIds = [];
-				var _g = 0;
-				while(_g < items.length) {
-					var tmp = items[_g++].id;
-					var videoId = tmp != null ? tmp.videoId : null;
-					if(videoId != null && videoId != "") {
-						videoIds.push(videoId);
-					}
-				}
-				haxe_Log.trace("YouTube API returned " + videoIds.length + " video IDs: [" + videoIds.join(", ") + "]",{ fileName : "src/client/players/Youtube.hx", lineNumber : 389, className : "client.players.Youtube", methodName : "searchVideos"});
-				callback(videoIds);
-			} catch( _g ) {
-				_gthis.youtubeApiError({ code : 0, message : "Failed to parse search results"});
-				callback([]);
-			}
-		};
-		http.onError = function(msg) {
-			_gthis.youtubeApiError({ code : 0, message : "Search request failed: " + msg});
-			callback([]);
-		};
-		http.request();
+		haxe_Log.trace("YouTube Crawler: Searching for \"" + query + "\" with max results " + maxResults,{ fileName : "src/client/players/Youtube.hx", lineNumber : 366, className : "client.players.Youtube", methodName : "searchVideos"});
+		client_YoutubeCrawler.searchVideos(query,maxResults,function(videoIds) {
+			haxe_Log.trace("YouTube Crawler returned " + videoIds.length + " video IDs: [" + videoIds.join(", ") + "]",{ fileName : "src/client/players/Youtube.hx", lineNumber : 370, className : "client.players.Youtube", methodName : "searchVideos"});
+			callback(videoIds);
+		});
 	}
 	,__class__: client_players_Youtube
 };
@@ -7965,7 +7900,23 @@ var haxe_http_HttpBase = function(url) {
 };
 haxe_http_HttpBase.__name__ = true;
 haxe_http_HttpBase.prototype = {
-	onData: function(data) {
+	setHeader: function(name,value) {
+		var _g = 0;
+		var _g1 = this.headers.length;
+		while(_g < _g1) {
+			var i = _g++;
+			if(this.headers[i].name == name) {
+				this.headers[i] = { name : name, value : value};
+				return;
+			}
+		}
+		this.headers.push({ name : name, value : value});
+	}
+	,setPostData: function(data) {
+		this.postData = data;
+		this.postBytes = null;
+	}
+	,onData: function(data) {
 	}
 	,onBytes: function(data) {
 	}

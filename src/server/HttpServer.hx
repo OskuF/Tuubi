@@ -15,6 +15,8 @@ import json2object.ErrorUtils;
 import json2object.JsonParser;
 import server.cache.Cache;
 import sys.FileSystem;
+import tools.HttpServerTools;
+
 
 @:structInit
 private class HttpServerConfig {
@@ -98,6 +100,8 @@ class HttpServer {
 					uploadFile(req, res);
 				case "/setup":
 					finishSetup(req, res);
+				case "/api/youtube-search":
+					handleYouTubeSearch(req, res);
 			}
 			return;
 		}
@@ -329,6 +333,79 @@ class HttpServer {
 			res.status(200).json({success: true});
 		});
 	}
+
+	function handleYouTubeSearch(req:IncomingMessage, res:ServerResponse):Void {
+		var body = "";
+		
+		req.on("data", chunk -> {
+			body += chunk;
+		});
+		
+		req.on("end", () -> {
+			try {
+				final data = haxe.Json.parse(body);
+				final query:String = data.query;
+				final maxResults:Int = data.maxResults ?? 20;
+				
+				if (query == null || query.trim() == "") {
+					HttpServerTools.status(res, 400);
+					HttpServerTools.json(res, {
+						success: false,
+						error: "Query parameter is required"
+					});
+					return;
+				}
+				
+				trace('YouTube Search API: Searching for "$query" with max results $maxResults');
+				
+				// Perform YouTube search using the npm package
+				untyped __js__("
+					var youtubeSearch = require('youtube-search-without-api-key');
+					var HttpServerTools = tools_HttpServerTools;
+					
+					youtubeSearch.search({0}, {limit: {1}}).then(function(results) {
+						var videoIds = [];
+						
+						console.log('Raw search results:', results[0]);
+						
+						for (var i = 0; i < results.length; i++) {
+							var result = results[i];
+							// Extract video ID from nested structure: result.id.videoId
+							var videoId = result.id?.videoId || result.videoId || result.url?.split('v=')[1]?.split('&')[0];
+							if (videoId && typeof videoId === 'string') {
+								videoIds.push(videoId);
+							}
+						}
+						
+						console.log('YouTube Search API: Found ' + videoIds.length + ' video IDs');
+						
+						HttpServerTools.status({2}, 200);
+						HttpServerTools.json({2}, {
+							success: true,
+							videoIds: videoIds,
+							count: videoIds.length
+						});
+					}).catch(function(error) {
+						console.log('YouTube Search API error:', error);
+						HttpServerTools.status({2}, 500);
+						HttpServerTools.json({2}, {
+							success: false,
+							error: 'Search request failed'
+						});
+					});
+				", query, maxResults, res);
+				
+			} catch (e:Dynamic) {
+				trace('YouTube Search API parse error: $e');
+				HttpServerTools.status(res, 400);
+				HttpServerTools.json(res, {
+					success: false,
+					error: "Invalid request format"
+				});
+			}
+		});
+	}
+
 
 	function getPath(dir:String, url:URL):String {
 		final filePath = dir.urlDecode() + decodeURIComponent(url.pathname);
