@@ -47,6 +47,8 @@ typedef Config = {
 	youtubePlaylistLimit:Int,
 	randomVideoYoutubeApiKey:String,
 	fallbackToMainApiKey:Bool,
+	useYoutubeCrawler:Bool,
+	crawlerFallbackToApi:Bool,
 	youtubeRegion:String,
 	allowAgeRestrictedVideos:Bool,
 	strictEmbeddingChecks:Bool,
@@ -224,7 +226,8 @@ typedef WsEvent = {
 	},
 	?addVideo:{
 		item:VideoItem,
-		atEnd:Bool
+		atEnd:Bool,
+		?isRandomVideo:Bool
 	},
 	?removeVideo:{
 		url:String
@@ -302,6 +305,9 @@ typedef WsEvent = {
 		isTransparent:Bool,
 		color:String
 	},
+	?randomVideoNotification:{
+		message:String
+	},
 }
 
 enum abstract WsEventType(String) {
@@ -349,6 +355,7 @@ enum abstract WsEventType(String) {
 	var LoadDrawing;
 	var DrawCursor;
 	var SetBackground;
+	var RandomVideoNotification;
 }
 
 typedef DanmakuMessageEvent = {

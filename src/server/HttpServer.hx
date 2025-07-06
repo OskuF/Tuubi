@@ -15,6 +15,7 @@ import json2object.ErrorUtils;
 import json2object.JsonParser;
 import server.cache.Cache;
 import sys.FileSystem;
+import tools.HttpServerTools;
 
 @:structInit
 private class HttpServerConfig {
@@ -98,6 +99,8 @@ class HttpServer {
 					uploadFile(req, res);
 				case "/setup":
 					finishSetup(req, res);
+				case "/api/youtube-search":
+					handleYouTubeSearch(req, res);
 			}
 			return;
 		}
@@ -327,6 +330,102 @@ class HttpServer {
 
 			main.addAdmin(name, password);
 			res.status(200).json({success: true});
+		});
+	}
+
+	function handleYouTubeSearch(req:IncomingMessage, res:ServerResponse):Void {
+		var body = "";
+		
+		req.on("data", chunk -> {
+			body += chunk;
+		});
+		
+		req.on("end", () -> {
+			try {
+				final data = haxe.Json.parse(body);
+				final query:String = data.query;
+				final maxResults:Int = data.maxResults ?? 20;
+				final userName:String = data.userName ?? "Unknown";
+				final method:String = data.method ?? "crawler";
+				final isRandomVideo:Bool = data.isRandomVideo ?? false;
+				
+				if (query == null || query.trim() == "") {
+					HttpServerTools.status(res, 400);
+					HttpServerTools.json(res, {
+						success: false,
+						error: "Query parameter is required"
+					});
+					return;
+				}
+				
+				// Enhanced logging for random video requests
+				if (isRandomVideo) {
+					trace('[RANDOM VIDEO] User: "$userName" | Query: "$query" | Method: $method | Status: SEARCHING...');
+				} else {
+					trace('YouTube Search API: Searching for "$query" with max results $maxResults');
+				}
+				
+				// Perform YouTube search using the npm package
+				untyped __js__("
+					var youtubeSearch = require('youtube-search-without-api-key');
+					var HttpServerTools = tools_HttpServerTools;
+					var userName = {3};
+					var method = {4};
+					var isRandomVideo = {5};
+					
+					youtubeSearch.search({0}, {limit: {1}}).then(function(results) {
+						var videoIds = [];
+						var videoTitles = [];
+						
+						for (var i = 0; i < results.length; i++) {
+							var result = results[i];
+							// Extract video ID from nested structure: result.id.videoId
+							var videoId = result.id?.videoId || result.videoId || result.url?.split('v=')[1]?.split('&')[0];
+							if (videoId && typeof videoId === 'string') {
+								videoIds.push(videoId);
+								videoTitles.push(result.title || 'Unknown Title');
+							}
+						}
+						
+						if (isRandomVideo && videoIds.length > 0) {
+							// Log detailed result for random video requests
+							var firstVideoTitle = videoTitles[0] || 'Unknown';
+							var firstVideoId = videoIds[0] || 'Unknown';
+							console.log('[RANDOM VIDEO] User: \"' + userName + '\" | Query: \"' + {0} + '\" | Method: ' + method + ' | Result: \"' + firstVideoTitle + '\" (' + firstVideoId + ') | Count: ' + videoIds.length + ' | Status: SUCCESS');
+						} else if (isRandomVideo) {
+							console.log('[RANDOM VIDEO] User: \"' + userName + '\" | Query: \"' + {0} + '\" | Method: ' + method + ' | Result: No videos found | Status: FAILED');
+						} else {
+							console.log('YouTube Search API: Found ' + videoIds.length + ' video IDs');
+						}
+						
+						HttpServerTools.status({2}, 200);
+						HttpServerTools.json({2}, {
+							success: true,
+							videoIds: videoIds,
+							count: videoIds.length
+						});
+					}).catch(function(error) {
+						if (isRandomVideo) {
+							console.log('[RANDOM VIDEO] User: \"' + userName + '\" | Query: \"' + {0} + '\" | Method: ' + method + ' | Error: ' + error + ' | Status: FAILED');
+						} else {
+							console.log('YouTube Search API error:', error);
+						}
+						HttpServerTools.status({2}, 500);
+						HttpServerTools.json({2}, {
+							success: false,
+							error: 'Search request failed'
+						});
+					});
+				", query, maxResults, res, userName, method, isRandomVideo);
+				
+			} catch (e:Dynamic) {
+				trace('[RANDOM VIDEO] Parse error in request body: $e');
+				HttpServerTools.status(res, 400);
+				HttpServerTools.json(res, {
+					success: false,
+					error: "Invalid request format"
+				});
+			}
 		});
 	}
 

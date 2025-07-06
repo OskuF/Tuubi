@@ -91,11 +91,6 @@ class Main {
 	var speechSynthesis:Dynamic;
 	var finnishVoice:Dynamic;
 
-	// Rate limiting for random video searches
-	var lastRandomVideoTime = 0.0;
-	var randomVideoRequestCount = 0;
-	var randomVideoResetTime = 0.0;
-
 	// Search context for error recovery
 	var currentRandomVideoSearch:Array<String> = [];
 	var currentRandomVideoIndex = 0;
@@ -1191,7 +1186,8 @@ class Main {
 						voiceOverTrack: data.voiceOverTrack,
 						playerType: data.playerType
 					},
-					atEnd: atEnd
+					atEnd: atEnd,
+					isRandomVideo: isRandomVideoOperation
 				}
 			});
 			if (callback != null) callback();
@@ -1286,38 +1282,9 @@ class Main {
 	}
 
 	public function addRandomYoutubeVideo():Void {
-		// Basic rate limiting: max 10 requests per hour, min 2 seconds between requests
-		final now = Date.now().getTime();
-		final hourInMs = 60 * 60 * 1000;
-
-		// Reset counter if an hour has passed
-		if (now - randomVideoResetTime > hourInMs) {
-			randomVideoRequestCount = 0;
-			randomVideoResetTime = now;
-		}
-
-		// Check hourly limit
-		if (randomVideoRequestCount >= 10) {
-			final timeUntilReset = Math.ceil((randomVideoResetTime
-				+ hourInMs
-				- now) / 1000 / 60); // Minutes
-			serverMessage('Random video limit reached (10/hour). Try again in ${timeUntilReset} minutes.', true, false);
-			trace('Rate limit: ${randomVideoRequestCount}/10 requests used. Reset in ${timeUntilReset} minutes.');
-			return;
-		}
-
-		// Check minimum time between requests (2 seconds)
-		final timeSinceLastRequest = now - lastRandomVideoTime;
-		if (timeSinceLastRequest < 2000) {
-			final waitTime = Math.ceil((2000 - timeSinceLastRequest) / 1000);
-			serverMessage('Please wait ${waitTime} more second(s) before requesting another random video.', true, false);
-			trace('Cooldown: ${waitTime} second(s) remaining.');
-			return;
-		}
-
-		lastRandomVideoTime = now;
-		randomVideoRequestCount++;
-
+		// Enhanced logging for random video button press
+		trace('[RANDOM VIDEO] User: "${personal.name}" pressed random video button | Starting search...');
+		
 		// Mark that we're starting a random video operation
 		isRandomVideoOperation = true;
 
@@ -1341,7 +1308,7 @@ class Main {
 
 		final query = generateRandomSearchQuery();
 		final searchTime = Date.fromTime(Date.now().getTime());
-		trace('Searching YouTube at ${searchTime.toString()} for: "$query"');
+		trace('[RANDOM VIDEO] User: "${personal.name}" | Generated query: "$query" | Initiating search...');
 
 		// Use the public method to search for YouTube videos with dedicated API key
 		final randomApiKey = getRandomVideoApiKey();
@@ -1359,7 +1326,7 @@ class Main {
 
 			// Try to find an embeddable video from the search results
 			tryEmbeddableVideoFromResults(videoIds, query, attemptCount);
-		}, randomApiKey);
+		}, randomApiKey, personal.name, true);
 	}
 
 	function tryEmbeddableVideoFromResults(videoIds:Array<String>, query:String, attemptCount:Int):Void {
@@ -1552,19 +1519,29 @@ class Main {
 	}
 
 	public function handleRandomVideoPlaybackError(errorCode:Int):Void {
-		trace('Handling random video playback error $errorCode');
+		final errorType = switch(errorCode) {
+			case 101: "Cannot embed (restricted by uploader)";
+			case 150: "Embedding disabled";
+			case 5: "Format not supported";
+			case 2: "Video not found";
+			default: "Unknown error ($errorCode)";
+		};
+		
+		sendRandomVideoNotification('[RANDOM VIDEO] User: "${personal.name}" | Error: $errorType | Action: Initiating reroll process...');
 
 		// Remove the failed video from the playlist
 		final currentItem = player.getCurrentItem();
 		if (currentItem != null) {
+			final videoTitle = currentItem.title ?? "Unknown";
+			sendRandomVideoNotification('[RANDOM VIDEO] User: "${personal.name}" | Removed: "$videoTitle" | Reason: $errorType');
 			removeVideoItem(currentItem.url);
-			trace('Removed failed video from playlist: ${currentItem.url}');
 		}
 
 		// Try to find a replacement from the current search results
 		if (currentRandomVideoSearch.length > 0
 			&& currentRandomVideoIndex < currentRandomVideoSearch.length) {
-			trace('Trying next video from search results (index: $currentRandomVideoIndex)');
+			final remainingVideos = currentRandomVideoSearch.length - currentRandomVideoIndex;
+			sendRandomVideoNotification('[RANDOM VIDEO] User: "${personal.name}" | Action: Trying next video from current search | Remaining: $remainingVideos videos');
 			tryNextVideoFromList(
 				currentRandomVideoSearch,
 				currentRandomVideoIndex,
@@ -1573,10 +1550,11 @@ class Main {
 			);
 		} else {
 			// No more videos in current search, try a new search
-			trace('No more videos in current search, starting new search');
+			sendRandomVideoNotification('[RANDOM VIDEO] User: "${personal.name}" | Action: No more videos in current search, starting new search | Attempt: ${currentRandomVideoAttemptCount + 1}/3');
 			if (currentRandomVideoAttemptCount < 2) {
 				addRandomYoutubeVideoWithRetry(currentRandomVideoAttemptCount + 1);
 			} else {
+				sendRandomVideoNotification('[RANDOM VIDEO] User: "${personal.name}" | Action: Max attempts reached, falling back to popular queries');
 				addRandomYoutubeVideoFallback();
 			}
 		}
@@ -1617,7 +1595,7 @@ class Main {
 				serverMessage('Added trending video: "$query"');
 				// Note: Flag will be cleared when video successfully plays or fails
 			});
-		}, randomApiKey);
+		}, randomApiKey, personal.name, true);
 	}
 
 	public function removeVideoItem(url:String) {
@@ -2031,6 +2009,10 @@ class Main {
 				// Process incoming cursor data from other clients
 				Drawing.onDrawCursor(data.drawCursor.clientName, data.drawCursor.x, data.drawCursor.y);
 
+			case RandomVideoNotification:
+				// RandomVideoNotification events are sent from client to server only
+				// This case is here for completeness but should not receive events
+				
 			case SetBackground:
 				// Process incoming background changes from other clients
 				Drawing.onSetBackground(data.setBackground.isTransparent, data.setBackground.color);
@@ -2314,6 +2296,15 @@ class Main {
 	public function send(data:WsEvent):Void {
 		if (!isConnected) return;
 		ws.send(Json.stringify(data));
+	}
+
+	public function sendRandomVideoNotification(message:String):Void {
+		send({
+			type: RandomVideoNotification,
+			randomVideoNotification: {
+				message: message
+			}
+		});
 	}
 
 	function chatMessageConnected():Void {
@@ -2985,6 +2976,14 @@ class Main {
 			return config.youtubeApiKey;
 		}
 		return "";
+	}
+
+	public function getUseYoutubeCrawler():Bool {
+		return config.useYoutubeCrawler;
+	}
+
+	public function getCrawlerFallbackToApi():Bool {
+		return config.crawlerFallbackToApi;
 	}
 
 	public function getYoutubePlaylistLimit():Int {

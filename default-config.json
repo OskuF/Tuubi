@@ -16,6 +16,8 @@
 	"youtubePlaylistLimit": 50,
 	"randomVideoYoutubeApiKey": "",
 	"fallbackToMainApiKey": true,
+	"useYoutubeCrawler": true,
+	"crawlerFallbackToApi": true,
 	"youtubeRegion": "FI",
 	"allowAgeRestrictedVideos": false,
 	"strictEmbeddingChecks": true,

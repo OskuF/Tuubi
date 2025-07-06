@@ -697,6 +697,11 @@ class Main {
 
 			case ServerMessage:
 			case Progress:
+			case RandomVideoNotification:
+				// Log random video notifications to server console
+				if (data.randomVideoNotification?.message != null) {
+					trace(data.randomVideoNotification.message);
+				}
 			case AddVideo:
 				if (isPlaylistLockedFor(client)) return;
 				if (!checkPermission(client, AddVideoPerm)) return;
@@ -727,6 +732,15 @@ class Main {
 				inline function addVideo():Void {
 					data.addVideo.item = item;
 					videoList.addItem(item, data.addVideo.atEnd);
+					
+					// Enhanced logging for random video additions
+					if (data.addVideo.isRandomVideo == true) {
+						final title = item.title ?? "Unknown Title";
+						final duration = Math.round(item.duration);
+						final position = data.addVideo.atEnd ? "end" : "next";
+						trace('[RANDOM VIDEO] User: "${client.name}" | Video Added: "$title" | Duration: ${duration}s | Position: $position | URL: ${item.url} | Status: SUCCESS');
+					}
+					
 					broadcast(data);
 					// Initial timer start if VideoLoaded is not happen
 					if (videoList.length == 1) restartWaitTimer();

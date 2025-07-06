@@ -680,48 +680,6 @@ JsonParser_$1686a6c336b71b36d77354cea19a8b52.prototype = $extend(json2object_rea
 	}
 	,__class__: JsonParser_$1686a6c336b71b36d77354cea19a8b52
 });
-var JsonParser_$17f62a9968afd16686d4888a98c34102 = function(errors,putils,errorType) {
-	if(errorType == null) {
-		errorType = 0;
-	}
-	json2object_reader_BaseParser.call(this,errors,putils,errorType);
-};
-JsonParser_$17f62a9968afd16686d4888a98c34102.__name__ = true;
-JsonParser_$17f62a9968afd16686d4888a98c34102.__super__ = json2object_reader_BaseParser;
-JsonParser_$17f62a9968afd16686d4888a98c34102.prototype = $extend(json2object_reader_BaseParser.prototype,{
-	onIncorrectType: function(pos,variable) {
-		this.errors.push(json2object_Error.IncorrectType(variable,"{ item : VideoItem, atEnd : Bool }",pos));
-		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
-	}
-	,loadJsonNull: function(pos,variable) {
-		this.value = null;
-	}
-	,loadJsonObject: function(o,pos,variable) {
-		var assigned = new haxe_ds_StringMap();
-		this.objectSetupAssign(assigned,["atEnd","item"],[false,false]);
-		this.value = this.getAuto();
-		var _g = 0;
-		while(_g < o.length) {
-			var field = o[_g];
-			++_g;
-			switch(field.name) {
-			case "atEnd":
-				this.value.atEnd = this.loadObjectField(($_=new JsonParser_$c26f15e86e3de4c398a8273272aba034(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"atEnd",assigned,this.value.atEnd,pos);
-				break;
-			case "item":
-				this.value.item = this.loadObjectField(($_=new JsonParser_$d89734267d6f665b411f49f013149267(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"item",assigned,this.value.item,pos);
-				break;
-			default:
-				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
-			}
-		}
-		this.objectErrors(assigned,pos);
-	}
-	,getAuto: function() {
-		return { atEnd : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), item : new JsonParser_$d89734267d6f665b411f49f013149267([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
-	}
-	,__class__: JsonParser_$17f62a9968afd16686d4888a98c34102
-});
 var JsonParser_$1c666dcf50d5150ff2e96763d230d607 = function(errors,putils,errorType) {
 	if(errorType == null) {
 		errorType = 0;
@@ -1105,7 +1063,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.__name__ = true;
 JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.__super__ = json2object_reader_BaseParser;
 JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_reader_BaseParser.prototype,{
 	onIncorrectType: function(pos,variable) {
-		this.errors.push(json2object_Error.IncorrectType(variable,"{ ?updatePlaylist : Null<{ videoList : Array<VideoItem> }>, ?updateClients : Null<{ clients : Array<ClientData> }>, type : WsEventType, ?togglePlaylistLock : Null<{ isOpen : Bool }>, ?toggleItemType : Null<{ pos : Int }>, ?toggleDrawing : Null<{ enabled : Bool }>, ?skipVideo : Null<{ url : String }>, ?setTime : Null<{ time : Float }>, ?setRate : Null<{ rate : Float }>, ?setNextItem : Null<{ pos : Int }>, ?setLeader : Null<{ clientName : String }>, ?setBackground : Null<{ isTransparent : Bool, color : String }>, ?serverMessage : Null<{ textId : String }>, ?saveDrawing : Null<{ data : String }>, ?rewind : Null<{ time : Float }>, ?removeVideo : Null<{ url : String }>, ?progress : Null<{ type : ProgressType, ratio : Float, ?data : Null<String> }>, ?playItem : Null<{ pos : Int }>, ?play : Null<{ time : Float }>, ?pause : Null<{ time : Float }>, ?message : Null<{ text : String, clientName : String }>, ?logout : Null<{ oldClientName : String, clients : Array<ClientData>, clientName : String }>, ?login : Null<{ ?passHash : Null<String>, ?isUnknownClient : Null<Bool>, ?clients : Null<Array<ClientData>>, clientName : String }>, ?loadDrawing : Null<{ data : String }>, ?kickClient : Null<{ name : String }>, ?getTime : Null<GetTimeEvent>, ?emoteMessage : Null<{ html : String, clientName : String }>, ?dump : Null<{ data : String }>, ?drawStart : Null<{ y : Float, x : Float, tool : String, size : Float, color : String, clientName : String }>, ?drawMove : Null<{ y : Float, x : Float, clientName : String }>, ?drawEnd : Null<{ }>, ?drawCursor : Null<{ y : Float, x : Float, clientName : String }>, ?danmakuMessage : Null<DanmakuMessageEvent>, ?connected : Null<{ videoList : Array<VideoItem>, uuid : String, playersCacheSupport : Array<PlayerType>, itemPos : Int, isUnknownClient : Bool, isPlaylistOpen : Bool, history : Array<Message>, globalIp : String, config : Config, clients : Array<ClientData>, clientName : String }>, ?clearDrawing : Null<{ }>, ?banClient : Null<{ time : Float, name : String }>, ?addVideo : Null<{ item : VideoItem, atEnd : Bool }> }",pos));
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ ?updatePlaylist : Null<{ videoList : Array<VideoItem> }>, ?updateClients : Null<{ clients : Array<ClientData> }>, type : WsEventType, ?togglePlaylistLock : Null<{ isOpen : Bool }>, ?toggleItemType : Null<{ pos : Int }>, ?toggleDrawing : Null<{ enabled : Bool }>, ?skipVideo : Null<{ url : String }>, ?setTime : Null<{ time : Float }>, ?setRate : Null<{ rate : Float }>, ?setNextItem : Null<{ pos : Int }>, ?setLeader : Null<{ clientName : String }>, ?setBackground : Null<{ isTransparent : Bool, color : String }>, ?serverMessage : Null<{ textId : String }>, ?saveDrawing : Null<{ data : String }>, ?rewind : Null<{ time : Float }>, ?removeVideo : Null<{ url : String }>, ?randomVideoNotification : Null<{ message : String }>, ?progress : Null<{ type : ProgressType, ratio : Float, ?data : Null<String> }>, ?playItem : Null<{ pos : Int }>, ?play : Null<{ time : Float }>, ?pause : Null<{ time : Float }>, ?message : Null<{ text : String, clientName : String }>, ?logout : Null<{ oldClientName : String, clients : Array<ClientData>, clientName : String }>, ?login : Null<{ ?passHash : Null<String>, ?isUnknownClient : Null<Bool>, ?clients : Null<Array<ClientData>>, clientName : String }>, ?loadDrawing : Null<{ data : String }>, ?kickClient : Null<{ name : String }>, ?getTime : Null<GetTimeEvent>, ?emoteMessage : Null<{ html : String, clientName : String }>, ?dump : Null<{ data : String }>, ?drawStart : Null<{ y : Float, x : Float, tool : String, size : Float, color : String, clientName : String }>, ?drawMove : Null<{ y : Float, x : Float, clientName : String }>, ?drawEnd : Null<{ }>, ?drawCursor : Null<{ y : Float, x : Float, clientName : String }>, ?danmakuMessage : Null<DanmakuMessageEvent>, ?connected : Null<{ videoList : Array<VideoItem>, uuid : String, playersCacheSupport : Array<PlayerType>, itemPos : Int, isUnknownClient : Bool, isPlaylistOpen : Bool, history : Array<Message>, globalIp : String, config : Config, clients : Array<ClientData>, clientName : String }>, ?clearDrawing : Null<{ }>, ?banClient : Null<{ time : Float, name : String }>, ?addVideo : Null<{ item : VideoItem, ?isRandomVideo : Null<Bool>, atEnd : Bool }> }",pos));
 		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
 	}
 	,loadJsonNull: function(pos,variable) {
@@ -1113,7 +1071,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 	}
 	,loadJsonObject: function(o,pos,variable) {
 		var assigned = new haxe_ds_StringMap();
-		this.objectSetupAssign(assigned,["addVideo","banClient","clearDrawing","connected","danmakuMessage","drawCursor","drawEnd","drawMove","drawStart","dump","emoteMessage","getTime","kickClient","loadDrawing","login","logout","message","pause","play","playItem","progress","removeVideo","rewind","saveDrawing","serverMessage","setBackground","setLeader","setNextItem","setRate","setTime","skipVideo","toggleDrawing","toggleItemType","togglePlaylistLock","type","updateClients","updatePlaylist"],[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,false,true,true]);
+		this.objectSetupAssign(assigned,["addVideo","banClient","clearDrawing","connected","danmakuMessage","drawCursor","drawEnd","drawMove","drawStart","dump","emoteMessage","getTime","kickClient","loadDrawing","login","logout","message","pause","play","playItem","progress","randomVideoNotification","removeVideo","rewind","saveDrawing","serverMessage","setBackground","setLeader","setNextItem","setRate","setTime","skipVideo","toggleDrawing","toggleItemType","togglePlaylistLock","type","updateClients","updatePlaylist"],[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,false,true,true]);
 		this.value = this.getAuto();
 		var _g = 0;
 		while(_g < o.length) {
@@ -1121,7 +1079,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 			++_g;
 			switch(field.name) {
 			case "addVideo":
-				this.value.addVideo = this.loadObjectField(($_=new JsonParser_$17f62a9968afd16686d4888a98c34102(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"addVideo",assigned,this.value.addVideo,pos);
+				this.value.addVideo = this.loadObjectField(($_=new JsonParser_$afd8b5c33ca84426c608e1811d667fbd(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"addVideo",assigned,this.value.addVideo,pos);
 				break;
 			case "banClient":
 				this.value.banClient = this.loadObjectField(($_=new JsonParser_$cceff829ad5e63207b6f78bebb03c69a(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"banClient",assigned,this.value.banClient,pos);
@@ -1183,6 +1141,9 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 			case "progress":
 				this.value.progress = this.loadObjectField(($_=new JsonParser_$e15c2211613da80aa2992b6249949a65(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"progress",assigned,this.value.progress,pos);
 				break;
+			case "randomVideoNotification":
+				this.value.randomVideoNotification = this.loadObjectField(($_=new JsonParser_$89efb0155f5df67e4ae9bdd39a6b829b(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"randomVideoNotification",assigned,this.value.randomVideoNotification,pos);
+				break;
 			case "removeVideo":
 				this.value.removeVideo = this.loadObjectField(($_=new JsonParser_$bf1400338ef221d86126b3ec267cf395(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"removeVideo",assigned,this.value.removeVideo,pos);
 				break;
@@ -1238,7 +1199,7 @@ JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9.prototype = $extend(json2object_rea
 		this.objectErrors(assigned,pos);
 	}
 	,getAuto: function() {
-		return { addVideo : new JsonParser_$17f62a9968afd16686d4888a98c34102([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), banClient : new JsonParser_$cceff829ad5e63207b6f78bebb03c69a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clearDrawing : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), connected : new JsonParser_$d011018d886fa55f8828ebb1e93413c3([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), danmakuMessage : new JsonParser_$f378d50044c8c87339ebd29901892072([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawCursor : new JsonParser_$1c666dcf50d5150ff2e96763d230d607([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawEnd : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawMove : new JsonParser_$1c666dcf50d5150ff2e96763d230d607([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawStart : new JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), dump : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), emoteMessage : new JsonParser_$c19b4a653b84c0484a2790e2552a7ac7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), getTime : new JsonParser_$feded5bdb427eb48f39e60029d5dca4a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), kickClient : new JsonParser_$b2777fc36a3f1c43a2ae7d80ba0572ca([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), loadDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), login : new JsonParser_$128275a4734b926daca1924fc6a200c7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), logout : new JsonParser_$8d3a3702ec359ae3022bce905b75550b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), message : new JsonParser_$33c34d246ae14cf949ef186cb0e1d8eb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), pause : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), play : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), playItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), progress : new JsonParser_$e15c2211613da80aa2992b6249949a65([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), removeVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), rewind : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), saveDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), serverMessage : new JsonParser_$d1c1e71f4452df068de6cecc104f6dd6([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setBackground : new JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setLeader : new JsonParser_$65985176838b1da92d970132a0cb6d58([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setNextItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setRate : new JsonParser_$359929cb56fda98b8740cbc66ef083c4([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setTime : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), skipVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleDrawing : new JsonParser_$dd7b5d75def09bce38d87fd906f73270([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleItemType : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), togglePlaylistLock : new JsonParser_$e5a960b500232cc84a0caf718de13706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), type : new JsonParser_$d8e5213783812cec0906ca233f0379dc([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updateClients : new JsonParser_$126814d365d277a375ef70de1963f53d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updatePlaylist : new JsonParser_$a82c17fc41c21179c58e1d406d2b20cd([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+		return { addVideo : new JsonParser_$afd8b5c33ca84426c608e1811d667fbd([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), banClient : new JsonParser_$cceff829ad5e63207b6f78bebb03c69a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), clearDrawing : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), connected : new JsonParser_$d011018d886fa55f8828ebb1e93413c3([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), danmakuMessage : new JsonParser_$f378d50044c8c87339ebd29901892072([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawCursor : new JsonParser_$1c666dcf50d5150ff2e96763d230d607([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawEnd : new JsonParser_$f387d6e9ee8f16e56ef1d2a1cc73b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawMove : new JsonParser_$1c666dcf50d5150ff2e96763d230d607([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), drawStart : new JsonParser_$c4331a31e3adb7fa98a11ba0008d82cb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), dump : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), emoteMessage : new JsonParser_$c19b4a653b84c0484a2790e2552a7ac7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), getTime : new JsonParser_$feded5bdb427eb48f39e60029d5dca4a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), kickClient : new JsonParser_$b2777fc36a3f1c43a2ae7d80ba0572ca([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), loadDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), login : new JsonParser_$128275a4734b926daca1924fc6a200c7([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), logout : new JsonParser_$8d3a3702ec359ae3022bce905b75550b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), message : new JsonParser_$33c34d246ae14cf949ef186cb0e1d8eb([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), pause : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), play : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), playItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), progress : new JsonParser_$e15c2211613da80aa2992b6249949a65([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), randomVideoNotification : new JsonParser_$89efb0155f5df67e4ae9bdd39a6b829b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), removeVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), rewind : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), saveDrawing : new JsonParser_$dda5f87e2972892b16c7b833df96706a([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), serverMessage : new JsonParser_$d1c1e71f4452df068de6cecc104f6dd6([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setBackground : new JsonParser_$8fdfe66397f17d372f8eb5119b5b6c4d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setLeader : new JsonParser_$65985176838b1da92d970132a0cb6d58([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setNextItem : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setRate : new JsonParser_$359929cb56fda98b8740cbc66ef083c4([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), setTime : new JsonParser_$6340d11111c9ffddbd7ebb0d12d7c162([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), skipVideo : new JsonParser_$bf1400338ef221d86126b3ec267cf395([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleDrawing : new JsonParser_$dd7b5d75def09bce38d87fd906f73270([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), toggleItemType : new JsonParser_$5696efcdbd81f0be9220dc4cfb255706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), togglePlaylistLock : new JsonParser_$e5a960b500232cc84a0caf718de13706([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), type : new JsonParser_$d8e5213783812cec0906ca233f0379dc([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updateClients : new JsonParser_$126814d365d277a375ef70de1963f53d([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), updatePlaylist : new JsonParser_$a82c17fc41c21179c58e1d406d2b20cd([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
 	,__class__: JsonParser_$5f812affc76e9ba3f21130cdbd3b05d9
 });
@@ -1336,6 +1297,43 @@ JsonParser_$65cb6553a71d34740bf81458b7243f94.prototype = $extend(json2object_rea
 		this.value = this.loadJsonArrayValue(a,($_=new JsonParser_$ed5dea09095f671b801bee34ea28a319(this.errors,this.putils,2),$bind($_,$_.loadJson)),variable);
 	}
 	,__class__: JsonParser_$65cb6553a71d34740bf81458b7243f94
+});
+var JsonParser_$89efb0155f5df67e4ae9bdd39a6b829b = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$89efb0155f5df67e4ae9bdd39a6b829b.__name__ = true;
+JsonParser_$89efb0155f5df67e4ae9bdd39a6b829b.__super__ = json2object_reader_BaseParser;
+JsonParser_$89efb0155f5df67e4ae9bdd39a6b829b.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ message : String }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,["message"],[false]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			if(field.name == "message") {
+				this.value.message = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"message",assigned,this.value.message,pos);
+			} else {
+				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+			}
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { message : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+	}
+	,__class__: JsonParser_$89efb0155f5df67e4ae9bdd39a6b829b
 });
 var JsonParser_$8d3a3702ec359ae3022bce905b75550b = function(errors,putils,errorType) {
 	if(errorType == null) {
@@ -1481,6 +1479,51 @@ JsonParser_$acbf8fc6181cc1dcb443a91fcea5cf0c.prototype = $extend(json2object_rea
 		this.value = this.loadJsonArrayValue(a,($_=new JsonParser_$d89734267d6f665b411f49f013149267(this.errors,this.putils,2),$bind($_,$_.loadJson)),variable);
 	}
 	,__class__: JsonParser_$acbf8fc6181cc1dcb443a91fcea5cf0c
+});
+var JsonParser_$afd8b5c33ca84426c608e1811d667fbd = function(errors,putils,errorType) {
+	if(errorType == null) {
+		errorType = 0;
+	}
+	json2object_reader_BaseParser.call(this,errors,putils,errorType);
+};
+JsonParser_$afd8b5c33ca84426c608e1811d667fbd.__name__ = true;
+JsonParser_$afd8b5c33ca84426c608e1811d667fbd.__super__ = json2object_reader_BaseParser;
+JsonParser_$afd8b5c33ca84426c608e1811d667fbd.prototype = $extend(json2object_reader_BaseParser.prototype,{
+	onIncorrectType: function(pos,variable) {
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ item : VideoItem, ?isRandomVideo : Null<Bool>, atEnd : Bool }",pos));
+		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
+	}
+	,loadJsonNull: function(pos,variable) {
+		this.value = null;
+	}
+	,loadJsonObject: function(o,pos,variable) {
+		var assigned = new haxe_ds_StringMap();
+		this.objectSetupAssign(assigned,["atEnd","isRandomVideo","item"],[false,true,false]);
+		this.value = this.getAuto();
+		var _g = 0;
+		while(_g < o.length) {
+			var field = o[_g];
+			++_g;
+			switch(field.name) {
+			case "atEnd":
+				this.value.atEnd = this.loadObjectField(($_=new JsonParser_$c26f15e86e3de4c398a8273272aba034(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"atEnd",assigned,this.value.atEnd,pos);
+				break;
+			case "isRandomVideo":
+				this.value.isRandomVideo = this.loadObjectField(($_=new JsonParser_$f55acea3678203c700715b781ad1ef0c(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"isRandomVideo",assigned,this.value.isRandomVideo,pos);
+				break;
+			case "item":
+				this.value.item = this.loadObjectField(($_=new JsonParser_$d89734267d6f665b411f49f013149267(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"item",assigned,this.value.item,pos);
+				break;
+			default:
+				this.errors.push(json2object_Error.UnknownVariable(field.name,this.putils.convertPosition(field.namePos)));
+			}
+		}
+		this.objectErrors(assigned,pos);
+	}
+	,getAuto: function() {
+		return { atEnd : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), isRandomVideo : new JsonParser_$f55acea3678203c700715b781ad1ef0c([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), item : new JsonParser_$d89734267d6f665b411f49f013149267([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+	}
+	,__class__: JsonParser_$afd8b5c33ca84426c608e1811d667fbd
 });
 var JsonParser_$b228e2c506a1d2b95c8332e07c38b0f2 = function(errors,putils,errorType) {
 	if(errorType == null) {
@@ -2062,7 +2105,7 @@ JsonParser_$d8e5213783812cec0906ca233f0379dc.prototype = $extend(json2object_rea
 		this.value = null;
 	}
 	,loadJsonString: function(s,pos,variable) {
-		this.value = this.loadString(s,pos,variable,["Connected","Disconnected","Login","PasswordRequest","LoginError","Logout","Message","ServerMessage","EmoteMessage","DanmakuMessage","Progress","UpdateClients","BanClient","KickClient","AddVideo","RemoveVideo","SkipVideo","VideoLoaded","Pause","Play","GetTime","SetTime","SetRate","Rewind","Flashback","SetLeader","PlayItem","SetNextItem","ToggleItemType","ClearChat","ClearPlaylist","ShufflePlaylist","UpdatePlaylist","TogglePlaylistLock","Dump","DrawStart","DrawMove","DrawEnd","ClearDrawing","ToggleDrawing","SaveDrawing","LoadDrawing","DrawCursor","SetBackground"],"Connected");
+		this.value = this.loadString(s,pos,variable,["Connected","Disconnected","Login","PasswordRequest","LoginError","Logout","Message","ServerMessage","EmoteMessage","DanmakuMessage","Progress","UpdateClients","BanClient","KickClient","AddVideo","RemoveVideo","SkipVideo","VideoLoaded","Pause","Play","GetTime","SetTime","SetRate","Rewind","Flashback","SetLeader","PlayItem","SetNextItem","ToggleItemType","ClearChat","ClearPlaylist","ShufflePlaylist","UpdatePlaylist","TogglePlaylistLock","Dump","DrawStart","DrawMove","DrawEnd","ClearDrawing","ToggleDrawing","SaveDrawing","LoadDrawing","DrawCursor","SetBackground","RandomVideoNotification"],"Connected");
 	}
 	,__class__: JsonParser_$d8e5213783812cec0906ca233f0379dc
 });
@@ -2450,7 +2493,7 @@ JsonParser_$fa535ffb25e1fd20341652f9be21e06e.__name__ = true;
 JsonParser_$fa535ffb25e1fd20341652f9be21e06e.__super__ = json2object_reader_BaseParser;
 JsonParser_$fa535ffb25e1fd20341652f9be21e06e.prototype = $extend(json2object_reader_BaseParser.prototype,{
 	onIncorrectType: function(pos,variable) {
-		this.errors.push(json2object_Error.IncorrectType(variable,"{ youtubeRegion : String, youtubePlaylistLimit : Int, youtubeApiKey : String, userVideoLimit : Int, unpauseWithoutLeader : Bool, totalVideoLimit : Int, templateUrl : String, strictEmbeddingChecks : Bool, serverChatHistory : Int, ?salt : Null<String>, requestLeaderOnPause : Bool, randomVideoYoutubeApiKey : String, port : Int, permissions : Permissions, maxMessageLength : Int, maxLoginLength : Int, localNetworkOnly : Bool, localAdmins : Bool, ?isVerbose : Null<Bool>, filters : Array<Filter>, fallbackToMainApiKey : Bool, emotes : Array<Emote>, channelName : String, cacheStorageLimitGiB : Float, allowedFileTypes : Array<String>, allowProxyIps : Bool, allowAgeRestrictedVideos : Bool }",pos));
+		this.errors.push(json2object_Error.IncorrectType(variable,"{ youtubeRegion : String, youtubePlaylistLimit : Int, youtubeApiKey : String, userVideoLimit : Int, useYoutubeCrawler : Bool, unpauseWithoutLeader : Bool, totalVideoLimit : Int, templateUrl : String, strictEmbeddingChecks : Bool, serverChatHistory : Int, ?salt : Null<String>, requestLeaderOnPause : Bool, randomVideoYoutubeApiKey : String, port : Int, permissions : Permissions, maxMessageLength : Int, maxLoginLength : Int, localNetworkOnly : Bool, localAdmins : Bool, ?isVerbose : Null<Bool>, filters : Array<Filter>, fallbackToMainApiKey : Bool, emotes : Array<Emote>, crawlerFallbackToApi : Bool, channelName : String, cacheStorageLimitGiB : Float, allowedFileTypes : Array<String>, allowProxyIps : Bool, allowAgeRestrictedVideos : Bool }",pos));
 		json2object_reader_BaseParser.prototype.onIncorrectType.call(this,pos,variable);
 	}
 	,loadJsonNull: function(pos,variable) {
@@ -2458,7 +2501,7 @@ JsonParser_$fa535ffb25e1fd20341652f9be21e06e.prototype = $extend(json2object_rea
 	}
 	,loadJsonObject: function(o,pos,variable) {
 		var assigned = new haxe_ds_StringMap();
-		this.objectSetupAssign(assigned,["allowAgeRestrictedVideos","allowProxyIps","allowedFileTypes","cacheStorageLimitGiB","channelName","emotes","fallbackToMainApiKey","filters","isVerbose","localAdmins","localNetworkOnly","maxLoginLength","maxMessageLength","permissions","port","randomVideoYoutubeApiKey","requestLeaderOnPause","salt","serverChatHistory","strictEmbeddingChecks","templateUrl","totalVideoLimit","unpauseWithoutLeader","userVideoLimit","youtubeApiKey","youtubePlaylistLimit","youtubeRegion"],[false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false]);
+		this.objectSetupAssign(assigned,["allowAgeRestrictedVideos","allowProxyIps","allowedFileTypes","cacheStorageLimitGiB","channelName","crawlerFallbackToApi","emotes","fallbackToMainApiKey","filters","isVerbose","localAdmins","localNetworkOnly","maxLoginLength","maxMessageLength","permissions","port","randomVideoYoutubeApiKey","requestLeaderOnPause","salt","serverChatHistory","strictEmbeddingChecks","templateUrl","totalVideoLimit","unpauseWithoutLeader","useYoutubeCrawler","userVideoLimit","youtubeApiKey","youtubePlaylistLimit","youtubeRegion"],[false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false]);
 		this.value = this.getAuto();
 		var _g = 0;
 		while(_g < o.length) {
@@ -2479,6 +2522,9 @@ JsonParser_$fa535ffb25e1fd20341652f9be21e06e.prototype = $extend(json2object_rea
 				break;
 			case "channelName":
 				this.value.channelName = this.loadObjectField(($_=new JsonParser_$27118326006d3829667a400ad23d5d98(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"channelName",assigned,this.value.channelName,pos);
+				break;
+			case "crawlerFallbackToApi":
+				this.value.crawlerFallbackToApi = this.loadObjectField(($_=new JsonParser_$c26f15e86e3de4c398a8273272aba034(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"crawlerFallbackToApi",assigned,this.value.crawlerFallbackToApi,pos);
 				break;
 			case "emotes":
 				this.value.emotes = this.loadObjectField(($_=new JsonParser_$b228e2c506a1d2b95c8332e07c38b0f2(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"emotes",assigned,this.value.emotes,pos);
@@ -2534,6 +2580,9 @@ JsonParser_$fa535ffb25e1fd20341652f9be21e06e.prototype = $extend(json2object_rea
 			case "unpauseWithoutLeader":
 				this.value.unpauseWithoutLeader = this.loadObjectField(($_=new JsonParser_$c26f15e86e3de4c398a8273272aba034(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"unpauseWithoutLeader",assigned,this.value.unpauseWithoutLeader,pos);
 				break;
+			case "useYoutubeCrawler":
+				this.value.useYoutubeCrawler = this.loadObjectField(($_=new JsonParser_$c26f15e86e3de4c398a8273272aba034(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"useYoutubeCrawler",assigned,this.value.useYoutubeCrawler,pos);
+				break;
 			case "userVideoLimit":
 				this.value.userVideoLimit = this.loadObjectField(($_=new JsonParser_$1686a6c336b71b36d77354cea19a8b52(this.errors,this.putils,1),$bind($_,$_.loadJson)),field,"userVideoLimit",assigned,this.value.userVideoLimit,pos);
 				break;
@@ -2553,7 +2602,7 @@ JsonParser_$fa535ffb25e1fd20341652f9be21e06e.prototype = $extend(json2object_rea
 		this.objectErrors(assigned,pos);
 	}
 	,getAuto: function() {
-		return { allowAgeRestrictedVideos : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), allowProxyIps : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), allowedFileTypes : new JsonParser_$fae276e53583ba7855144d0eb60db288([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), cacheStorageLimitGiB : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), channelName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), emotes : new JsonParser_$b228e2c506a1d2b95c8332e07c38b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), fallbackToMainApiKey : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), filters : new JsonParser_$4152afa9599cfde83ddff5d84d1707c8([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), isVerbose : new JsonParser_$f55acea3678203c700715b781ad1ef0c([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), localAdmins : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), localNetworkOnly : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), maxLoginLength : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), maxMessageLength : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), permissions : new JsonParser_$d08ccf52b4cdd08e41cfb99ec42e0b29([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), port : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), randomVideoYoutubeApiKey : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), requestLeaderOnPause : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), salt : new JsonParser_$ddce6d3de223cb2759be5c48797abca5([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), serverChatHistory : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), strictEmbeddingChecks : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), templateUrl : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), totalVideoLimit : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), unpauseWithoutLeader : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), userVideoLimit : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), youtubeApiKey : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), youtubePlaylistLimit : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), youtubeRegion : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
+		return { allowAgeRestrictedVideos : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), allowProxyIps : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), allowedFileTypes : new JsonParser_$fae276e53583ba7855144d0eb60db288([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), cacheStorageLimitGiB : new JsonParser_$22ae0e2b89e5e3d477f988cc36d3272b([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), channelName : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), crawlerFallbackToApi : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), emotes : new JsonParser_$b228e2c506a1d2b95c8332e07c38b0f2([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), fallbackToMainApiKey : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), filters : new JsonParser_$4152afa9599cfde83ddff5d84d1707c8([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), isVerbose : new JsonParser_$f55acea3678203c700715b781ad1ef0c([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), localAdmins : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), localNetworkOnly : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), maxLoginLength : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), maxMessageLength : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), permissions : new JsonParser_$d08ccf52b4cdd08e41cfb99ec42e0b29([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), port : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), randomVideoYoutubeApiKey : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), requestLeaderOnPause : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), salt : new JsonParser_$ddce6d3de223cb2759be5c48797abca5([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), serverChatHistory : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), strictEmbeddingChecks : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), templateUrl : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), totalVideoLimit : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), unpauseWithoutLeader : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), useYoutubeCrawler : new JsonParser_$c26f15e86e3de4c398a8273272aba034([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), userVideoLimit : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), youtubeApiKey : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), youtubePlaylistLimit : new JsonParser_$1686a6c336b71b36d77354cea19a8b52([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1))), youtubeRegion : new JsonParser_$27118326006d3829667a400ad23d5d98([],this.putils,0).loadJson(new hxjsonast_Json(hxjsonast_JsonValue.JNull,new hxjsonast_Position("",0,1)))};
 	}
 	,__class__: JsonParser_$fa535ffb25e1fd20341652f9be21e06e
 });
@@ -4337,6 +4386,9 @@ server_HttpServer.prototype = {
 		res.setHeader("content-type",this.getMimeType(ext));
 		if(this.cache != null && req.method == "POST") {
 			switch(url.pathname) {
+			case "/api/youtube-search":
+				this.handleYouTubeSearch(req,res);
+				break;
 			case "/setup":
 				this.finishSetup(req,res);
 				break;
@@ -4422,10 +4474,10 @@ server_HttpServer.prototype = {
 			fileName = null;
 		}
 		var ext = haxe_io_Path.extension(fileName).toLowerCase();
-		haxe_Log.trace("Trying to upload new file to the cache: " + fileName + ", extension: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 175, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
+		haxe_Log.trace("Trying to upload new file to the cache: " + fileName + ", extension: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 178, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
 		if(!this.isAllowedFileType(ext)) {
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,400),{ info : "Invalid file type. Filetype is not on the whitelist."});
-			haxe_Log.trace("Filetype not allowed: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 179, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
+			haxe_Log.trace("Filetype not allowed: " + ext,{ fileName : "src/server/HttpServer.hx", lineNumber : 182, className : "server.HttpServer", methodName : "uploadFileLastChunk"});
 			return;
 		}
 		var name = this.cache.getFreeFileName(fileName);
@@ -4501,7 +4553,7 @@ server_HttpServer.prototype = {
 			}
 		});
 		stream.on("error",function(err) {
-			haxe_Log.trace(err,{ fileName : "src/server/HttpServer.hx", lineNumber : 248, className : "server.HttpServer", methodName : "uploadFile"});
+			haxe_Log.trace(err,{ fileName : "src/server/HttpServer.hx", lineNumber : 251, className : "server.HttpServer", methodName : "uploadFile"});
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,500),{ info : "File write stream error."});
 			var _this = _gthis.uploadingFilesSizes;
 			if(Object.prototype.hasOwnProperty.call(_this.h,filePath)) {
@@ -4514,7 +4566,7 @@ server_HttpServer.prototype = {
 			_gthis.cache.remove(name);
 		});
 		req.on("error",function(err) {
-			haxe_Log.trace("Request Error:",{ fileName : "src/server/HttpServer.hx", lineNumber : 255, className : "server.HttpServer", methodName : "uploadFile", customParams : [err]});
+			haxe_Log.trace("Request Error:",{ fileName : "src/server/HttpServer.hx", lineNumber : 258, className : "server.HttpServer", methodName : "uploadFile", customParams : [err]});
 			stream.destroy();
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,500),{ info : "File request error."});
 			var _this = _gthis.uploadingFilesSizes;
@@ -4546,7 +4598,7 @@ server_HttpServer.prototype = {
 			var jsonParser = new JsonParser_$f3c29c0813c93ee49a61ccf072b8a177();
 			var jsonData = jsonParser.fromJson(body);
 			if(jsonParser.errors.length > 0) {
-				haxe_Log.trace(json2object_ErrorUtils.convertErrorArray(jsonParser.errors),{ fileName : "src/server/HttpServer.hx", lineNumber : 286, className : "server.HttpServer", methodName : "finishSetup"});
+				haxe_Log.trace(json2object_ErrorUtils.convertErrorArray(jsonParser.errors),{ fileName : "src/server/HttpServer.hx", lineNumber : 289, className : "server.HttpServer", methodName : "finishSetup"});
 				tools_HttpServerTools.json(tools_HttpServerTools.status(res,400),{ success : false, errors : []});
 				return;
 			}
@@ -4571,6 +4623,93 @@ server_HttpServer.prototype = {
 			}
 			_gthis.main.addAdmin(name,password);
 			tools_HttpServerTools.json(tools_HttpServerTools.status(res,200),{ success : true});
+		});
+	}
+	,handleYouTubeSearch: function(req,res) {
+		var body = "";
+		req.on("data",function(chunk) {
+			body += chunk;
+			return body;
+		});
+		req.on("end",function() {
+			try {
+				var data = JSON.parse(body);
+				var query = data.query;
+				var tmp = data.maxResults;
+				var maxResults = tmp != null ? tmp : 20;
+				var tmp = data.userName;
+				var userName = tmp != null ? tmp : "Unknown";
+				var tmp = data.method;
+				var method = tmp != null ? tmp : "crawler";
+				var tmp = data.isRandomVideo;
+				var isRandomVideo = tmp != null && tmp;
+				if(query == null || StringTools.trim(query) == "") {
+					tools_HttpServerTools.status(res,400);
+					tools_HttpServerTools.json(res,{ success : false, error : "Query parameter is required"});
+					return;
+				}
+				if(isRandomVideo) {
+					haxe_Log.trace("[RANDOM VIDEO] User: \"" + userName + "\" | Query: \"" + query + "\" | Method: " + method + " | Status: SEARCHING...",{ fileName : "src/server/HttpServer.hx", lineNumber : 363, className : "server.HttpServer", methodName : "handleYouTubeSearch"});
+				} else {
+					haxe_Log.trace("YouTube Search API: Searching for \"" + query + "\" with max results " + maxResults,{ fileName : "src/server/HttpServer.hx", lineNumber : 365, className : "server.HttpServer", methodName : "handleYouTubeSearch"});
+				}
+				
+					var youtubeSearch = require('youtube-search-without-api-key');
+					var HttpServerTools = tools_HttpServerTools;
+					var userName = userName;
+					var method = method;
+					var isRandomVideo = isRandomVideo;
+					
+					youtubeSearch.search(query, {limit: maxResults}).then(function(results) {
+						var videoIds = [];
+						var videoTitles = [];
+						
+						for (var i = 0; i < results.length; i++) {
+							var result = results[i];
+							// Extract video ID from nested structure: result.id.videoId
+							var videoId = result.id?.videoId || result.videoId || result.url?.split('v=')[1]?.split('&')[0];
+							if (videoId && typeof videoId === 'string') {
+								videoIds.push(videoId);
+								videoTitles.push(result.title || 'Unknown Title');
+							}
+						}
+						
+						if (isRandomVideo && videoIds.length > 0) {
+							// Log detailed result for random video requests
+							var firstVideoTitle = videoTitles[0] || 'Unknown';
+							var firstVideoId = videoIds[0] || 'Unknown';
+							console.log('[RANDOM VIDEO] User: "' + userName + '" | Query: "' + query + '" | Method: ' + method + ' | Result: "' + firstVideoTitle + '" (' + firstVideoId + ') | Count: ' + videoIds.length + ' | Status: SUCCESS');
+						} else if (isRandomVideo) {
+							console.log('[RANDOM VIDEO] User: "' + userName + '" | Query: "' + query + '" | Method: ' + method + ' | Result: No videos found | Status: FAILED');
+						} else {
+							console.log('YouTube Search API: Found ' + videoIds.length + ' video IDs');
+						}
+						
+						HttpServerTools.status(res, 200);
+						HttpServerTools.json(res, {
+							success: true,
+							videoIds: videoIds,
+							count: videoIds.length
+						});
+					}).catch(function(error) {
+						if (isRandomVideo) {
+							console.log('[RANDOM VIDEO] User: "' + userName + '" | Query: "' + query + '" | Method: ' + method + ' | Error: ' + error + ' | Status: FAILED');
+						} else {
+							console.log('YouTube Search API error:', error);
+						}
+						HttpServerTools.status(res, 500);
+						HttpServerTools.json(res, {
+							success: false,
+							error: 'Search request failed'
+						});
+					});
+				;
+			} catch( _g ) {
+				var e = haxe_Exception.caught(_g).unwrap();
+				haxe_Log.trace("[RANDOM VIDEO] Parse error in request body: " + Std.string(e),{ fileName : "src/server/HttpServer.hx", lineNumber : 422, className : "server.HttpServer", methodName : "handleYouTubeSearch"});
+				tools_HttpServerTools.status(res,400);
+				tools_HttpServerTools.json(res,{ success : false, error : "Invalid request format"});
+			}
 		});
 	}
 	,getPath: function(dir,url) {
@@ -5321,6 +5460,10 @@ server_Main.prototype = {
 			if(!item.doCache) {
 				data.addVideo.item = item;
 				_gthis.videoList.addItem(item,data.addVideo.atEnd);
+				if(data.addVideo.isRandomVideo == true) {
+					var tmp = item.title;
+					haxe_Log.trace("[RANDOM VIDEO] User: \"" + client.name + "\" | Video Added: \"" + (tmp != null ? tmp : "Unknown Title") + "\" | Duration: " + Math.round(item.duration) + "s | Position: " + (data.addVideo.atEnd ? "end" : "next") + " | URL: " + item.url + " | Status: SUCCESS",{ fileName : "src/server/Main.hx", lineNumber : 741, className : "server.Main", methodName : "onMessage"});
+				}
 				_gthis.broadcast(data);
 				if(_gthis.videoList.items.length == 1) {
 					_gthis.restartWaitTimer();
@@ -5333,6 +5476,10 @@ server_Main.prototype = {
 						item = _$Types_VideoItemTools.withUrl(item,_gthis.cache.getFileUrl(name));
 						data.addVideo.item = item;
 						_gthis.videoList.addItem(item,data.addVideo.atEnd);
+						if(data.addVideo.isRandomVideo == true) {
+							var tmp = item.title;
+							haxe_Log.trace("[RANDOM VIDEO] User: \"" + client.name + "\" | Video Added: \"" + (tmp != null ? tmp : "Unknown Title") + "\" | Duration: " + Math.round(item.duration) + "s | Position: " + (data.addVideo.atEnd ? "end" : "next") + " | URL: " + item.url + " | Status: SUCCESS",{ fileName : "src/server/Main.hx", lineNumber : 741, className : "server.Main", methodName : "onMessage"});
+						}
 						_gthis.broadcast(data);
 						if(_gthis.videoList.items.length == 1) {
 							_gthis.restartWaitTimer();
@@ -5347,6 +5494,10 @@ server_Main.prototype = {
 						}
 						data.addVideo.item = item;
 						_gthis.videoList.addItem(item,data.addVideo.atEnd);
+						if(data.addVideo.isRandomVideo == true) {
+							var tmp = item.title;
+							haxe_Log.trace("[RANDOM VIDEO] User: \"" + client.name + "\" | Video Added: \"" + (tmp != null ? tmp : "Unknown Title") + "\" | Duration: " + Math.round(item.duration) + "s | Position: " + (data.addVideo.atEnd ? "end" : "next") + " | URL: " + item.url + " | Status: SUCCESS",{ fileName : "src/server/Main.hx", lineNumber : 741, className : "server.Main", methodName : "onMessage"});
+						}
 						_gthis.broadcast(data);
 						if(_gthis.videoList.items.length == 1) {
 							_gthis.restartWaitTimer();
@@ -5358,6 +5509,10 @@ server_Main.prototype = {
 					this.serverMessage(client,"No cache support for " + name + " player.");
 					data.addVideo.item = item;
 					_gthis.videoList.addItem(item,data.addVideo.atEnd);
+					if(data.addVideo.isRandomVideo == true) {
+						var tmp = item.title;
+						haxe_Log.trace("[RANDOM VIDEO] User: \"" + client.name + "\" | Video Added: \"" + (tmp != null ? tmp : "Unknown Title") + "\" | Duration: " + Math.round(item.duration) + "s | Position: " + (data.addVideo.atEnd ? "end" : "next") + " | URL: " + item.url + " | Status: SUCCESS",{ fileName : "src/server/Main.hx", lineNumber : 741, className : "server.Main", methodName : "onMessage"});
+					}
 					_gthis.broadcast(data);
 					if(_gthis.videoList.items.length == 1) {
 						_gthis.restartWaitTimer();
@@ -5740,6 +5895,12 @@ server_Main.prototype = {
 			break;
 		case "Progress":
 			break;
+		case "RandomVideoNotification":
+			var tmp = data.randomVideoNotification;
+			if((tmp != null ? tmp.message : null) != null) {
+				haxe_Log.trace(data.randomVideoNotification.message,{ fileName : "src/server/Main.hx", lineNumber : 703, className : "server.Main", methodName : "onMessage"});
+			}
+			break;
 		case "RemoveVideo":
 			if(this.videoList.items.length == 0) {
 				return;
@@ -6012,7 +6173,7 @@ server_Main.prototype = {
 			client.setGroupFlag(ClientGroup.Banned,!isOutdated);
 			if(isOutdated) {
 				HxOverrides.remove(this.userList.bans,ban);
-				haxe_Log.trace("" + client.name + " ban removed",{ fileName : "src/server/Main.hx", lineNumber : 1177, className : "server.Main", methodName : "checkBan"});
+				haxe_Log.trace("" + client.name + " ban removed",{ fileName : "src/server/Main.hx", lineNumber : 1191, className : "server.Main", methodName : "checkBan"});
 				this.sendClientList();
 			}
 			break;

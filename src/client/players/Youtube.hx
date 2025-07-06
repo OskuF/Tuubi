@@ -5,6 +5,7 @@ import Types.VideoData;
 import Types.VideoDataRequest;
 import Types.VideoItem;
 import client.Main.getEl;
+import client.YoutubeCrawler;
 import haxe.Http;
 import haxe.Json;
 import js.Browser.document;
@@ -96,7 +97,12 @@ class Youtube implements IPlayer {
 				
 				// Check if video is embeddable
 				if (!embeddable) {
-					trace('Skipping non-embeddable video: $title (ID: $id)');
+					if (main.isRandomVideoOperation) {
+						final userName = main.getName();
+						main.sendRandomVideoNotification('[RANDOM VIDEO] User: "$userName" | Video: "$title" ($id) | Error: Not embeddable (pre-check) | Action: Skipping to next video...');
+					} else {
+						trace('Skipping non-embeddable video: $title (ID: $id)');
+					}
 					callback({duration: 0}); // Signal that video should be skipped
 					return;
 				}
@@ -210,7 +216,14 @@ class Youtube implements IPlayer {
 					
 					// Handle specific embedding errors
 					if (errorCode == 101 || errorCode == 150) {
-						trace('Video not embeddable, skipping');
+						if (main.isRandomVideoOperation) {
+							final userName = main.getName();
+							final videoId = extractVideoId(url);
+							final errorType = errorCode == 101 ? "Cannot embed (restricted)" : "Embedding disabled";
+							main.sendRandomVideoNotification('[RANDOM VIDEO] User: "$userName" | Video: $videoId | Error: $errorType (temp player) | Action: Skipping to next video...');
+						} else {
+							trace('Video not embeddable, skipping');
+						}
 					}
 					
 					if (playerEl.contains(video)) playerEl.removeChild(video);
@@ -281,6 +294,10 @@ class Youtube implements IPlayer {
 					switch (errorCode) {
 						case 101: // Video not available in embedded player
 							if (main.isRandomVideoOperation) {
+								final userName = main.getName();
+								final currentItem = player.getCurrentItem();
+								final videoUrl = currentItem?.url ?? "unknown";
+								main.sendRandomVideoNotification('[RANDOM VIDEO] User: "$userName" | Video: $videoUrl | Error: Cannot embed (restricted by uploader) | Action: Finding replacement...');
 								main.serverMessage('Video cannot be embedded, finding replacement...', false);
 								main.handleRandomVideoPlaybackError(errorCode);
 								// Flag will be cleared by handleRandomVideoPlaybackError or replacement success
@@ -289,6 +306,10 @@ class Youtube implements IPlayer {
 							}
 						case 150: // Video cannot be embedded
 							if (main.isRandomVideoOperation) {
+								final userName = main.getName();
+								final currentItem = player.getCurrentItem();
+								final videoUrl = currentItem?.url ?? "unknown";
+								main.sendRandomVideoNotification('[RANDOM VIDEO] User: "$userName" | Video: $videoUrl | Error: Embedding disabled | Action: Finding replacement...');
 								main.serverMessage('Video embedding disabled, finding replacement...', false);
 								main.handleRandomVideoPlaybackError(errorCode);
 								// Flag will be cleared by handleRandomVideoPlaybackError or replacement success
@@ -361,7 +382,32 @@ class Youtube implements IPlayer {
 		youtube.unMute();
 	}
 
-	public function searchVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void, ?customApiKey:String):Void {
+	public function searchVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void, ?customApiKey:String, ?userName:String, ?isRandomVideo:Bool):Void {
+		// Check if we should use the crawler or API
+		final useYoutubeCrawler = main.getUseYoutubeCrawler();
+		final crawlerFallbackToApi = main.getCrawlerFallbackToApi();
+		
+		if (useYoutubeCrawler) {
+			trace('YouTube: Using crawler for search');
+			YoutubeCrawler.searchVideos(query, maxResults, (crawlerVideoIds:Array<String>) -> {
+				if (crawlerVideoIds.length > 0) {
+					trace('YouTube crawler returned ${crawlerVideoIds.length} video IDs: [${crawlerVideoIds.join(", ")}]');
+					callback(crawlerVideoIds);
+				} else if (crawlerFallbackToApi) {
+					trace('YouTube crawler failed, falling back to API');
+					searchViaApi(query, maxResults, callback, customApiKey, userName, isRandomVideo);
+				} else {
+					trace('YouTube crawler returned no results');
+					callback([]);
+				}
+			}, userName, isRandomVideo);
+		} else {
+			trace('YouTube: Using API for search');
+			searchViaApi(query, maxResults, callback, customApiKey, userName, isRandomVideo);
+		}
+	}
+	
+	function searchViaApi(query:String, maxResults:Int, callback:(videoIds:Array<String>) -> Void, ?customApiKey:String, ?userName:String, ?isRandomVideo:Bool):Void {
 		final effectiveApiKey = customApiKey ?? {
 			if (apiKey == null) apiKey = main.getYoutubeApiKey();
 			apiKey;
@@ -370,7 +416,11 @@ class Youtube implements IPlayer {
 		final params = '?part=snippet&type=video&maxResults=$maxResults&q=${StringTools.urlEncode(query)}&key=$effectiveApiKey';
 		final dataUrl = searchUrl + params;
 		
-		trace('YouTube API call: ${searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + StringTools.urlEncode(query) + "&key=***"}');
+		if (isRandomVideo == true) {
+			trace('[RANDOM VIDEO] User: "${userName ?? "Unknown"}" | Query: "$query" | Method: YouTube API | Status: SEARCHING...');
+		} else {
+			trace('YouTube API call: ${searchUrl + "?part=snippet&type=video&maxResults=" + maxResults + "&q=" + StringTools.urlEncode(query) + "&key=***"}');
+		}
 		
 		final http = new Http(dataUrl);
 		http.onData = response -> {
@@ -386,14 +436,26 @@ class Youtube implements IPlayer {
 					}
 				}
 				
-				trace('YouTube API returned ${videoIds.length} video IDs: [${videoIds.join(", ")}]');
+				if (isRandomVideo == true && videoIds.length > 0) {
+					trace('[RANDOM VIDEO] User: "${userName ?? "Unknown"}" | Query: "$query" | Method: YouTube API | Found: ${videoIds.length} videos | First: ${videoIds[0]} | Status: SUCCESS');
+				} else if (isRandomVideo == true) {
+					trace('[RANDOM VIDEO] User: "${userName ?? "Unknown"}" | Query: "$query" | Method: YouTube API | Result: No videos found | Status: FAILED');
+				} else {
+					trace('YouTube API returned ${videoIds.length} video IDs: [${videoIds.join(", ")}]');
+				}
 				callback(videoIds);
 			} catch (e:Dynamic) {
+				if (isRandomVideo == true) {
+					trace('[RANDOM VIDEO] User: "${userName ?? "Unknown"}" | Query: "$query" | Method: YouTube API | Error: Parse failed | Status: FAILED');
+				}
 				youtubeApiError({code: 0, message: "Failed to parse search results"});
 				callback([]);
 			}
 		};
 		http.onError = msg -> {
+			if (isRandomVideo == true) {
+				trace('[RANDOM VIDEO] User: "${userName ?? "Unknown"}" | Query: "$query" | Method: YouTube API | Error: $msg | Status: FAILED');
+			}
 			youtubeApiError({code: 0, message: "Search request failed: " + msg});
 			callback([]);
 		};
