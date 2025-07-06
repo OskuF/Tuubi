@@ -1257,28 +1257,62 @@ class Main {
 	}
 
 	function generateRandomSearchQuery():String {
-		var query:String;
+		var query:String = "";
+		var isDateFormat = false;
 
 		if (settings.obscureMode) {
-			// Obscure mode: use device/file tags + random numbers
+			// Obscure mode: use device/file tags + random numbers OR date formats
 			final spacedTags = ["IMG", "MVI", "MOV", "100", "SAM", "DSC", "SDV"];
 			final noSpaceTags = ["DSCF", "DSCN", "PICT", "MAQ0", "FILE", "GOPR", "GP01", "GX01"];
+			final dateFormats = ["YMD", "MDY", "DMY"];
 			
-			// Randomly choose between spaced and no-space tag types
-			final useSpacedTags = Math.random() < 0.5;
-			final selectedTagArray = useSpacedTags ? spacedTags : noSpaceTags;
-			final randomTag = selectedTagArray[Math.floor(Math.random() * selectedTagArray.length)];
+			// Create combined array with equal probability for each individual item
+			final allOptions = [];
+			for (tag in spacedTags) allOptions.push({type: "spaced", value: tag});
+			for (tag in noSpaceTags) allOptions.push({type: "nospace", value: tag});
+			for (format in dateFormats) allOptions.push({type: "date", value: format});
 			
-			final randomNumber = Math.floor(Math.random() * 9999) + 1;
-			final paddedNumber = StringTools.lpad(Std.string(randomNumber), "0", 4);
+			// Randomly select one option (equal probability for each)
+			final selectedOption = allOptions[Math.floor(Math.random() * allOptions.length)];
 			
-			// Apply appropriate formatting based on tag type
-			if (useSpacedTags) {
-				query = '$randomTag $paddedNumber'; // Format: TAG 0001
-			} else {
-				query = '$randomTag$paddedNumber'; // Format: TAG0001
+			switch (selectedOption.type) {
+				case "spaced":
+					// Spaced device tags
+					final randomNumber = Math.floor(Math.random() * 9999) + 1;
+					final paddedNumber = StringTools.lpad(Std.string(randomNumber), "0", 4);
+					query = '${selectedOption.value} $paddedNumber'; // Format: TAG 0001
+					trace('Generated obscure search query (spaced): "$query"');
+				
+				case "nospace":
+					// No-space device tags
+					final randomNumber = Math.floor(Math.random() * 9999) + 1;
+					final paddedNumber = StringTools.lpad(Std.string(randomNumber), "0", 4);
+					query = '${selectedOption.value}$paddedNumber'; // Format: TAG0001
+					trace('Generated obscure search query (no-space): "$query"');
+				
+				case "date":
+					// Date format tags
+					// Generate random date (same range as before filter: 1-15 years ago)
+					final currentYear = Date.now().getFullYear();
+					final year = currentYear - (Math.floor(Math.random() * 15) + 1); // 1-15 years ago
+					final month = Math.floor(Math.random() * 12) + 1;
+					final day = Math.floor(Math.random() * 28) + 1; // Use 1-28 to avoid month length issues
+					
+					final yearStr = Std.string(year);
+					final monthStr = month < 10 ? "0" + month : "" + month;
+					final dayStr = day < 10 ? "0" + day : "" + day;
+					
+					// Apply date format
+					switch (selectedOption.value) {
+						case "YMD": query = '$yearStr$monthStr$dayStr'; // 20250706
+						case "MDY": query = '$monthStr$dayStr$yearStr'; // 07062025
+						case "DMY": query = '$dayStr$monthStr$yearStr'; // 06072025
+						default: query = '$yearStr$monthStr$dayStr';
+					}
+					
+					isDateFormat = true;
+					trace('Generated obscure search query (date format ${selectedOption.value}): "$query"');
 			}
-			trace('Generated obscure search query: "$query"');
 		} else {
 			// Keyword mode: original functionality
 			final words = getWordlist();
@@ -1296,18 +1330,21 @@ class Main {
 			trace('Generated keyword search query: "$query"');
 		}
 
-		// Always add a random "before:" date filter to discover content from different eras
-		final currentYear = Date.now().getFullYear();
-		// Random date anywhere from 1 to 15 years ago
-		final year = currentYear - (Math.floor(Math.random() * 15) + 1);
-		final month = Math.floor(Math.random() * 12) + 1;
-		final day = Math.floor(Math.random() * 28)
-			+ 1; // Use 1-28 to avoid month length issues
-		final monthStr = month < 10 ? "0" + month : "" + month;
-		final dayStr = day < 10 ? "0" + day : "" + day;
-		query += ' before:$year-$monthStr-$dayStr';
-
-		trace('Final search query with date: "$query"');
+		// Add random "before:" date filter (except for date format tags which are dates themselves)
+		if (!isDateFormat) {
+			final currentYear = Date.now().getFullYear();
+			// Random date anywhere from 1 to 15 years ago
+			final year = currentYear - (Math.floor(Math.random() * 15) + 1);
+			final month = Math.floor(Math.random() * 12) + 1;
+			final day = Math.floor(Math.random() * 28)
+				+ 1; // Use 1-28 to avoid month length issues
+			final monthStr = month < 10 ? "0" + month : "" + month;
+			final dayStr = day < 10 ? "0" + day : "" + day;
+			query += ' before:$year-$monthStr-$dayStr';
+			trace('Final search query with date: "$query"');
+		} else {
+			trace('Final search query (date format, no before filter): "$query"');
+		}
 		return query;
 	}
 
