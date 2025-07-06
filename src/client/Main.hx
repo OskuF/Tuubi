@@ -190,6 +190,10 @@ class Main {
 					data.checkboxes.remove(oldCheck);
 					data.checkedCache.push(YoutubeType);
 				}
+			case 6:
+				final data:ClientSettings = data;
+				data.keywordMode = true;
+				data.obscureMode = false;
 			case SETTINGS_VERSION, _:
 				throw 'skipped version $version';
 		}
@@ -1257,11 +1261,23 @@ class Main {
 
 		if (settings.obscureMode) {
 			// Obscure mode: use device/file tags + random numbers
-			final deviceTags = ["IMG", "MVI", "MOV", "100", "SAM", "DSC", "SDV"];
-			final randomTag = deviceTags[Math.floor(Math.random() * deviceTags.length)];
+			final spacedTags = ["IMG", "MVI", "MOV", "100", "SAM", "DSC", "SDV"];
+			final noSpaceTags = ["DSCF", "DSCN", "PICT", "MAQ0", "FILE", "GOPR", "GP01", "GX01"];
+			
+			// Randomly choose between spaced and no-space tag types
+			final useSpacedTags = Math.random() < 0.5;
+			final selectedTagArray = useSpacedTags ? spacedTags : noSpaceTags;
+			final randomTag = selectedTagArray[Math.floor(Math.random() * selectedTagArray.length)];
+			
 			final randomNumber = Math.floor(Math.random() * 9999) + 1;
 			final paddedNumber = StringTools.lpad(Std.string(randomNumber), "0", 4);
-			query = '$randomTag $paddedNumber';
+			
+			// Apply appropriate formatting based on tag type
+			if (useSpacedTags) {
+				query = '$randomTag $paddedNumber'; // Format: TAG 0001
+			} else {
+				query = '$randomTag$paddedNumber'; // Format: TAG0001
+			}
 			trace('Generated obscure search query: "$query"');
 		} else {
 			// Keyword mode: original functionality
