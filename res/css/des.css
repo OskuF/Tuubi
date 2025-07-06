@@ -232,6 +232,16 @@ input[type="checkbox"] {
   margin-right: .3rem;
 }
 
+/* Video randomization specific styles */
+#optionsList h4 {
+  text-decoration: none;
+}
+
+#optionsList .checkbox-row {
+  padding-left: 0;
+  text-align: left;
+}
+
 input,
 textarea {
   color: var(--foreground);

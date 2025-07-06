@@ -17,4 +17,6 @@ typedef ClientSettings = {
 	var showHintList:Bool;
 	var checkboxes:Array<{id:String, checked:Null<Bool>}>;
 	var checkedCache:Array<PlayerType>;
+	var keywordMode:Bool;
+	var obscureMode:Bool;
 }

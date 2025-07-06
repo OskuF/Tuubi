@@ -605,6 +605,46 @@ class Buttons {
 				Settings.write(settings);
 			});
 		}
+
+		// Video randomization checkboxes with mutual exclusion
+		final keywordModeCheckbox:InputElement = getEl("#keywordModeBtn");
+		final obscureModeCheckbox:InputElement = getEl("#obscureModeBtn");
+		
+		// Initialize checkbox states from settings
+		keywordModeCheckbox.checked = settings.keywordMode;
+		obscureModeCheckbox.checked = settings.obscureMode;
+
+		keywordModeCheckbox.addEventListener("change", () -> {
+			if (keywordModeCheckbox.checked) {
+				// Enable keyword mode, disable obscure mode
+				obscureModeCheckbox.checked = false;
+				settings.keywordMode = true;
+				settings.obscureMode = false;
+			} else {
+				// If trying to uncheck keyword mode, force enable obscure mode instead
+				obscureModeCheckbox.checked = true;
+				keywordModeCheckbox.checked = false;
+				settings.keywordMode = false;
+				settings.obscureMode = true;
+			}
+			Settings.write(settings);
+		});
+
+		obscureModeCheckbox.addEventListener("change", () -> {
+			if (obscureModeCheckbox.checked) {
+				// Enable obscure mode, disable keyword mode
+				keywordModeCheckbox.checked = false;
+				settings.obscureMode = true;
+				settings.keywordMode = false;
+			} else {
+				// If trying to uncheck obscure mode, force enable keyword mode instead
+				keywordModeCheckbox.checked = true;
+				obscureModeCheckbox.checked = false;
+				settings.obscureMode = false;
+				settings.keywordMode = true;
+			}
+			Settings.write(settings);
+		});
 	}
 
 	public static function onViewportResize():Void {

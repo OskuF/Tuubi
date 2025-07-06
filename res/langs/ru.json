@@ -115,5 +115,9 @@
 	"areYouSure": "Вы уверены?",
 	"dataWillBeLost": "Данные будут потеряны.",
 
+	"videoRandomization": "Рандомизация видео",
+	"keywordMode": "Режим ключевых слов",
+	"obscureMode": "Малоизвестный режим",
+
 	"setupTitle": "Добро пожаловать в SyncTube!"
 }

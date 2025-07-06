@@ -30,7 +30,7 @@ import js.html.WebSocket;
 
 class Main {
 	public static var instance(default, null):Main;
-	static inline var SETTINGS_VERSION = 6;
+	static inline var SETTINGS_VERSION = 7;
 	static inline var MAX_CHAT_MESSAGES = 200;
 
 	public final settings:ClientSettings;
@@ -124,6 +124,8 @@ class Main {
 			showHintList: true,
 			checkboxes: [],
 			checkedCache: [],
+			keywordMode: true,
+			obscureMode: false,
 		}
 		Settings.init(defaults, settingsPatcher);
 		settings = Settings.read();
@@ -1251,20 +1253,32 @@ class Main {
 	}
 
 	function generateRandomSearchQuery():String {
-		// Load words from embedded wordlist resource
-		final words = getWordlist();
+		var query:String;
 
-		// Pick 1-3 random words
-		final numWords = Math.floor(Math.random() * 3) + 1;
-		final selectedWords = [];
-		for (i in 0...numWords) {
-			final word = words[Math.floor(Math.random() * words.length)];
-			if (selectedWords.indexOf(word) == -1) {
-				selectedWords.push(word);
+		if (settings.obscureMode) {
+			// Obscure mode: use device/file tags + random numbers
+			final deviceTags = ["IMG", "MVI", "MOV", "100", "SAM", "DSC", "SDV"];
+			final randomTag = deviceTags[Math.floor(Math.random() * deviceTags.length)];
+			final randomNumber = Math.floor(Math.random() * 9999) + 1;
+			final paddedNumber = StringTools.lpad(Std.string(randomNumber), "0", 4);
+			query = '$randomTag $paddedNumber';
+			trace('Generated obscure search query: "$query"');
+		} else {
+			// Keyword mode: original functionality
+			final words = getWordlist();
+
+			// Pick 1-3 random words
+			final numWords = Math.floor(Math.random() * 3) + 1;
+			final selectedWords = [];
+			for (i in 0...numWords) {
+				final word = words[Math.floor(Math.random() * words.length)];
+				if (selectedWords.indexOf(word) == -1) {
+					selectedWords.push(word);
+				}
 			}
+			query = selectedWords.join(" ");
+			trace('Generated keyword search query: "$query"');
 		}
-
-		var query = selectedWords.join(" ");
 
 		// Always add a random "before:" date filter to discover content from different eras
 		final currentYear = Date.now().getFullYear();
@@ -1277,7 +1291,7 @@ class Main {
 		final dayStr = day < 10 ? "0" + day : "" + day;
 		query += ' before:$year-$monthStr-$dayStr';
 
-		trace('Generated random search query: "$query"');
+		trace('Final search query with date: "$query"');
 		return query;
 	}
 

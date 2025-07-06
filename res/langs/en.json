@@ -115,5 +115,9 @@
 	"areYouSure": "Are you sure?",
 	"dataWillBeLost": "The data will be lost.",
 
+	"videoRandomization": "Video Randomization",
+	"keywordMode": "Keyword mode",
+	"obscureMode": "Obscure mode",
+
 	"setupTitle": "Welcome to SyncTube!"
 }
