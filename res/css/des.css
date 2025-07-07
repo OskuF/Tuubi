@@ -242,6 +242,21 @@ input[type="checkbox"] {
   text-align: left;
 }
 
+/* YouTube search specific styling */
+.youtube-search-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 1.7rem;
+}
+
+#youtube-search-status {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  margin-left: 1rem;
+  white-space: nowrap;
+}
+
 input,
 textarea {
   color: var(--foreground);
@@ -381,6 +396,7 @@ header h4 {
   position: relative;
   display: flex;
   flex-wrap: nowrap;
+  margin-bottom: 1.5rem;
 }
 
 .controls span {
@@ -557,6 +573,20 @@ iframe#videoplayer {
   display: flex;
   flex: 1;
   padding-right: 2rem;
+}
+
+#youtube-search-input {
+  display: flex;
+  flex: 1;
+  padding-right: 2rem;
+}
+
+#youtube-search-status {
+  text-align: left;
+  padding: 0.5rem 2rem 0 2rem;
+  font-size: 0.9rem;
+  color: var(--foreground);
+  min-height: 1.2rem;
 }
 
 #mediaurl-upload {

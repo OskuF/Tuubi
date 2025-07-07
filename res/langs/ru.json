@@ -119,5 +119,9 @@
 	"keywordMode": "Режим ключевых слов",
 	"obscureMode": "Малоизвестный режим",
 
+	"youtubeSearch": "Поиск YouTube",
+	"youtubeSearchPlaceholder": "Поиск видео на YouTube...",
+	"randomVideo": "Случайное видео",
+
 	"setupTitle": "Добро пожаловать в SyncTube!"
 }

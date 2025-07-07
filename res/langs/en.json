@@ -119,5 +119,9 @@
 	"keywordMode": "Keyword mode",
 	"obscureMode": "Obscure mode",
 
+	"youtubeSearch": "YouTube Search",
+	"youtubeSearchPlaceholder": "Search YouTube videos...",
+	"randomVideo": "Random video",
+
 	"setupTitle": "Welcome to SyncTube!"
 }

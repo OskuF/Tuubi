@@ -4663,12 +4663,14 @@ server_HttpServer.prototype = {
 					youtubeSearch.search(query, {limit: maxResults}).then(function(results) {
 						var videoIds = [];
 						var videoTitles = [];
+						var seenVideoIds = new Set(); // Deduplication using Set
 						
 						for (var i = 0; i < results.length; i++) {
 							var result = results[i];
 							// Extract video ID from nested structure: result.id.videoId
 							var videoId = result.id?.videoId || result.videoId || result.url?.split('v=')[1]?.split('&')[0];
-							if (videoId && typeof videoId === 'string') {
+							if (videoId && typeof videoId === 'string' && !seenVideoIds.has(videoId)) {
+								seenVideoIds.add(videoId); // Track this video ID to prevent duplicates
 								videoIds.push(videoId);
 								videoTitles.push(result.title || 'Unknown Title');
 							}
@@ -4706,7 +4708,7 @@ server_HttpServer.prototype = {
 				;
 			} catch( _g ) {
 				var e = haxe_Exception.caught(_g).unwrap();
-				haxe_Log.trace("[RANDOM VIDEO] Parse error in request body: " + Std.string(e),{ fileName : "src/server/HttpServer.hx", lineNumber : 422, className : "server.HttpServer", methodName : "handleYouTubeSearch"});
+				haxe_Log.trace("[RANDOM VIDEO] Parse error in request body: " + Std.string(e),{ fileName : "src/server/HttpServer.hx", lineNumber : 424, className : "server.HttpServer", methodName : "handleYouTubeSearch"});
 				tools_HttpServerTools.status(res,400);
 				tools_HttpServerTools.json(res,{ success : false, error : "Invalid request format"});
 			}

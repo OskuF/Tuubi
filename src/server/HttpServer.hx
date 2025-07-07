@@ -376,12 +376,14 @@ class HttpServer {
 					youtubeSearch.search({0}, {limit: {1}}).then(function(results) {
 						var videoIds = [];
 						var videoTitles = [];
+						var seenVideoIds = new Set(); // Deduplication using Set
 						
 						for (var i = 0; i < results.length; i++) {
 							var result = results[i];
 							// Extract video ID from nested structure: result.id.videoId
 							var videoId = result.id?.videoId || result.videoId || result.url?.split('v=')[1]?.split('&')[0];
-							if (videoId && typeof videoId === 'string') {
+							if (videoId && typeof videoId === 'string' && !seenVideoIds.has(videoId)) {
+								seenVideoIds.add(videoId); // Track this video ID to prevent duplicates
 								videoIds.push(videoId);
 								videoTitles.push(result.title || 'Unknown Title');
 							}

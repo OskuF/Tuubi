@@ -1242,7 +1242,7 @@ class Main {
 
 	static var cachedWordlist:Array<String>;
 
-	function getWordlist():Array<String> {
+	public function getWordlist():Array<String> {
 		if (cachedWordlist == null) {
 			final wordlistContent = haxe.Resource.getString("wordlist");
 			if (wordlistContent != null) {
@@ -1364,6 +1364,10 @@ class Main {
 		}, 10000);
 
 		addRandomYoutubeVideoWithRetry(0);
+	}
+
+	public function searchYoutubeVideos(query:String, maxResults:Int = 20, callback:(videoIds:Array<String>) -> Void):Void {
+		player.searchYoutubeVideos(query, maxResults, callback);
 	}
 
 	function addRandomYoutubeVideoWithRetry(attemptCount:Int):Void {

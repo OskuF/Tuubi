@@ -180,6 +180,10 @@
             data-target="#addfromurl" aria-expanded="false">
             <ion-icon name="add"></ion-icon>
           </button>
+          <button class="collapsed" id="showyoutubesearch" title="${youtubeSearch}" data-toggle="collapse"
+            data-target="#youtubesearch" aria-expanded="false">
+            <ion-icon name="search"></ion-icon>
+          </button>
           <button class="collapsed" id="showcustomembed" title="${embedCustomFrame}" data-toggle="collapse"
             data-target="#customembed" aria-expanded="false">
             <ion-icon name="code"></ion-icon>
@@ -238,6 +242,28 @@
           <div class="queue-buttons">
             <button id="queue_next">${queueNext}</button>
             <button id="queue_end">${queueLast}</button>
+          </div>
+        </div>
+      </div>
+      <!-- YouTube search -->
+      <div class="collapsible collapse" id="youtubesearch" aria-expanded="false">
+        <div class="collapse-list">
+          <div class="display-flex">
+            <button id="youtube_search_template" title="Search suggestions">
+              <div>&gt;</div>
+            </button>
+            <div class="mediaurl-wrap">
+              <input id="youtube-search-input" type="text" placeholder="${youtubeSearchPlaceholder}">
+              <button id="youtube-search-btn">
+                <ion-icon name="search"></ion-icon>
+              </button>
+            </div>
+          </div>
+          <div class="checkbox-row youtube-search-row">
+            <label class="checkbox-row-item">
+              <input id="add-before-date" type="checkbox">${randomVideo}
+            </label>
+            <div id="youtube-search-status"></div>
           </div>
         </div>
       </div>

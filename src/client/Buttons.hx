@@ -21,6 +21,21 @@ class Buttons {
 	static var split:Split;
 	static var settings:ClientSettings;
 
+	static function generateSearchSuggestion(main:Main):String {
+		final words = main.getWordlist();
+		
+		// Pick 1-3 random words (same logic as keyword mode)
+		final numWords = Math.floor(Math.random() * 3) + 1;
+		final selectedWords = [];
+		for (i in 0...numWords) {
+			final word = words[Math.floor(Math.random() * words.length)];
+			if (selectedWords.indexOf(word) == -1) {
+				selectedWords.push(word);
+			}
+		}
+		return selectedWords.join(" ");
+	}
+
 	public static function init(main:Main):Void {
 		settings = main.settings;
 		if (settings.isSwapped) swapPlayerAndChat();
@@ -258,6 +273,15 @@ class Buttons {
 			if (isOpen) Timer.delay(() -> {
 				getEl("#customembed").scrollIntoView();
 				getEl("#customembed-title").focus();
+			}, 100);
+		}
+
+		final showYoutubeSearch = getEl("#showyoutubesearch");
+		showYoutubeSearch.onclick = e -> {
+			final isOpen = showPlayerGroup(showYoutubeSearch);
+			if (isOpen) Timer.delay(() -> {
+				getEl("#youtubesearch").scrollIntoView();
+				getEl("#youtube-search-input").focus();
 			}, 100);
 		}
 
@@ -645,6 +669,121 @@ class Buttons {
 			}
 			Settings.write(settings);
 		});
+
+		// YouTube search functionality
+		final youtubeSearchInput:InputElement = getEl("#youtube-search-input");
+		final youtubeSearchBtn = getEl("#youtube-search-btn");
+		final youtubeSearchTemplate = getEl("#youtube_search_template");
+		final randomVideoCheckbox:InputElement = getEl("#add-before-date");
+		final youtubeSearchStatus = getEl("#youtube-search-status");
+
+		youtubeSearchTemplate.onclick = e -> {
+			// Generate a dynamic search suggestion using the wordlist
+			final suggestion = generateSearchSuggestion(main);
+			youtubeSearchInput.value = suggestion;
+			youtubeSearchInput.focus();
+		};
+
+		youtubeSearchBtn.onclick = e -> {
+			final searchTerm = youtubeSearchInput.value.trim();
+			trace('[YOUTUBE SEARCH] Search button clicked, searchTerm: "${searchTerm}"');
+			if (searchTerm == "") {
+				trace('[YOUTUBE SEARCH] Empty search term, returning');
+				return;
+			}
+
+			// Build search query
+			var query = searchTerm;
+			if (randomVideoCheckbox.checked) {
+				// Add random date range (after and before on consecutive days)
+				final currentYear = Date.now().getFullYear();
+				final year = currentYear - (Math.floor(Math.random() * 15) + 1);
+				final month = Math.floor(Math.random() * 12) + 1;
+				final day = Math.floor(Math.random() * 28) + 1;
+				final monthStr = month < 10 ? "0" + month : "" + month;
+				final dayStr = day < 10 ? "0" + day : "" + day;
+				
+				// Calculate next day for "before" parameter
+				final nextDay = day + 1;
+				final nextDayStr = nextDay < 10 ? "0" + nextDay : "" + nextDay;
+				
+				// Handle month rollover (simplified - just use same month for safety)
+				var nextMonthStr = monthStr;
+				var nextDayFormatted = nextDayStr;
+				if (nextDay > 28) {
+					// If day goes beyond 28, use next month's first day
+					final nextMonth = month + 1 > 12 ? 1 : month + 1;
+					nextMonthStr = nextMonth < 10 ? "0" + nextMonth : "" + nextMonth;
+					nextDayFormatted = "01";
+				}
+				
+				query += ' after:$year-$monthStr-$dayStr before:$year-$nextMonthStr-$nextDayFormatted';
+			}
+
+			// Show loading state
+			youtubeSearchStatus.textContent = "Searching...";
+
+			// Use more results for better randomization when random video is enabled
+			final maxResults = randomVideoCheckbox.checked ? 50 : 20;
+			trace('[YOUTUBE SEARCH] About to call main.searchYoutubeVideos with query: "${query}", maxResults: ${maxResults}');
+			
+			// Search for videos using the existing YouTube crawler
+			main.searchYoutubeVideos(query, maxResults, (videoIds:Array<String>) -> {
+				trace('[YOUTUBE SEARCH] Callback received videoIds: ${videoIds}');
+				trace('[YOUTUBE SEARCH] VideoIds length (before dedup): ${videoIds.length}');
+				
+				// Remove duplicates from the video IDs array
+				final uniqueVideoIds = [];
+				for (videoId in videoIds) {
+					if (uniqueVideoIds.indexOf(videoId) == -1) {
+						uniqueVideoIds.push(videoId);
+					}
+				}
+				
+				trace('[YOUTUBE SEARCH] VideoIds length (after dedup): ${uniqueVideoIds.length}');
+				
+				if (uniqueVideoIds.length > 0) {
+					// Select video based on random video checkbox state
+					final selectedVideoId = if (randomVideoCheckbox.checked) {
+						// Random selection when checkbox is enabled
+						final randomIndex = Math.floor(Math.random() * uniqueVideoIds.length);
+						uniqueVideoIds[randomIndex];
+					} else {
+						// First video when checkbox is disabled
+						uniqueVideoIds[0];
+					};
+					
+					final videoUrl = "https://www.youtube.com/watch?v=" + selectedVideoId;
+					trace('[YOUTUBE SEARCH] Auto-queueing video: ${videoUrl} (random: ${randomVideoCheckbox.checked})');
+					
+					// Automatically add the selected video to the end of the playlist as temporary
+					main.addVideo(videoUrl, true, true, false);
+					
+					youtubeSearchStatus.textContent = 'Video added to playlist!';
+					trace('[YOUTUBE SEARCH] Video successfully queued');
+					
+					// Clear status after 3 seconds
+					Timer.delay(() -> {
+						youtubeSearchStatus.textContent = "";
+					}, 3000);
+				} else {
+					youtubeSearchStatus.textContent = "No videos found for this search";
+					trace('[YOUTUBE SEARCH] No videos found in callback');
+					
+					// Clear status after 3 seconds
+					Timer.delay(() -> {
+						youtubeSearchStatus.textContent = "";
+					}, 3000);
+				}
+			});
+		};
+
+		// Allow Enter key to trigger search
+		youtubeSearchInput.onkeypress = e -> {
+			if (e.keyCode == 13) { // Enter key
+				youtubeSearchBtn.onclick(null);
+			}
+		};
 	}
 
 	public static function onViewportResize():Void {
