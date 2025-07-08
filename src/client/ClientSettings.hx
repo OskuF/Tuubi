@@ -19,4 +19,5 @@ typedef ClientSettings = {
 	var checkedCache:Array<PlayerType>;
 	var keywordMode:Bool;
 	var obscureMode:Bool;
+	var twitchChatEnabled:Bool;
 }

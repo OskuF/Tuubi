@@ -18,7 +18,8 @@ typedef TwitchEmbedOptions = {
 	parent:Array<String>,
 	?autoplay:Bool,
 	?muted:Bool,
-	?time:String
+	?time:String,
+	?layout:String
 }
 
 typedef TwitchPlayer = {
@@ -151,7 +152,7 @@ class Twitch implements IPlayer {
 		
 		final channelName = extractChannelName(item.url);
 		final videoId = extractVideoId(item.url);
-		final hostname = js.Browser.location.hostname;
+		final hostname = getValidTwitchParent();
 		final clientId = main.getTwitchClientId();
 		
 		// Calculate responsive dimensions based on container
@@ -168,8 +169,11 @@ class Twitch implements IPlayer {
 			height: playerHeight,
 			parent: [hostname],
 			autoplay: true,
-			muted: !main.isAutoplayAllowed()
+			muted: !main.isAutoplayAllowed(),
+			layout: main.settings.twitchChatEnabled ? "video-with-chat" : "video"
 		};
+		
+		trace('Twitch embed - channel: "$channelName", video: "$videoId", layout: ${embedOptions.layout}, twitchChatEnabled: ${main.settings.twitchChatEnabled}');
 		
 		if (channelName != "") {
 			embedOptions.channel = channelName;
@@ -269,6 +273,29 @@ class Twitch implements IPlayer {
 
 	function isTwitchSDKLoaded():Bool {
 		return js.Syntax.code("typeof Twitch !== 'undefined' && typeof Twitch.Embed !== 'undefined'");
+	}
+
+	function getValidTwitchParent():String {
+		final hostname = js.Browser.location.hostname;
+		
+		// For localhost and IP addresses, return localhost
+		if (hostname == "localhost" || hostname == "127.0.0.1") {
+			return "localhost";
+		}
+		
+		// For IP addresses (IPv4), use localhost
+		if (~/^\d+\.\d+\.\d+\.\d+$/.match(hostname)) {
+			return "localhost";
+		}
+		
+		// For Windows machine names or other non-domain hostnames, use localhost
+		// Valid domain names should contain at least one dot
+		if (hostname.indexOf(".") == -1) {
+			return "localhost";
+		}
+		
+		// For valid domain names, return as-is
+		return hostname;
 	}
 
 	public function removeVideo():Void {

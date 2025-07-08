@@ -69,6 +69,8 @@
 	"chat": "Чат",
 	"kicked": "Выпнут",
 	"clearChat": "Очистить чат",
+	"twitchChatEnabled": "Показать чат Twitch",
+	"adminControls": "Управление администратора",
 	"chatlinePlaceholder": "Введите сообщение...",
 	"leaderDisconnectedServerOnPause": "Лидер вышел, сервер на паузе.",
 	"unpause": "Возобновить",

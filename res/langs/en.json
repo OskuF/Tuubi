@@ -69,6 +69,8 @@
 	"chat": "Chat",
 	"kicked": "Kicked",
 	"clearChat": "Clear Chat",
+	"twitchChatEnabled": "Show Twitch Chat",
+	"adminControls": "Admin Controls",
 	"chatlinePlaceholder": "Send a message...",
 	"leaderDisconnectedServerOnPause": "Leader was disconnected, server on pause.",
 	"unpause": "Unpause",

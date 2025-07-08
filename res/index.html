@@ -351,8 +351,20 @@
               </label>
             </div>
           </div>
-          <div id="adminMenu" style="display: none;">
+          <div id="chatSettings">
             <h4>${chat}</h4>
+            <div class="settings-subsection">
+              <h5>Twitch Settings</h5>
+              <div class="checkbox-row">
+                <label class="checkbox-row-item">
+                  <input id="twitchChatEnabled" type="checkbox" checked> 
+                  <span>${twitchChatEnabled}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div id="adminMenu" style="display: none;">
+            <h4>${adminControls}</h4>
             <li><button id="clearchatbtn"><span>${clearChat}</span></button></li>
           </div>
         </div>

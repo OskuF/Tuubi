@@ -30,7 +30,7 @@ import js.html.WebSocket;
 
 class Main {
 	public static var instance(default, null):Main;
-	static inline var SETTINGS_VERSION = 7;
+	static inline var SETTINGS_VERSION = 8;
 	static inline var MAX_CHAT_MESSAGES = 200;
 
 	public final settings:ClientSettings;
@@ -126,6 +126,7 @@ class Main {
 			checkedCache: [],
 			keywordMode: true,
 			obscureMode: false,
+			twitchChatEnabled: true,
 		}
 		Settings.init(defaults, settingsPatcher);
 		settings = Settings.read();
@@ -194,6 +195,9 @@ class Main {
 				final data:ClientSettings = data;
 				data.keywordMode = true;
 				data.obscureMode = false;
+			case 7:
+				final data:ClientSettings = data;
+				data.twitchChatEnabled = true;
 			case SETTINGS_VERSION, _:
 				throw 'skipped version $version';
 		}

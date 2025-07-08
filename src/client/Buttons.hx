@@ -670,6 +670,21 @@ class Buttons {
 			Settings.write(settings);
 		});
 
+		// Twitch chat toggle checkbox
+		final twitchChatCheckbox:InputElement = getEl("#twitchChatEnabled");
+		
+		// Initialize checkbox state from settings
+		twitchChatCheckbox.checked = settings.twitchChatEnabled;
+		
+		twitchChatCheckbox.addEventListener("change", () -> {
+			settings.twitchChatEnabled = twitchChatCheckbox.checked;
+			Settings.write(settings);
+			
+			// Refresh the player to apply the new chat setting
+			// This will work for any Twitch video currently playing
+			main.refreshPlayer();
+		});
+
 		// YouTube search functionality
 		final youtubeSearchInput:InputElement = getEl("#youtube-search-input");
 		final youtubeSearchBtn = getEl("#youtube-search-btn");
