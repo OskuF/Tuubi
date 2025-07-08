@@ -9,6 +9,7 @@ import client.players.Iframe;
 import client.players.Peertube;
 import client.players.Raw;
 import client.players.Streamable;
+import client.players.Twitch;
 import client.players.Vk;
 import client.players.Youtube;
 import haxe.Http;
@@ -49,6 +50,7 @@ class Player {
 			new Vk(main, this),
 			new Streamable(main, this),
 			new Peertube(main, this),
+			new Twitch(main, this),
 		];
 		iframePlayer = new Iframe(main, this);
 		rawPlayer = new Raw(main, this);
@@ -240,6 +242,7 @@ class Player {
 		final currentPlayer = players.find(p -> p.isSupportedLink(url));
 		if (currentPlayer != null) setPlayer(currentPlayer);
 		else if (playerType == IframeType) setPlayer(iframePlayer);
+		else if (playerType == TwitchType) setPlayer(players.find(p -> p.getPlayerType() == TwitchType));
 		else setPlayer(rawPlayer);
 	}
 

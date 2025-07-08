@@ -21,6 +21,7 @@
 	"youtubeRegion": "FI",
 	"allowAgeRestrictedVideos": false,
 	"strictEmbeddingChecks": true,
+	"twitchClientId": "",
 	"cacheStorageLimitGiB": 3.0,
 	"allowedFileTypes": ["mp4", "mp3", "webm"],
 	"permissions": {

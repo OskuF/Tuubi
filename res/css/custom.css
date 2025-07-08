@@ -2,3 +2,24 @@
   Create user/res/css/custom.css
   in project folder to override this file.
 */
+
+/* Twitch Player Responsive Styling */
+div[id^="twitch-embed"] {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 80vh !important;
+  aspect-ratio: 16 / 9;
+}
+
+div[id^="twitch-embed"] iframe {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: inherit !important;
+}
+
+/* Ensure Twitch player responds to mobile viewport */
+@media only screen and (orientation: portrait) {
+  div[id^="twitch-embed"] {
+    max-height: 30vh !important;
+  }
+}

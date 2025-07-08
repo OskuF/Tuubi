@@ -3039,6 +3039,10 @@ class Main {
 		return config.youtubeApiKey;
 	}
 
+	public function getTwitchClientId():String {
+		return config.twitchClientId;
+	}
+
 	public function getRandomVideoApiKey():String {
 		if (config.randomVideoYoutubeApiKey != null && config.randomVideoYoutubeApiKey != "") {
 			return config.randomVideoYoutubeApiKey;

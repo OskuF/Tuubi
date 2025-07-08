@@ -5039,6 +5039,9 @@ client_Main.prototype = {
 	,getYoutubeApiKey: function() {
 		return this.config.youtubeApiKey;
 	}
+	,getTwitchClientId: function() {
+		return this.config.twitchClientId;
+	}
 	,getRandomVideoApiKey: function() {
 		if(this.config.randomVideoYoutubeApiKey != null && this.config.randomVideoYoutubeApiKey != "") {
 			return this.config.randomVideoYoutubeApiKey;
@@ -5244,7 +5247,7 @@ var client_Player = function(main) {
 	var _gthis = this;
 	this.main = main;
 	this.youtube = new client_players_Youtube(main,this);
-	this.players = [this.youtube,new client_players_Vk(main,this),new client_players_Streamable(main,this),new client_players_Peertube(main,this)];
+	this.players = [this.youtube,new client_players_Vk(main,this),new client_players_Streamable(main,this),new client_players_Peertube(main,this),new client_players_Twitch(main,this)];
 	this.iframePlayer = new client_players_Iframe(main,this);
 	this.rawPlayer = new client_players_Raw(main,this);
 	this.initItemButtons();
@@ -5410,7 +5413,7 @@ client_Player.prototype = {
 			return _gthis.isAudioTrackLoaded = true;
 		};
 		this.audioTrack.onerror = function(e) {
-			haxe_Log.trace(e,{ fileName : "src/client/Player.hx", lineNumber : 220, className : "client.Player", methodName : "setExternalAudioTrack"});
+			haxe_Log.trace(e,{ fileName : "src/client/Player.hx", lineNumber : 222, className : "client.Player", methodName : "setExternalAudioTrack"});
 			_gthis.audioTrack.oncanplay = null;
 			_gthis.audioTrack.onerror = null;
 			_gthis.isAudioTrackLoaded = false;
@@ -5440,6 +5443,10 @@ client_Player.prototype = {
 			this.setPlayer(currentPlayer);
 		} else if(playerType == "IframeType") {
 			this.setPlayer(this.iframePlayer);
+		} else if(playerType == "TwitchType") {
+			this.setPlayer(Lambda.find(this.players,function(p) {
+				return p.getPlayerType() == "TwitchType";
+			}));
 		} else {
 			this.setPlayer(this.rawPlayer);
 		}
@@ -5975,7 +5982,7 @@ client_Player.prototype = {
 			}
 		};
 		http.onError = function(msg) {
-			haxe_Log.trace(msg,{ fileName : "src/client/Player.hx", lineNumber : 743, className : "client.Player", methodName : "skipAd"});
+			haxe_Log.trace(msg,{ fileName : "src/client/Player.hx", lineNumber : 746, className : "client.Player", methodName : "skipAd"});
 		};
 		http.request();
 	}
@@ -7207,6 +7214,237 @@ client_players_Streamable.prototype = $extend(client_players_Raw.prototype,{
 	}
 	,__class__: client_players_Streamable
 });
+var client_players_Twitch = function(main,player) {
+	this.isLoaded = false;
+	this.playerEl = window.document.querySelector("#ytapiplayer");
+	this.main = main;
+	this.player = player;
+};
+client_players_Twitch.__name__ = true;
+client_players_Twitch.__interfaces__ = [client_IPlayer];
+client_players_Twitch.prototype = {
+	getPlayerType: function() {
+		return "TwitchType";
+	}
+	,isSupportedLink: function(url) {
+		if(this.extractChannelName(url) == "") {
+			return this.extractVideoId(url) != "";
+		} else {
+			return true;
+		}
+	}
+	,extractChannelName: function(url) {
+		var channelRegex = new EReg("^https?://(?:www\\.)?twitch\\.tv/([a-zA-Z0-9_]+)(?:/.*)?$","");
+		if(channelRegex.match(url)) {
+			return channelRegex.matched(1);
+		}
+		return "";
+	}
+	,extractVideoId: function(url) {
+		var videoRegex = new EReg("^https?://(?:www\\.)?twitch\\.tv/videos/([0-9]+)(?:/.*)?$","");
+		if(videoRegex.match(url)) {
+			return videoRegex.matched(1);
+		}
+		return "";
+	}
+	,getVideoData: function(data,callback) {
+		var url = data.url;
+		var channelName = this.extractChannelName(url);
+		var videoId = this.extractVideoId(url);
+		if(channelName != "" || videoId != "") {
+			callback({ duration : 356400, title : channelName != "" ? "Twitch: " + channelName : "Twitch Video: " + videoId, url : url});
+		} else {
+			callback({ duration : 0});
+		}
+	}
+	,loadVideo: function(item) {
+		var _gthis = this;
+		if(!this.isTwitchSDKLoaded()) {
+			window.setTimeout(function() {
+				_gthis.loadVideo(item);
+			},100);
+			return;
+		}
+		this.removeVideo();
+		this.isLoaded = false;
+		this.video = window.document.createElement("div");
+		this.video.id = "videoplayer";
+		this.playerEl.appendChild(this.video);
+		var channelName = this.extractChannelName(item.url);
+		var videoId = this.extractVideoId(item.url);
+		var hostname = $global.location.hostname;
+		this.main.getTwitchClientId();
+		var containerWidth = this.playerEl.clientWidth;
+		var playerWidth = containerWidth > 0 ? containerWidth : 854;
+		var embedOptions = { width : playerWidth, height : Math.round(playerWidth / 1.7777777777777777), parent : [hostname], autoplay : true, muted : !this.main.isAutoplayAllowed()};
+		if(channelName != "") {
+			embedOptions.channel = channelName;
+		} else if(videoId != "") {
+			embedOptions.video = videoId;
+		}
+		try {
+			var embedId = "twitch-embed-" + Math.floor(Math.random() * 10000);
+			this.video.id = embedId;
+			this.twitchEmbed = new Twitch.Embed(embedId,embedOptions);
+			this.twitchEmbed.addEventListener("Twitch.Embed.VIDEO_READY",$bind(this,this.onVideoReady));
+			this.video.style.width = "100%";
+			this.video.style.height = "100%";
+			this.video.style.maxHeight = "80vh";
+			this.setupResizeObserver();
+		} catch( _g ) {
+			haxe_Log.trace("Twitch embed error: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/players/Twitch.hx", lineNumber : 199, className : "client.players.Twitch", methodName : "loadVideo"});
+			this.main.serverMessage("Error loading Twitch stream",false);
+			this.removeVideo();
+		}
+	}
+	,onVideoReady: function(e) {
+		this.twitchPlayer = this.twitchEmbed.getPlayer();
+		this.twitchPlayer.addEventListener("play",$bind(this,this.onPlay));
+		this.twitchPlayer.addEventListener("pause",$bind(this,this.onPause));
+		this.twitchPlayer.addEventListener("seek",$bind(this,this.onSeek));
+		this.twitchPlayer.addEventListener("ready",$bind(this,this.onReady));
+		this.isLoaded = true;
+		if(this.main.lastState.paused) {
+			this.twitchPlayer.pause();
+		}
+		this.player.onCanBePlayed();
+	}
+	,onReady: function(e) {
+		if(this.onReadyCallback != null) {
+			this.onReadyCallback();
+		}
+	}
+	,onPlay: function(e) {
+		this.player.onPlay();
+		if(this.onPlayCallback != null) {
+			this.onPlayCallback();
+		}
+	}
+	,onPause: function(e) {
+		this.player.onPause();
+		if(this.onPauseCallback != null) {
+			this.onPauseCallback();
+		}
+	}
+	,onSeek: function(e) {
+		this.player.onSetTime();
+		if(this.onSeekCallback != null) {
+			this.onSeekCallback();
+		}
+	}
+	,setupResizeObserver: function() {
+		if(typeof ResizeObserver !== 'undefined') {
+			this.resizeObserver = new ResizeObserver(function(entries) {
+				// Throttle resize events to avoid performance issues
+				clearTimeout(this.resizeTimeout);
+				this.resizeTimeout = setTimeout(function() {
+					if (video && video.style) {
+						// Ensure the container maintains responsive behavior
+						video.style.width = '100%';
+						video.style.height = '100%';
+					}
+				}, 100);
+			});
+			this.resizeObserver.observe(this.playerEl);
+		}
+	}
+	,isTwitchSDKLoaded: function() {
+		return typeof Twitch !== 'undefined' && typeof Twitch.Embed !== 'undefined';
+	}
+	,removeVideo: function() {
+		if(this.video == null) {
+			return;
+		}
+		if(this.twitchEmbed != null) {
+			try {
+				this.twitchEmbed.removeEventListener("Twitch.Embed.VIDEO_READY",$bind(this,this.onVideoReady));
+			} catch( _g ) {
+				haxe_Log.trace("Error removing Twitch embed listeners: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/players/Twitch.hx", lineNumber : 281, className : "client.players.Twitch", methodName : "removeVideo"});
+			}
+		}
+		if(this.twitchPlayer != null) {
+			try {
+				this.twitchPlayer.removeEventListener("play",$bind(this,this.onPlay));
+				this.twitchPlayer.removeEventListener("pause",$bind(this,this.onPause));
+				this.twitchPlayer.removeEventListener("seek",$bind(this,this.onSeek));
+				this.twitchPlayer.removeEventListener("ready",$bind(this,this.onReady));
+			} catch( _g ) {
+				haxe_Log.trace("Error removing Twitch player listeners: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/players/Twitch.hx", lineNumber : 292, className : "client.players.Twitch", methodName : "removeVideo"});
+			}
+		}
+		if(this.resizeObserver != null) {
+			try {
+				this.resizeObserver.disconnect();
+				this.resizeObserver = null;
+			} catch( _g ) {
+				haxe_Log.trace("Error cleaning up resize observer: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/players/Twitch.hx", lineNumber : 302, className : "client.players.Twitch", methodName : "removeVideo"});
+			}
+		}
+		this.isLoaded = false;
+		this.twitchEmbed = null;
+		this.twitchPlayer = null;
+		if(this.playerEl.contains(this.video)) {
+			this.playerEl.removeChild(this.video);
+		}
+		this.video = null;
+	}
+	,isVideoLoaded: function() {
+		if(this.isLoaded) {
+			return this.twitchPlayer != null;
+		} else {
+			return false;
+		}
+	}
+	,play: function() {
+		if(this.twitchPlayer != null) {
+			this.twitchPlayer.play();
+		}
+	}
+	,pause: function() {
+		if(this.twitchPlayer != null) {
+			this.twitchPlayer.pause();
+		}
+	}
+	,isPaused: function() {
+		if(this.twitchPlayer != null) {
+			return this.twitchPlayer.isPaused();
+		}
+		return false;
+	}
+	,getTime: function() {
+		if(this.twitchPlayer != null) {
+			return this.twitchPlayer.getCurrentTime();
+		}
+		return 0;
+	}
+	,setTime: function(time) {
+		if(this.twitchPlayer != null) {
+			this.twitchPlayer.seek(time);
+		}
+	}
+	,getPlaybackRate: function() {
+		return 1.0;
+	}
+	,setPlaybackRate: function(rate) {
+	}
+	,getVolume: function() {
+		if(this.twitchPlayer != null) {
+			return this.twitchPlayer.getVolume();
+		}
+		return 1.0;
+	}
+	,setVolume: function(volume) {
+		if(this.twitchPlayer != null) {
+			this.twitchPlayer.setVolume(volume);
+		}
+	}
+	,unmute: function() {
+		if(this.twitchPlayer != null) {
+			this.twitchPlayer.setMuted(false);
+		}
+	}
+	,__class__: client_players_Twitch
+};
 var client_players_Vk = function(main,player) {
 	this.matchIds = new EReg("video(-?[0-9]+)_([0-9]+)","g");
 	this.matchVk = new EReg("(vk.com/video|vkvideo)","g");

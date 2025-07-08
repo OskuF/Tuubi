@@ -6,6 +6,7 @@ enum abstract PlayerType(String) {
 	var RawType;
 	var YoutubeType;
 	var VkType;
+	var TwitchType;
 	var IframeType;
 }
 
@@ -52,6 +53,7 @@ typedef Config = {
 	youtubeRegion:String,
 	allowAgeRestrictedVideos:Bool,
 	strictEmbeddingChecks:Bool,
+	twitchClientId:String,
 	cacheStorageLimitGiB:Float,
 	permissions:Permissions,
 	emotes:Array<Emote>,
