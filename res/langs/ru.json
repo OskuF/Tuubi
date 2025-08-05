@@ -45,6 +45,7 @@
 	"exit": "Выход",
 	"settings": "Настройки",
 	"synchThreshold": "Частота синхронизации",
+	"defaultSkipSeconds": "Пропуск по умолчанию",
 	"general": "Основное",
 	"hotkeys": "Горячие клавиши",
 	"video": "Видео",

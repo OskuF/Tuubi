@@ -30,7 +30,7 @@ import js.html.WebSocket;
 
 class Main {
 	public static var instance(default, null):Main;
-	static inline var SETTINGS_VERSION = 8;
+	static inline var SETTINGS_VERSION = 9;
 	static inline var MAX_CHAT_MESSAGES = 200;
 
 	public final settings:ClientSettings;
@@ -127,6 +127,7 @@ class Main {
 			keywordMode: true,
 			obscureMode: false,
 			twitchChatEnabled: true,
+			defaultSkipSeconds: 10.0,
 		}
 		Settings.init(defaults, settingsPatcher);
 		settings = Settings.read();
@@ -198,6 +199,9 @@ class Main {
 			case 7:
 				final data:ClientSettings = data;
 				data.twitchChatEnabled = true;
+			case 8:
+				final data:ClientSettings = data;
+				data.defaultSkipSeconds = 10.0;
 			case SETTINGS_VERSION, _:
 				throw 'skipped version $version';
 		}
@@ -2813,6 +2817,21 @@ class Main {
 				return true;
 			case "dump":
 				send({type: Dump});
+				return true;
+			case "skip":
+				var seconds = settings.defaultSkipSeconds;
+				if (args.length > 0) {
+					var parsed = Std.parseFloat(args[0]);
+					if (!Math.isNaN(parsed)) {
+						seconds = parsed;
+					}
+				}
+				send({
+					type: Rewind,
+					rewind: {
+						time: seconds
+					}
+				});
 				return true;
 		}
 		if (matchSimpleDate.match(command)) {

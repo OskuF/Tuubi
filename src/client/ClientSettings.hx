@@ -20,4 +20,5 @@ typedef ClientSettings = {
 	var keywordMode:Bool;
 	var obscureMode:Bool;
 	var twitchChatEnabled:Bool;
+	var defaultSkipSeconds:Float;
 }

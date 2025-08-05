@@ -471,6 +471,43 @@ class Buttons {
 		}
 		updateSynchThresholdBtn();
 
+		// Draggable default skip seconds
+		final defaultSkipValue = getEl("#default-skip-value");
+		if (defaultSkipValue != null) {
+			defaultSkipValue.innerText = Std.string(Std.int(settings.defaultSkipSeconds));
+			
+			var isDragging = false;
+			var lastMouseX = 0.0;
+			var startValue = 0.0;
+			var onDocumentMouseMove:js.html.MouseEvent -> Void = null;
+			var onDocumentMouseUp:js.html.MouseEvent -> Void = null;
+			
+			onDocumentMouseMove = (e:js.html.MouseEvent) -> {
+				if (!isDragging) return;
+				final deltaX = e.clientX - lastMouseX;
+				final newValue = Math.max(1, Math.round(startValue + deltaX / 5)); // 5 pixels = 1 second
+				settings.defaultSkipSeconds = newValue;
+				Settings.write(settings);
+				defaultSkipValue.innerText = Std.string(Std.int(newValue));
+			};
+			
+			onDocumentMouseUp = (e:js.html.MouseEvent) -> {
+				isDragging = false;
+				js.Browser.document.removeEventListener("mousemove", onDocumentMouseMove);
+				js.Browser.document.removeEventListener("mouseup", onDocumentMouseUp);
+			};
+			
+			defaultSkipValue.onmousedown = (e:js.html.MouseEvent) -> {
+				isDragging = true;
+				lastMouseX = e.clientX;
+				startValue = settings.defaultSkipSeconds;
+				e.preventDefault();
+				
+				js.Browser.document.addEventListener("mousemove", onDocumentMouseMove);
+				js.Browser.document.addEventListener("mouseup", onDocumentMouseUp);
+			};
+		}
+
 		final hotkeysBtn = getEl("#hotkeysBtn");
 		hotkeysBtn.onclick = e -> {
 			settings.hotkeysEnabled = !settings.hotkeysEnabled;

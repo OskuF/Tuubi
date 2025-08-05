@@ -45,6 +45,7 @@
 	"exit": "Exit",
 	"settings": "Settings",
 	"synchThreshold": "Synch Threshold",
+	"defaultSkipSeconds": "Default Skip",
 	"general": "General",
 	"hotkeys": "Hotkeys",
 	"video": "Video",
