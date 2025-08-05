@@ -74,8 +74,8 @@ class JsApi {
 
 	@:expose
 	static function addVideoItem(url:String, atEnd:Bool, isTemp:Bool, ?callback:() ->
-		Void, doCache = false):Void {
-		main.addVideo(url, atEnd, isTemp, doCache, callback);
+		Void, doCache = false, isAnime = false):Void {
+		main.addVideo(url, atEnd, isTemp, doCache, isAnime, callback);
 	}
 
 	@:expose

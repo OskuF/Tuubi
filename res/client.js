@@ -504,7 +504,7 @@ StringTools.hex = function(n,digits) {
 var _$Types_VideoItemTools = function() { };
 _$Types_VideoItemTools.__name__ = true;
 _$Types_VideoItemTools.withUrl = function(item,url) {
-	return { url : url, title : item.title, author : item.author, duration : item.duration, subs : item.subs, voiceOverTrack : item.voiceOverTrack, isTemp : item.isTemp, doCache : item.doCache, playerType : item.playerType};
+	return { url : url, title : item.title, author : item.author, duration : item.duration, subs : item.subs, voiceOverTrack : item.voiceOverTrack, isTemp : item.isTemp, doCache : item.doCache, isAnime : item.isAnime, playerType : item.playerType};
 };
 var VideoList = function() {
 	this.items = [];
@@ -560,6 +560,439 @@ VideoList.prototype = {
 		}
 	}
 	,__class__: VideoList
+};
+var client__$AnimeTranslationService_ContentType = $hxEnums["client._AnimeTranslationService.ContentType"] = { __ename__:true,__constructs__:null
+	,MainSeries: {_hx_name:"MainSeries",_hx_index:0,__enum__:"client._AnimeTranslationService.ContentType",toString:$estr}
+	,Season: {_hx_name:"Season",_hx_index:1,__enum__:"client._AnimeTranslationService.ContentType",toString:$estr}
+	,Movie: {_hx_name:"Movie",_hx_index:2,__enum__:"client._AnimeTranslationService.ContentType",toString:$estr}
+	,Special: {_hx_name:"Special",_hx_index:3,__enum__:"client._AnimeTranslationService.ContentType",toString:$estr}
+	,Recap: {_hx_name:"Recap",_hx_index:4,__enum__:"client._AnimeTranslationService.ContentType",toString:$estr}
+};
+client__$AnimeTranslationService_ContentType.__constructs__ = [client__$AnimeTranslationService_ContentType.MainSeries,client__$AnimeTranslationService_ContentType.Season,client__$AnimeTranslationService_ContentType.Movie,client__$AnimeTranslationService_ContentType.Special,client__$AnimeTranslationService_ContentType.Recap];
+var client_AnimeTranslationService = function() { };
+client_AnimeTranslationService.__name__ = true;
+client_AnimeTranslationService.getTitleVariations = function(originalTitle,callback) {
+	if(originalTitle == null || StringTools.trim(originalTitle) == "") {
+		callback(originalTitle,[]);
+		return;
+	}
+	client_AnimeTranslationService.translateToEnglish(StringTools.trim(originalTitle),function(primaryTitle) {
+		var variations = client_AnimeTranslationService.generateTitleVariations(primaryTitle);
+		haxe_Log.trace("Title variations for \"" + originalTitle + "\": primary=\"" + primaryTitle + "\", variations=[" + variations.join(", ") + "]",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 52, className : "client.AnimeTranslationService", methodName : "getTitleVariations"});
+		callback(primaryTitle,variations);
+	});
+};
+client_AnimeTranslationService.translateToEnglish = function(originalTitle,callback) {
+	if(originalTitle == null || StringTools.trim(originalTitle) == "") {
+		callback(originalTitle);
+		return;
+	}
+	var trimmedTitle = StringTools.trim(originalTitle);
+	if(Object.prototype.hasOwnProperty.call(client_AnimeTranslationService.titleTranslationCache.h,trimmedTitle)) {
+		var cachedTimestamp = client_AnimeTranslationService.cacheTimestamps.h[trimmedTitle];
+		var now = new Date().getTime();
+		if(cachedTimestamp != null && now - cachedTimestamp < client_AnimeTranslationService.CACHE_EXPIRATION) {
+			var cachedTitle = client_AnimeTranslationService.titleTranslationCache.h[trimmedTitle];
+			haxe_Log.trace("Cache hit for anime title: \"" + trimmedTitle + "\" -> \"" + cachedTitle + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 78, className : "client.AnimeTranslationService", methodName : "translateToEnglish"});
+			callback(cachedTitle);
+			return;
+		} else {
+			var _this = client_AnimeTranslationService.titleTranslationCache;
+			if(Object.prototype.hasOwnProperty.call(_this.h,trimmedTitle)) {
+				delete(_this.h[trimmedTitle]);
+			}
+			var _this = client_AnimeTranslationService.cacheTimestamps;
+			if(Object.prototype.hasOwnProperty.call(_this.h,trimmedTitle)) {
+				delete(_this.h[trimmedTitle]);
+			}
+			haxe_Log.trace("Cache expired for anime title: \"" + trimmedTitle + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 85, className : "client.AnimeTranslationService", methodName : "translateToEnglish"});
+		}
+	}
+	client_AnimeTranslationService.searchAniListAnime(trimmedTitle,callback);
+};
+client_AnimeTranslationService.searchAniListAnime = function(searchTitle,callback) {
+	haxe_Log.trace("Searching AniList for anime title: \"" + searchTitle + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 97, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+	var query = { query : "query ($" + "search: String!) {\r\n\t\t\t\tPage(page: 1, perPage: 5) {\r\n\t\t\t\t\tmedia(search: $" + "search, type: ANIME) {\r\n\t\t\t\t\t\tid\r\n\t\t\t\t\t\ttitle {\r\n\t\t\t\t\t\t\tromaji\r\n\t\t\t\t\t\t\tenglish\r\n\t\t\t\t\t\t\tnative\r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t\tsynonyms\r\n\t\t\t\t\t\tstartDate {\r\n\t\t\t\t\t\t\tyear\r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t}\r\n\t\t\t\t}\r\n\t\t\t}", variables : { search : searchTitle}};
+	var http = new haxe_http_HttpJs(client_AnimeTranslationService.ANILIST_API_URL);
+	http.addHeader("Content-Type","application/json");
+	http.addHeader("Accept","application/json");
+	http.setPostData(JSON.stringify(query));
+	http.onData = function(text) {
+		try {
+			var response = JSON.parse(text);
+			if(response.errors != null) {
+				haxe_Log.trace("AniList GraphQL errors: " + JSON.stringify(response.errors),{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 132, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+				client_AnimeTranslationService.fallbackToOriginal(searchTitle,callback);
+				return;
+			}
+			if(response.data != null && response.data.Page != null && response.data.Page.media != null) {
+				var mediaList = response.data.Page.media;
+				if(mediaList.length == 0) {
+					haxe_Log.trace("No anime found on AniList for: \"" + searchTitle + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 141, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+					client_AnimeTranslationService.fallbackToOriginal(searchTitle,callback);
+					return;
+				}
+				var bestMatch = client_AnimeTranslationService.findBestMatch(searchTitle,mediaList);
+				if(bestMatch != null) {
+					var englishTitle = client_AnimeTranslationService.extractEnglishTitle(bestMatch);
+					if(englishTitle != null && englishTitle != searchTitle) {
+						client_AnimeTranslationService.cacheTranslation(searchTitle,englishTitle);
+						haxe_Log.trace("Successfully translated: \"" + searchTitle + "\" -> \"" + englishTitle + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 154, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+						callback(englishTitle);
+					} else {
+						haxe_Log.trace("No suitable English title found for: \"" + searchTitle + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 157, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+						client_AnimeTranslationService.fallbackToOriginal(searchTitle,callback);
+					}
+				} else {
+					haxe_Log.trace("No good match found for: \"" + searchTitle + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 161, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+					client_AnimeTranslationService.fallbackToOriginal(searchTitle,callback);
+				}
+			} else {
+				haxe_Log.trace("Invalid response structure from AniList",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 165, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+				client_AnimeTranslationService.fallbackToOriginal(searchTitle,callback);
+			}
+		} catch( _g ) {
+			haxe_Log.trace("Error parsing AniList response: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 170, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+			client_AnimeTranslationService.fallbackToOriginal(searchTitle,callback);
+		}
+	};
+	http.onError = function(msg) {
+		haxe_Log.trace("AniList API error: " + msg,{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 176, className : "client.AnimeTranslationService", methodName : "searchAniListAnime"});
+		client_AnimeTranslationService.fallbackToOriginal(searchTitle,callback);
+	};
+	http.request();
+};
+client_AnimeTranslationService.normalizeForComparison = function(title) {
+	return StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(StringTools.trim(title.toLowerCase())," ",""),".",""),":",""),"-",""),"×","x"),"!","");
+};
+client_AnimeTranslationService.isNearExactMatch = function(search,candidate) {
+	var searchClean = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(search," ",""),".",""),":",""),"-","");
+	var candidateClean = StringTools.replace(StringTools.replace(StringTools.replace(StringTools.replace(candidate," ",""),".",""),":",""),"-","");
+	if(searchClean == candidateClean) {
+		return true;
+	}
+	if(Math.min(searchClean.length,candidateClean.length) / Math.max(searchClean.length,candidateClean.length) > 0.9) {
+		if(searchClean.indexOf(candidateClean) == -1) {
+			return candidateClean.indexOf(searchClean) != -1;
+		} else {
+			return true;
+		}
+	}
+	return false;
+};
+client_AnimeTranslationService.findBestMatch = function(searchTitle,mediaList) {
+	if(mediaList.length == 0) {
+		return null;
+	}
+	var searchLower = StringTools.trim(searchTitle.toLowerCase());
+	var bestMatch = null;
+	var bestScore = 0.0;
+	haxe_Log.trace("Finding best match for: \"" + searchTitle + "\" among " + mediaList.length + " results",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 225, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+	var _g = 0;
+	while(_g < mediaList.length) {
+		var media = mediaList[_g];
+		++_g;
+		var score = 0.0;
+		var contentType = client_AnimeTranslationService.detectContentType(media);
+		var title = media.title;
+		if(title == null) {
+			continue;
+		}
+		var hasExactMatch = false;
+		if(title.english != null) {
+			var englishNormalized = client_AnimeTranslationService.normalizeForComparison(title.english);
+			var searchNormalized = client_AnimeTranslationService.normalizeForComparison(searchTitle);
+			if(englishNormalized == searchNormalized) {
+				score = 20.;
+				hasExactMatch = true;
+				haxe_Log.trace("  Exact English match: \"" + title.english + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 243, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			} else if(client_AnimeTranslationService.isNearExactMatch(searchNormalized,englishNormalized)) {
+				score = 15.;
+				hasExactMatch = true;
+				haxe_Log.trace("  Near-exact English match: \"" + title.english + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 247, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			}
+		}
+		if(title.romaji != null && !hasExactMatch) {
+			var romajiNormalized = client_AnimeTranslationService.normalizeForComparison(title.romaji);
+			var searchNormalized1 = client_AnimeTranslationService.normalizeForComparison(searchTitle);
+			if(romajiNormalized == searchNormalized1) {
+				score += 18.0;
+				hasExactMatch = true;
+				haxe_Log.trace("  Exact romaji match: \"" + title.romaji + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 257, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			} else if(client_AnimeTranslationService.isNearExactMatch(searchNormalized1,romajiNormalized)) {
+				score += 13.0;
+				hasExactMatch = true;
+				haxe_Log.trace("  Near-exact romaji match: \"" + title.romaji + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 261, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			}
+		}
+		if(!hasExactMatch) {
+			if(title.english != null) {
+				var similarity = client_AnimeTranslationService.calculateTitleSimilarity(searchLower,StringTools.trim(title.english.toLowerCase()));
+				score += similarity * 2.0;
+				haxe_Log.trace("  English similarity: \"" + title.english + "\" = " + similarity,{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 271, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			}
+			if(title.romaji != null) {
+				var similarity1 = client_AnimeTranslationService.calculateTitleSimilarity(searchLower,StringTools.trim(title.romaji.toLowerCase()));
+				score += similarity1 * 1.8;
+				haxe_Log.trace("  Romaji similarity: \"" + title.romaji + "\" = " + similarity1,{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 277, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			}
+			if(title.native != null) {
+				score += client_AnimeTranslationService.calculateTitleSimilarity(searchLower,StringTools.trim(title.native.toLowerCase())) * 0.5;
+			}
+			if(media.synonyms != null) {
+				var synonyms = media.synonyms;
+				var _g1 = 0;
+				while(_g1 < synonyms.length) {
+					var synonym = synonyms[_g1];
+					++_g1;
+					if(synonym != null) {
+						var synonymStr = Std.string(synonym);
+						var synonymNormalized = StringTools.trim(synonymStr.toLowerCase());
+						if(synonymNormalized == searchLower) {
+							score += 8.0;
+							haxe_Log.trace("  Exact synonym match: \"" + synonymStr + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 295, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+						} else {
+							score += client_AnimeTranslationService.calculateTitleSimilarity(searchLower,synonymNormalized);
+						}
+					}
+				}
+			}
+		}
+		switch(contentType._hx_index) {
+		case 0:
+			score += 1.0;
+			haxe_Log.trace("  Main series bonus applied",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 309, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			break;
+		case 1:
+			score += 0.5;
+			break;
+		case 2:
+			score -= 2.0;
+			haxe_Log.trace("  Movie penalty applied",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 314, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			break;
+		case 3:
+			score -= 1.5;
+			haxe_Log.trace("  Special penalty applied",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 317, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			break;
+		case 4:
+			score -= 3.0;
+			haxe_Log.trace("  Recap penalty applied",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 320, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+			break;
+		}
+		if(media.startDate != null && media.startDate.year != null) {
+			var year = media.startDate.year;
+			if(contentType == client__$AnimeTranslationService_ContentType.MainSeries && year >= 2000 && year <= 2020) {
+				score += 0.3;
+			}
+			if((contentType == client__$AnimeTranslationService_ContentType.Movie || contentType == client__$AnimeTranslationService_ContentType.Special || contentType == client__$AnimeTranslationService_ContentType.Recap) && year >= 2024) {
+				score -= 0.2;
+			}
+		}
+		var finalScore = Math.max(0,score);
+		haxe_Log.trace("  Final score for \"" + client_AnimeTranslationService.getDisplayTitle(media) + "\": " + finalScore + " (type: " + Std.string(contentType) + ")",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 337, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+		if(finalScore > bestScore) {
+			bestScore = finalScore;
+			bestMatch = media;
+		}
+	}
+	haxe_Log.trace("Best match selected: \"" + client_AnimeTranslationService.getDisplayTitle(bestMatch) + "\" with score " + bestScore,{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 345, className : "client.AnimeTranslationService", methodName : "findBestMatch"});
+	if(bestScore > 2.0) {
+		return bestMatch;
+	} else {
+		return null;
+	}
+};
+client_AnimeTranslationService.detectContentType = function(media) {
+	if(media == null || media.title == null) {
+		return client__$AnimeTranslationService_ContentType.MainSeries;
+	}
+	var title = media.title;
+	var allTitles = [];
+	if(title.english != null) {
+		allTitles.push(title.english);
+	}
+	if(title.romaji != null) {
+		allTitles.push(title.romaji);
+	}
+	if(title.native != null) {
+		allTitles.push(title.native);
+	}
+	if(media.synonyms != null) {
+		var synonyms = media.synonyms;
+		var _g = 0;
+		while(_g < synonyms.length) {
+			var synonym = synonyms[_g];
+			++_g;
+			if(synonym != null) {
+				allTitles.push(Std.string(synonym));
+			}
+		}
+	}
+	var _g = 0;
+	while(_g < allTitles.length) {
+		var titleStr = allTitles[_g];
+		++_g;
+		if(titleStr == null) {
+			continue;
+		}
+		var titleLower = titleStr.toLowerCase();
+		if(titleLower.indexOf("recap") != -1 || titleLower.indexOf("compilation") != -1 || titleLower.indexOf("mission recon") != -1 || titleLower.indexOf("総集編") != -1) {
+			return client__$AnimeTranslationService_ContentType.Recap;
+		}
+		if(titleLower.indexOf("movie") != -1 || titleLower.indexOf("film") != -1 || titleLower.indexOf("劇場版") != -1) {
+			return client__$AnimeTranslationService_ContentType.Movie;
+		}
+		if(titleLower.indexOf("special") != -1 || titleLower.indexOf("ova") != -1 || titleLower.indexOf("ona") != -1 || titleLower.indexOf("day off") != -1 || titleLower.indexOf("minute!") != -1 || titleLower.indexOf("mini") != -1 || titleLower.indexOf("chibi") != -1 || titleLower.indexOf("petit") != -1 || titleLower.indexOf("short") != -1) {
+			return client__$AnimeTranslationService_ContentType.Special;
+		}
+		if(titleLower.indexOf("season") != -1 || titleLower.indexOf("2nd") != -1 || titleLower.indexOf("3rd") != -1 || titleLower.indexOf("第") != -1 && titleLower.indexOf("期") != -1) {
+			return client__$AnimeTranslationService_ContentType.Season;
+		}
+	}
+	return client__$AnimeTranslationService_ContentType.MainSeries;
+};
+client_AnimeTranslationService.getDisplayTitle = function(media) {
+	if(media == null || media.title == null) {
+		return "null";
+	}
+	var title = media.title;
+	var tmp = title.english;
+	var tmp1 = tmp != null ? tmp : title.romaji;
+	var tmp = tmp1 != null ? tmp1 : title.native;
+	if(tmp != null) {
+		return tmp;
+	} else {
+		return "unknown";
+	}
+};
+client_AnimeTranslationService.calculateTitleSimilarity = function(searchTitle,candidateTitle) {
+	if(searchTitle == candidateTitle) {
+		return 1.0;
+	}
+	if(searchTitle.length == 0 || candidateTitle.length == 0) {
+		return 0.0;
+	}
+	var score = 0.0;
+	if(searchTitle.indexOf(candidateTitle) != -1 || candidateTitle.indexOf(searchTitle) != -1) {
+		score = 0.9;
+	} else {
+		var searchWords = searchTitle.split(" ");
+		var candidateWords = candidateTitle.split(" ");
+		var matchingWords = 0;
+		var totalWords = Math.max(searchWords.length,candidateWords.length);
+		var _g = 0;
+		while(_g < searchWords.length) {
+			var searchWord = searchWords[_g];
+			++_g;
+			if(searchWord.length <= 2) {
+				continue;
+			}
+			var _g1 = 0;
+			while(_g1 < candidateWords.length) {
+				var candidateWord = candidateWords[_g1];
+				++_g1;
+				if(candidateWord.length <= 2) {
+					continue;
+				}
+				if(searchWord == candidateWord) {
+					matchingWords += 1.0;
+					break;
+				} else if(searchWord.length > 4 && candidateWord.length > 4) {
+					if(searchWord.indexOf(candidateWord) != -1 || candidateWord.indexOf(searchWord) != -1) {
+						matchingWords += 0.7;
+						break;
+					}
+				}
+			}
+		}
+		score = matchingWords / totalWords;
+	}
+	var lengthRatio = Math.min(searchTitle.length,candidateTitle.length) / Math.max(searchTitle.length,candidateTitle.length);
+	if(lengthRatio < 0.5) {
+		score *= 0.7;
+	} else if(lengthRatio < 0.8) {
+		score *= 0.9;
+	}
+	if(score > 0.7 && candidateTitle.length < searchTitle.length) {
+		score += 0.1;
+	}
+	return Math.min(1.0,score);
+};
+client_AnimeTranslationService.extractEnglishTitle = function(media) {
+	if(media == null || media.title == null) {
+		return null;
+	}
+	var title = media.title;
+	if(title.english != null && title.english.trim() != "") {
+		return title.english.trim();
+	}
+	if(title.romaji != null && title.romaji.trim() != "") {
+		return title.romaji.trim();
+	}
+	return null;
+};
+client_AnimeTranslationService.generateTitleVariations = function(title) {
+	if(title == null || StringTools.trim(title) == "") {
+		return [];
+	}
+	var variations = [];
+	var baseTitle = StringTools.trim(title);
+	variations.push(baseTitle);
+	if(baseTitle.indexOf("No.") != -1) {
+		variations.push(StringTools.replace(baseTitle,"No.","No. "));
+		variations.push(StringTools.replace(baseTitle,"No.","#"));
+	}
+	if(baseTitle.indexOf("No. ") != -1) {
+		variations.push(StringTools.replace(baseTitle,"No. ","No."));
+		variations.push(StringTools.replace(baseTitle,"No. ","#"));
+	}
+	if(baseTitle.indexOf("#") != -1) {
+		variations.push(StringTools.replace(baseTitle,"#","No. "));
+		variations.push(StringTools.replace(baseTitle,"#","No."));
+	}
+	if(baseTitle.indexOf(":") != -1) {
+		variations.push(StringTools.replace(baseTitle,":"," -"));
+		variations.push(StringTools.replace(baseTitle,":",""));
+	}
+	if(baseTitle.indexOf(" - ") != -1) {
+		variations.push(StringTools.replace(baseTitle," - ",": "));
+		variations.push(StringTools.replace(baseTitle," - "," "));
+	}
+	variations.push(StringTools.replace(baseTitle,"!",""));
+	variations.push(StringTools.replace(baseTitle,"×","x"));
+	variations.push(StringTools.replace(baseTitle,"x","×"));
+	var uniqueVariations = [];
+	var _g = 0;
+	while(_g < variations.length) {
+		var trimmed = StringTools.trim(variations[_g++]);
+		if(trimmed != "" && uniqueVariations.indexOf(trimmed) == -1) {
+			uniqueVariations.push(trimmed);
+		}
+	}
+	return uniqueVariations;
+};
+client_AnimeTranslationService.cacheTranslation = function(originalTitle,englishTitle) {
+	client_AnimeTranslationService.titleTranslationCache.h[originalTitle] = englishTitle;
+	var this1 = client_AnimeTranslationService.cacheTimestamps;
+	var value = new Date().getTime();
+	this1.h[originalTitle] = value;
+	haxe_Log.trace("Cached translation: \"" + originalTitle + "\" -> \"" + englishTitle + "\"",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 571, className : "client.AnimeTranslationService", methodName : "cacheTranslation"});
+};
+client_AnimeTranslationService.fallbackToOriginal = function(originalTitle,callback) {
+	client_AnimeTranslationService.cacheTranslation(originalTitle,originalTitle);
+	callback(originalTitle);
+};
+client_AnimeTranslationService.clearCache = function() {
+	var count = 0;
+	var key_length = Object.keys(client_AnimeTranslationService.titleTranslationCache.h).length;
+	var key_current = 0;
+	while(key_current < key_length) {
+		++key_current;
+		++count;
+	}
+	haxe_Log.trace("Clearing anime translation cache (" + count + " entries)",{ fileName : "src/client/AnimeTranslationService.hx", lineNumber : 589, className : "client.AnimeTranslationService", methodName : "clearCache"});
+	client_AnimeTranslationService.titleTranslationCache.h = Object.create(null);
+	client_AnimeTranslationService.cacheTimestamps.h = Object.create(null);
 };
 var client_Buttons = function() { };
 client_Buttons.__name__ = true;
@@ -1265,7 +1698,7 @@ client_Buttons.initChatInputs = function(main) {
 				}
 				var videoUrl = "https://www.youtube.com/watch?v=" + selectedVideoId;
 				haxe_Log.trace("[YOUTUBE SEARCH] Auto-queueing video: " + videoUrl + " (random: " + (randomVideoCheckbox.checked == null ? "null" : "" + randomVideoCheckbox.checked) + ")",{ fileName : "src/client/Buttons.hx", lineNumber : 772, className : "client.Buttons", methodName : "initChatInputs"});
-				main.addVideo(videoUrl,true,true,false);
+				main.addVideo(videoUrl,true,true,false,false);
 				youtubeSearchStatus.textContent = "Video added to playlist!";
 				haxe_Log.trace("[YOUTUBE SEARCH] Video successfully queued",{ fileName : "src/client/Buttons.hx", lineNumber : 778, className : "client.Buttons", methodName : "initChatInputs"});
 				haxe_Timer.delay(function() {
@@ -2356,11 +2789,14 @@ client_JsApi.getVideoItems = $hx_exports["client"]["JsApi"]["getVideoItems"] = f
 	while(_g1 < items.length) _g.push(Reflect.copy(items[_g1++]));
 	return _g;
 };
-client_JsApi.addVideoItem = $hx_exports["client"]["JsApi"]["addVideoItem"] = function(url,atEnd,isTemp,callback,doCache) {
+client_JsApi.addVideoItem = $hx_exports["client"]["JsApi"]["addVideoItem"] = function(url,atEnd,isTemp,callback,doCache,isAnime) {
+	if(isAnime == null) {
+		isAnime = false;
+	}
 	if(doCache == null) {
 		doCache = false;
 	}
-	client_JsApi.main.addVideo(url,atEnd,isTemp,doCache,callback);
+	client_JsApi.main.addVideo(url,atEnd,isTemp,doCache,isAnime,callback);
 };
 client_JsApi.removeVideoItem = $hx_exports["client"]["JsApi"]["removeVideoItem"] = function(url) {
 	client_JsApi.main.removeVideoItem(url);
@@ -3307,6 +3743,7 @@ client_Main.prototype = {
 		var isTemp = window.document.querySelector("#addfromurl .add-temp").checked;
 		var checkboxCache = window.document.querySelector("#cache-on-server");
 		var doCache = checkboxCache.checked && checkboxCache.parentElement.style.display != "none";
+		var isAnime = window.document.querySelector("#is-anime").checked;
 		var url = mediaUrl.value;
 		var subs = subsUrl.value;
 		if(url.length == 0) {
@@ -3324,7 +3761,7 @@ client_Main.prototype = {
 		if(!atEnd) {
 			this.sortItemsForQueueNext(links);
 		}
-		this.addVideoArray(links,atEnd,isTemp,doCache);
+		this.addVideoArray(links,atEnd,isTemp,doCache,isAnime);
 	}
 	,getLinkPlayerType: function(url) {
 		return this.player.getLinkPlayerType(url);
@@ -3356,16 +3793,16 @@ client_Main.prototype = {
 			items.unshift(first);
 		}
 	}
-	,addVideoArray: function(links,atEnd,isTemp,doCache) {
+	,addVideoArray: function(links,atEnd,isTemp,doCache,isAnime) {
 		var _gthis = this;
 		if(links.length == 0) {
 			return;
 		}
-		this.addVideo(links.shift(),atEnd,isTemp,doCache,function() {
-			_gthis.addVideoArray(links,atEnd,isTemp,doCache);
+		this.addVideo(links.shift(),atEnd,isTemp,doCache,isAnime,function() {
+			_gthis.addVideoArray(links,atEnd,isTemp,doCache,isAnime);
 		});
 	}
-	,addVideo: function(url,atEnd,isTemp,doCache,callback) {
+	,addVideo: function(url,atEnd,isTemp,doCache,isAnime,callback) {
 		var _gthis = this;
 		var protocol = $global.location.protocol;
 		if(StringTools.startsWith(url,"/")) {
@@ -3385,7 +3822,7 @@ client_Main.prototype = {
 			}
 			data.title = data.title != null ? data.title : Lang.get("rawVideo");
 			data.url = data.url != null ? data.url : url;
-			_gthis.send({ type : "AddVideo", addVideo : { item : { url : data.url, title : data.title, author : _gthis.personal.name, duration : data.duration, isTemp : isTemp, doCache : doCache, subs : data.subs, voiceOverTrack : data.voiceOverTrack, playerType : data.playerType}, atEnd : atEnd, isRandomVideo : _gthis.isRandomVideoOperation}});
+			_gthis.send({ type : "AddVideo", addVideo : { item : { url : data.url, title : data.title, author : _gthis.personal.name, duration : data.duration, isTemp : isTemp, doCache : doCache, isAnime : isAnime, subs : data.subs, voiceOverTrack : data.voiceOverTrack, playerType : data.playerType}, atEnd : atEnd, isRandomVideo : _gthis.isRandomVideoOperation}});
 			if(callback != null) {
 				callback();
 			}
@@ -3403,6 +3840,7 @@ client_Main.prototype = {
 		var title = mediaTitle.value;
 		mediaTitle.value = "";
 		var isTemp = window.document.querySelector("#customembed .add-temp").checked;
+		var isAnime = window.document.querySelector("#is-anime").checked;
 		this.player.getIframeData({ url : iframe, atEnd : atEnd},function(data) {
 			if(data.duration == 0) {
 				_gthis.serverMessage(Lang.get("addVideoError"));
@@ -3413,7 +3851,7 @@ client_Main.prototype = {
 			}
 			data.title = data.title != null ? data.title : "Custom Media";
 			data.url = data.url != null ? data.url : iframe;
-			_gthis.send({ type : "AddVideo", addVideo : { item : { url : data.url, title : data.title, author : _gthis.personal.name, duration : data.duration, isTemp : isTemp, doCache : false, playerType : "IframeType"}, atEnd : atEnd}});
+			_gthis.send({ type : "AddVideo", addVideo : { item : { url : data.url, title : data.title, author : _gthis.personal.name, duration : data.duration, isTemp : isTemp, doCache : false, isAnime : isAnime, playerType : "IframeType"}, atEnd : atEnd}});
 		});
 	}
 	,getWordlist: function() {
@@ -3481,17 +3919,17 @@ client_Main.prototype = {
 					query = "" + yearStr + monthStr + dayStr;
 				}
 				isDateFormat = true;
-				haxe_Log.trace("Generated obscure search query (date format " + selectedOption.value + "): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1318, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (date format " + selectedOption.value + "): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1327, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			case "nospace":
 				var randomNumber = Math.floor(Math.random() * 9999) + 1;
 				query = "" + selectedOption.value + StringTools.lpad(randomNumber == null ? "null" : "" + randomNumber,"0",4);
-				haxe_Log.trace("Generated obscure search query (no-space): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1295, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (no-space): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1302, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			case "spaced":
 				var randomNumber = Math.floor(Math.random() * 9999) + 1;
 				query = "" + selectedOption.value + " " + StringTools.lpad(randomNumber == null ? "null" : "" + randomNumber,"0",4);
-				haxe_Log.trace("Generated obscure search query (spaced): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1288, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (spaced): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1295, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			}
 		} else {
@@ -3507,26 +3945,26 @@ client_Main.prototype = {
 				}
 			}
 			query = selectedWords.join(" ");
-			haxe_Log.trace("Generated keyword search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1334, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Generated keyword search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1343, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		}
 		if(!isDateFormat) {
 			var year = new Date().getFullYear() - (Math.floor(Math.random() * 15) + 1);
 			var month = Math.floor(Math.random() * 12) + 1;
 			var day = Math.floor(Math.random() * 28) + 1;
 			query += " before:" + year + "-" + (month < 10 ? "0" + month : "" + month) + "-" + (day < 10 ? "0" + day : "" + day);
-			haxe_Log.trace("Final search query with date: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1348, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Final search query with date: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1357, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		} else {
-			haxe_Log.trace("Final search query (date format, no before filter): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1350, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Final search query (date format, no before filter): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1359, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		}
 		return query;
 	}
 	,addRandomYoutubeVideo: function() {
 		var _gthis = this;
-		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" pressed random video button | Starting search...",{ fileName : "src/client/Main.hx", lineNumber : 1357, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" pressed random video button | Starting search...",{ fileName : "src/client/Main.hx", lineNumber : 1366, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 		this.isRandomVideoOperation = true;
 		window.setTimeout(function() {
 			if(_gthis.isRandomVideoOperation) {
-				haxe_Log.trace("Random video operation timeout, clearing flag",{ fileName : "src/client/Main.hx", lineNumber : 1365, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+				haxe_Log.trace("Random video operation timeout, clearing flag",{ fileName : "src/client/Main.hx", lineNumber : 1374, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 				_gthis.isRandomVideoOperation = false;
 			}
 		},10000);
@@ -3546,11 +3984,11 @@ client_Main.prototype = {
 		}
 		var query = this.generateRandomSearchQuery();
 		new Date(new Date().getTime());
-		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" | Generated query: \"" + query + "\" | Initiating search...",{ fileName : "src/client/Main.hx", lineNumber : 1386, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" | Generated query: \"" + query + "\" | Initiating search...",{ fileName : "src/client/Main.hx", lineNumber : 1395, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 		var randomApiKey = this.getRandomVideoApiKey();
 		this.player.searchYoutubeVideos(query,20,function(videoIds) {
 			if(videoIds.length == 0) {
-				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1392, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1401, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 				if(attemptCount < 2) {
 					_gthis.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 				} else {
@@ -3577,7 +4015,7 @@ client_Main.prototype = {
 	,tryNextVideoFromList: function(videoIds,index,query,attemptCount) {
 		var _gthis = this;
 		if(index >= videoIds.length) {
-			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1424, className : "client.Main", methodName : "tryNextVideoFromList"});
+			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1433, className : "client.Main", methodName : "tryNextVideoFromList"});
 			if(attemptCount < 2) {
 				this.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 			} else {
@@ -3587,19 +4025,19 @@ client_Main.prototype = {
 		}
 		var videoId = videoIds[index];
 		var youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
-		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1436, className : "client.Main", methodName : "tryNextVideoFromList"});
+		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1445, className : "client.Main", methodName : "tryNextVideoFromList"});
 		this.checkVideoEmbeddability(videoId,function(isEmbeddable,title) {
 			if(isEmbeddable) {
 				_gthis.currentRandomVideoSearch = videoIds;
 				_gthis.currentRandomVideoIndex = index + 1;
 				_gthis.currentRandomVideoQuery = query;
 				_gthis.currentRandomVideoAttemptCount = attemptCount;
-				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1448, className : "client.Main", methodName : "tryNextVideoFromList"});
-				_gthis.addVideo(youtubeUrl,true,true,false,function() {
+				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1457, className : "client.Main", methodName : "tryNextVideoFromList"});
+				_gthis.addVideo(youtubeUrl,true,true,false,false,function() {
 					_gthis.serverMessage("Added random video from search: \"" + query + "\"");
 				});
 			} else {
-				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1455, className : "client.Main", methodName : "tryNextVideoFromList"});
+				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1464, className : "client.Main", methodName : "tryNextVideoFromList"});
 				_gthis.tryNextVideoFromList(videoIds,index + 1,query,attemptCount);
 			}
 		});
@@ -3608,7 +4046,7 @@ client_Main.prototype = {
 		var _gthis = this;
 		var apiKey = this.getRandomVideoApiKey();
 		if(apiKey == null || apiKey == "") {
-			haxe_Log.trace("No YouTube API key available for random video embeddability check",{ fileName : "src/client/Main.hx", lineNumber : 1464, className : "client.Main", methodName : "checkVideoEmbeddability"});
+			haxe_Log.trace("No YouTube API key available for random video embeddability check",{ fileName : "src/client/Main.hx", lineNumber : 1473, className : "client.Main", methodName : "checkVideoEmbeddability"});
 			callback(true,"Unknown");
 			return;
 		}
@@ -3622,12 +4060,12 @@ client_Main.prototype = {
 					var tmp = json.error.message;
 					var errorMessage = tmp != null ? tmp : "Unknown error";
 					if(errorCode == 403) {
-						haxe_Log.trace("Random video API quota exhausted: " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1484, className : "client.Main", methodName : "checkVideoEmbeddability"});
+						haxe_Log.trace("Random video API quota exhausted: " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1493, className : "client.Main", methodName : "checkVideoEmbeddability"});
 						_gthis.serverMessage("Random video API quota exhausted. Try again later.",false);
 						callback(false,"API Quota Exhausted");
 						return;
 					} else {
-						haxe_Log.trace("Random video API error " + errorCode + ": " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1489, className : "client.Main", methodName : "checkVideoEmbeddability"});
+						haxe_Log.trace("Random video API error " + errorCode + ": " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1498, className : "client.Main", methodName : "checkVideoEmbeddability"});
 						_gthis.serverMessage("Random video API error. Using fallback.",false);
 						callback(true,"API Error");
 						return;
@@ -3636,7 +4074,7 @@ client_Main.prototype = {
 				var tmp = json.items;
 				var items = tmp != null ? tmp : [];
 				if(items.length == 0) {
-					haxe_Log.trace("Video " + videoId + " not found",{ fileName : "src/client/Main.hx", lineNumber : 1499, className : "client.Main", methodName : "checkVideoEmbeddability"});
+					haxe_Log.trace("Video " + videoId + " not found",{ fileName : "src/client/Main.hx", lineNumber : 1508, className : "client.Main", methodName : "checkVideoEmbeddability"});
 					callback(false,"Not Found");
 					return;
 				}
@@ -3651,16 +4089,16 @@ client_Main.prototype = {
 				var tmp = item.contentDetails;
 				var tmp3 = item.contentDetails;
 				var isActuallyEmbeddable = _gthis.checkComprehensiveEmbeddability(videoId,title,tmp1 != null ? tmp1 : true,tmp2 != null ? tmp2 : "public",tmp != null ? tmp.regionRestriction : null,tmp3 != null ? tmp3.contentRating : null);
-				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1516, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1525, className : "client.Main", methodName : "checkVideoEmbeddability"});
 				callback(isActuallyEmbeddable,title);
 			} catch( _g ) {
 				var _g1 = haxe_Exception.caught(_g).unwrap();
-				haxe_Log.trace("Error parsing embeddability response for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1519, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				haxe_Log.trace("Error parsing embeddability response for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1528, className : "client.Main", methodName : "checkVideoEmbeddability"});
 				callback(true,"Parse Error");
 			}
 		};
 		http.onError = function(error) {
-			haxe_Log.trace("Error checking embeddability for " + videoId + ": " + error,{ fileName : "src/client/Main.hx", lineNumber : 1525, className : "client.Main", methodName : "checkVideoEmbeddability"});
+			haxe_Log.trace("Error checking embeddability for " + videoId + ": " + error,{ fileName : "src/client/Main.hx", lineNumber : 1534, className : "client.Main", methodName : "checkVideoEmbeddability"});
 			callback(true,"API Error");
 		};
 		http.request();
@@ -3668,23 +4106,23 @@ client_Main.prototype = {
 	,checkComprehensiveEmbeddability: function(videoId,title,embeddable,privacyStatus,regionRestriction,contentRating) {
 		if(!this.config.strictEmbeddingChecks) {
 			if(!embeddable) {
-				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1543, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1552, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
-			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1546, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1555, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return true;
 		}
 		if(!embeddable) {
-			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1552, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1561, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
 		if(privacyStatus != "public") {
-			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1558, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1567, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
 		if(!this.config.allowAgeRestrictedVideos && contentRating != null) {
 			if(Reflect.fields(contentRating).length > 0) {
-				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1566, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1575, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 		}
@@ -3696,7 +4134,7 @@ client_Main.prototype = {
 			var _g1 = 0;
 			while(_g1 < blockedDynamic.length) _g.push(Std.string(blockedDynamic[_g1++]));
 			if(_g.indexOf(userRegion) != -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1579, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1588, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 			var tmp = regionRestriction.allowed;
@@ -3705,11 +4143,11 @@ client_Main.prototype = {
 			var _g1 = 0;
 			while(_g1 < allowedDynamic.length) _g.push(Std.string(allowedDynamic[_g1++]));
 			if(_g.length > 0 && _g.indexOf(userRegion) == -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1587, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1596, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 		}
-		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1592, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1601, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 		return true;
 	}
 	,handleRandomVideoPlaybackError: function(errorCode) {
@@ -3755,19 +4193,19 @@ client_Main.prototype = {
 		var popularQueries = ["music","funny animals","video games","travel vlog","cooking tutorial","science explained","beautiful nature","guitar cover","dance performance","documentary short","art tutorial","tech review"];
 		var query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
 		var fallbackTime = new Date(new Date().getTime());
-		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1648, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
+		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1657, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
 		var randomApiKey = this.getRandomVideoApiKey();
 		this.player.searchYoutubeVideos(query,10,function(videoIds) {
 			if(videoIds.length == 0) {
 				var knownVideoIds = ["dQw4w9WgXcQ","kJQP7kiw5Fk","fJ9rUzIMcZQ","9bZkp7q19f0"];
 				var randomVideoId = knownVideoIds[Math.floor(Math.random() * knownVideoIds.length)];
-				_gthis.addVideo("https://www.youtube.com/watch?v=" + randomVideoId,true,true,false,function() {
+				_gthis.addVideo("https://www.youtube.com/watch?v=" + randomVideoId,true,true,false,false,function() {
 					_gthis.serverMessage("Added popular video (emergency fallback)");
 				});
 				return;
 			}
 			var randomIndex = Math.random();
-			_gthis.addVideo("https://www.youtube.com/watch?v=" + videoIds[Math.floor(randomIndex * Math.min(videoIds.length,5))],true,true,false,function() {
+			_gthis.addVideo("https://www.youtube.com/watch?v=" + videoIds[Math.floor(randomIndex * Math.min(videoIds.length,5))],true,true,false,false,function() {
 				_gthis.serverMessage("Added trending video: \"" + query + "\"");
 			});
 		},randomApiKey,this.personal.name,true);
@@ -3844,7 +4282,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1771, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1780, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -4078,7 +4516,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2079, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2088, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -4797,6 +5235,9 @@ client_Main.prototype = {
 		case "dump":
 			this.send({ type : "Dump"});
 			return true;
+		case "ed":case "skip-ending":
+			this.player.skipAnimeEnding();
+			return false;
 		case "fb":case "flashback":
 			this.send({ type : "Flashback"});
 			return false;
@@ -4807,6 +5248,9 @@ client_Main.prototype = {
 			this.mergeRedundantArgs(args,0,1);
 			this.send({ type : "KickClient", kickClient : { name : args[0]}});
 			return true;
+		case "op":case "skip-opening":
+			this.player.skipAnimeOpening();
+			return false;
 		case "random":
 			this.fetchRandomEmote();
 			return true;
@@ -4817,6 +5261,9 @@ client_Main.prototype = {
 			this.mergeRedundantArgs(args,0,1);
 			this.send({ type : "BanClient", banClient : { name : args[0], time : 0}});
 			return true;
+		case "skip-anime":
+			this.player.skipAnimeSegments();
+			return false;
 		case "volume":
 			var v = parseFloat(args[0]);
 			if(isNaN(v)) {
@@ -5070,6 +5517,46 @@ client_Main.prototype = {
 	,getYoutubePlaylistLimit: function() {
 		return this.config.youtubePlaylistLimit;
 	}
+	,getAnimeSkipApiKey: function() {
+		var tmp = this.config.animeSkipApiKey;
+		if(tmp != null) {
+			return tmp;
+		} else {
+			return "";
+		}
+	}
+	,getEnableAnimeSkip: function() {
+		var tmp = this.config.enableAnimeSkip;
+		if(tmp != null) {
+			return tmp;
+		} else {
+			return true;
+		}
+	}
+	,getAutoSkipAnimeOpenings: function() {
+		var tmp = this.config.autoSkipAnimeOpenings;
+		if(tmp != null) {
+			return tmp;
+		} else {
+			return false;
+		}
+	}
+	,getAutoSkipAnimeEndings: function() {
+		var tmp = this.config.autoSkipAnimeEndings;
+		if(tmp != null) {
+			return tmp;
+		} else {
+			return false;
+		}
+	}
+	,getEnableAnimeTitleTranslation: function() {
+		var tmp = this.config.enableAnimeTitleTranslation;
+		if(tmp != null) {
+			return tmp;
+		} else {
+			return true;
+		}
+	}
 	,isAutoplayAllowed: function() {
 		var navigator = $global.navigator;
 		if(navigator.getAutoplayPolicy != null) {
@@ -5243,6 +5730,7 @@ client_Main.prototype = {
 	,__class__: client_Main
 };
 var client_Player = function(main) {
+	this.aniSkipSegmentCache = new haxe_ds_StringMap();
 	this.inUserInteraction = false;
 	this.voiceOverVolume = 0.3;
 	this.needsVolumeReset = false;
@@ -5394,6 +5882,7 @@ client_Player.prototype = {
 		this.videoList.setPos(i);
 		this.addActiveLabel(this.videoList.pos);
 		this.isLoaded = false;
+		this.clearAniSkipCache();
 		if(this.main.isVideoEnabled) {
 			this.player.loadVideo(item);
 			this.setExternalAudioTrack(item);
@@ -5423,7 +5912,7 @@ client_Player.prototype = {
 			return _gthis.isAudioTrackLoaded = true;
 		};
 		this.audioTrack.onerror = function(e) {
-			haxe_Log.trace(e,{ fileName : "src/client/Player.hx", lineNumber : 222, className : "client.Player", methodName : "setExternalAudioTrack"});
+			haxe_Log.trace(e,{ fileName : "src/client/Player.hx", lineNumber : 229, className : "client.Player", methodName : "setExternalAudioTrack"});
 			_gthis.audioTrack.oncanplay = null;
 			_gthis.audioTrack.onerror = null;
 			_gthis.isAudioTrackLoaded = false;
@@ -5474,6 +5963,7 @@ client_Player.prototype = {
 		this.player.loadVideo(_$Types_VideoItemTools.withUrl(tmp,url));
 	}
 	,removeVideo: function() {
+		this.stopAutoSkipMonitoring();
 		var _this = this.videoList;
 		client_JsApi.fireVideoRemoveEvents(_this.items[_this.pos]);
 		this.player.removeVideo();
@@ -5497,6 +5987,88 @@ client_Player.prototype = {
 		}
 		this.isLoaded = true;
 		client_Buttons.onViewportResize();
+		this.checkAutoSkipSegments();
+	}
+	,checkAutoSkipSegments: function() {
+		haxe_Log.trace("Checking auto-skip segments...",{ fileName : "src/client/Player.hx", lineNumber : 293, className : "client.Player", methodName : "checkAutoSkipSegments"});
+		if(!this.main.getEnableAnimeSkip()) {
+			haxe_Log.trace("Anime skip is disabled in config",{ fileName : "src/client/Player.hx", lineNumber : 296, className : "client.Player", methodName : "checkAutoSkipSegments"});
+			return;
+		}
+		var _this = this.videoList;
+		var tmp = _this.items[_this.pos];
+		if(tmp == null) {
+			return;
+		}
+		haxe_Log.trace("Current item: " + tmp.title + " (isAnime: " + (tmp.isAnime == null ? "null" : "" + tmp.isAnime) + ")",{ fileName : "src/client/Player.hx", lineNumber : 301, className : "client.Player", methodName : "checkAutoSkipSegments"});
+		if(!this.isAnimeContent(tmp)) {
+			haxe_Log.trace("Item is not marked as anime content",{ fileName : "src/client/Player.hx", lineNumber : 304, className : "client.Player", methodName : "checkAutoSkipSegments"});
+			return;
+		}
+		var autoSkipTypes = [];
+		if(this.main.getAutoSkipAnimeOpenings()) {
+			autoSkipTypes.push("opening");
+			autoSkipTypes.push("intro");
+			haxe_Log.trace("Auto-skip openings enabled",{ fileName : "src/client/Player.hx", lineNumber : 313, className : "client.Player", methodName : "checkAutoSkipSegments"});
+		}
+		if(this.main.getAutoSkipAnimeEndings()) {
+			autoSkipTypes.push("ending");
+			autoSkipTypes.push("outro");
+			haxe_Log.trace("Auto-skip endings enabled",{ fileName : "src/client/Player.hx", lineNumber : 319, className : "client.Player", methodName : "checkAutoSkipSegments"});
+		}
+		if(autoSkipTypes.length > 0) {
+			var result = new Array(autoSkipTypes.length);
+			var _g = 0;
+			var _g1 = autoSkipTypes.length;
+			while(_g < _g1) {
+				var i = _g++;
+				result[i] = Std.string(autoSkipTypes[i]);
+			}
+			haxe_Log.trace("Starting auto-skip monitoring for: " + result.join(", "),{ fileName : "src/client/Player.hx", lineNumber : 323, className : "client.Player", methodName : "checkAutoSkipSegments"});
+			this.startAutoSkipMonitoring(autoSkipTypes);
+		} else {
+			haxe_Log.trace("No auto-skip types enabled",{ fileName : "src/client/Player.hx", lineNumber : 326, className : "client.Player", methodName : "checkAutoSkipSegments"});
+		}
+	}
+	,getAniSkipCacheKey: function(animeInfo) {
+		return "" + animeInfo.title + ":" + animeInfo.episode;
+	}
+	,clearAniSkipCache: function() {
+		var count = 0;
+		var key_length = Object.keys(this.aniSkipSegmentCache.h).length;
+		var key_current = 0;
+		while(key_current < key_length) {
+			++key_current;
+			++count;
+		}
+		haxe_Log.trace("Clearing AniSkip segment cache (" + count + " entries)",{ fileName : "src/client/Player.hx", lineNumber : 342, className : "client.Player", methodName : "clearAniSkipCache"});
+		this.aniSkipSegmentCache.h = Object.create(null);
+		client_AnimeTranslationService.clearCache();
+	}
+	,startAutoSkipMonitoring: function(segmentTypes) {
+		var _gthis = this;
+		this.stopAutoSkipMonitoring();
+		this.autoSkipTimer = new haxe_Timer(1000);
+		this.autoSkipTimer.run = function() {
+			var tmp;
+			if(_gthis.isVideoLoaded()) {
+				var _this = _gthis.videoList;
+				tmp = _this.items[_this.pos] == null;
+			} else {
+				tmp = true;
+			}
+			if(tmp) {
+				_gthis.stopAutoSkipMonitoring();
+				return;
+			}
+			_gthis.skipSegments(segmentTypes);
+		};
+	}
+	,stopAutoSkipMonitoring: function() {
+		if(this.autoSkipTimer != null) {
+			this.autoSkipTimer.stop();
+			this.autoSkipTimer = null;
+		}
 	}
 	,onPlay: function() {
 		var tmp = this.audioTrack;
@@ -5958,13 +6530,42 @@ client_Player.prototype = {
 		}
 	}
 	,skipAd: function() {
-		var _gthis = this;
+		this.skipSegments(["sponsor"]);
+	}
+	,skipAnimeOpening: function() {
+		this.skipSegments(["opening","intro"]);
+	}
+	,skipAnimeEnding: function() {
+		this.skipSegments(["ending","outro"]);
+	}
+	,skipAnimeSegments: function() {
+		this.skipSegments(["opening","ending","intro","outro","recap"]);
+	}
+	,skipSegments: function(segmentTypes) {
 		var _this = this.videoList;
 		var tmp = _this.items[_this.pos];
 		if(tmp == null) {
 			return;
 		}
 		var itemUrl = tmp.url;
+		if(segmentTypes.indexOf("sponsor") != -1) {
+			this.skipSponsorBlockSegments(itemUrl);
+		}
+		var _g = [];
+		var _g1 = 0;
+		while(_g1 < segmentTypes.length) {
+			var v = segmentTypes[_g1];
+			++_g1;
+			if(v != "sponsor") {
+				_g.push(v);
+			}
+		}
+		if(_g.length > 0 && this.main.getEnableAnimeSkip() && this.isAnimeContent(tmp)) {
+			this.skipAniSkipSegments(itemUrl,_g);
+		}
+	}
+	,skipSponsorBlockSegments: function(itemUrl) {
+		var _gthis = this;
 		if(!this.youtube.isSupportedLink(itemUrl)) {
 			itemUrl = StringTools.replace(itemUrl,"/cache/","youtu.be/");
 			if(!this.youtube.isSupportedLink(itemUrl)) {
@@ -5988,13 +6589,536 @@ client_Player.prototype = {
 				var time = _gthis.getTime();
 				if(time > start - 1 && time < end) {
 					_gthis.main.send({ type : "Rewind", rewind : { time : end - time - 1}});
+					return;
 				}
 			}
 		};
 		http.onError = function(msg) {
-			haxe_Log.trace(msg,{ fileName : "src/client/Player.hx", lineNumber : 746, className : "client.Player", methodName : "skipAd"});
+			haxe_Log.trace(msg,{ fileName : "src/client/Player.hx", lineNumber : 867, className : "client.Player", methodName : "skipSponsorBlockSegments"});
 		};
 		http.request();
+	}
+	,skipAniSkipSegments: function(itemUrl,segmentTypes) {
+		var _gthis = this;
+		var _this = this.videoList;
+		var item = _this.items[_this.pos];
+		if(item == null) {
+			return;
+		}
+		var animeInfo = this.extractAnimeInfo(item.title);
+		if(animeInfo.title == "") {
+			haxe_Log.trace("Could not extract anime info from title: " + item.title,{ fileName : "src/client/Player.hx", lineNumber : 878, className : "client.Player", methodName : "skipAniSkipSegments"});
+			return;
+		}
+		if(this.main.getEnableAnimeTitleTranslation()) {
+			haxe_Log.trace("Getting title variations for anime title: \"" + animeInfo.title + "\"",{ fileName : "src/client/Player.hx", lineNumber : 884, className : "client.Player", methodName : "skipAniSkipSegments"});
+			client_AnimeTranslationService.getTitleVariations(animeInfo.title,function(primaryTitle,variations) {
+				_gthis.handleAniSkipWithVariations(animeInfo,primaryTitle,variations,segmentTypes);
+			});
+		} else {
+			haxe_Log.trace("Anime title translation is disabled, using original title: \"" + animeInfo.title + "\"",{ fileName : "src/client/Player.hx", lineNumber : 889, className : "client.Player", methodName : "skipAniSkipSegments"});
+			this.handleAniSkipWithVariations(animeInfo,animeInfo.title,[animeInfo.title],segmentTypes);
+		}
+	}
+	,handleAniSkipWithVariations: function(animeInfo,primaryTitle,variations,segmentTypes) {
+		this.tryAniSkipWithVariations(animeInfo,primaryTitle,variations,segmentTypes,0);
+	}
+	,tryAniSkipWithVariations: function(animeInfo,primaryTitle,variations,segmentTypes,varIndex) {
+		var _gthis = this;
+		if(varIndex >= variations.length) {
+			haxe_Log.trace("No skip segments found with any title variation",{ fileName : "src/client/Player.hx", lineNumber : 901, className : "client.Player", methodName : "tryAniSkipWithVariations"});
+			return;
+		}
+		var currentTitle = variations[varIndex];
+		var currentAnimeInfo = { title : currentTitle, episode : animeInfo.episode};
+		var cacheKey = this.getAniSkipCacheKey(currentAnimeInfo);
+		if(Object.prototype.hasOwnProperty.call(this.aniSkipSegmentCache.h,cacheKey)) {
+			var cachedSegments = this.aniSkipSegmentCache.h[cacheKey];
+			haxe_Log.trace("Cache hit for: " + currentTitle + " episode " + animeInfo.episode + " (" + cachedSegments.length + " segments)",{ fileName : "src/client/Player.hx", lineNumber : 916, className : "client.Player", methodName : "tryAniSkipWithVariations"});
+			this.processSkipSegments(cachedSegments,segmentTypes);
+			return;
+		}
+		haxe_Log.trace("Trying AniSkip query " + (varIndex + 1) + "/" + variations.length + ": \"" + currentTitle + "\" episode " + animeInfo.episode,{ fileName : "src/client/Player.hx", lineNumber : 921, className : "client.Player", methodName : "tryAniSkipWithVariations"});
+		this.queryAniSkipAPI(currentAnimeInfo,segmentTypes,function(segments) {
+			_gthis.aniSkipSegmentCache.h[cacheKey] = segments;
+			if(segments.length > 0) {
+				haxe_Log.trace("Success! Found " + segments.length + " segments with title: \"" + currentTitle + "\"",{ fileName : "src/client/Player.hx", lineNumber : 929, className : "client.Player", methodName : "tryAniSkipWithVariations"});
+				if(currentTitle != primaryTitle) {
+					var primaryCacheKey = _gthis.getAniSkipCacheKey({ title : primaryTitle, episode : animeInfo.episode});
+					_gthis.aniSkipSegmentCache.h[primaryCacheKey] = segments;
+				}
+				if(currentTitle != animeInfo.title) {
+					var originalCacheKey = _gthis.getAniSkipCacheKey(animeInfo);
+					_gthis.aniSkipSegmentCache.h[originalCacheKey] = segments;
+				}
+				_gthis.processSkipSegments(segments,segmentTypes);
+			} else {
+				haxe_Log.trace("No segments found with \"" + currentTitle + "\", trying next variation...",{ fileName : "src/client/Player.hx", lineNumber : 943, className : "client.Player", methodName : "tryAniSkipWithVariations"});
+				_gthis.tryAniSkipWithVariations(animeInfo,primaryTitle,variations,segmentTypes,varIndex + 1);
+			}
+		});
+	}
+	,processSkipSegments: function(segments,segmentTypes) {
+		var currentTime = this.getTime();
+		haxe_Log.trace("Current video time: " + currentTime + "s, checking " + segments.length + " segments",{ fileName : "src/client/Player.hx", lineNumber : 952, className : "client.Player", methodName : "processSkipSegments"});
+		var _g = 0;
+		while(_g < segments.length) {
+			var segment = segments[_g];
+			++_g;
+			if(segmentTypes.indexOf(segment.type) == -1) {
+				continue;
+			}
+			if(currentTime >= segment.start - 1 && currentTime <= segment.end) {
+				haxe_Log.trace("Skipping " + segment.type + " segment: " + segment.start + "-" + segment.end,{ fileName : "src/client/Player.hx", lineNumber : 959, className : "client.Player", methodName : "processSkipSegments"});
+				this.main.send({ type : "Rewind", rewind : { time : segment.end - currentTime}});
+				return;
+			}
+		}
+		haxe_Log.trace("No segments match current time " + currentTime + "s",{ fileName : "src/client/Player.hx", lineNumber : 970, className : "client.Player", methodName : "processSkipSegments"});
+	}
+	,extractAnimeInfo: function(title) {
+		var cleanTitle = title;
+		var episode = 1;
+		haxe_Log.trace("Original title: \"" + title + "\"",{ fileName : "src/client/Player.hx", lineNumber : 978, className : "client.Player", methodName : "extractAnimeInfo"});
+		var episodePatterns = [new EReg("\\s+episode\\s+(\\d+)","i"),new EReg("\\s+ep\\.?\\s*(\\d+)","i"),new EReg("\\s+e(\\d+)(?:\\s|$)","i"),new EReg("\\s*-\\s*(\\d+)\\s*\\[",""),new EReg("\\s+(\\d+)\\s*\\[.*?\\]\\s*$",""),new EReg("\\s+(\\d+)(?:\\s*-\\s*\\d+)?\\s*$",""),new EReg("\\s*-\\s*(\\d+)(?:\\s*-\\s*\\d+)?\\s*$",""),new EReg("s(\\d+)e(\\d+)","i"),new EReg("season\\s*\\d+\\s+episode\\s+(\\d+)","i"),new EReg("\\s+(\\d+)(?:話|화)(?:\\s|$)","")];
+		var patternMatched = false;
+		var _g = 0;
+		var _g1 = episodePatterns.length;
+		while(_g < _g1) {
+			var i = _g++;
+			var pattern = episodePatterns[i];
+			if(pattern.match(title)) {
+				haxe_Log.trace("Pattern " + i + " matched original title",{ fileName : "src/client/Player.hx", lineNumber : 999, className : "client.Player", methodName : "extractAnimeInfo"});
+				patternMatched = true;
+				if(i == 7) {
+					episode = Std.parseInt(pattern.matched(2));
+					haxe_Log.trace("Extracted episode from S#E# pattern: " + pattern.matched(2),{ fileName : "src/client/Player.hx", lineNumber : 1004, className : "client.Player", methodName : "extractAnimeInfo"});
+				} else {
+					episode = Std.parseInt(pattern.matched(1));
+					haxe_Log.trace("Extracted episode from pattern: " + pattern.matched(1),{ fileName : "src/client/Player.hx", lineNumber : 1007, className : "client.Player", methodName : "extractAnimeInfo"});
+				}
+				if(episode == null || episode <= 0) {
+					episode = 1;
+				}
+				haxe_Log.trace("Found episode " + episode + " using pattern " + i,{ fileName : "src/client/Player.hx", lineNumber : 1011, className : "client.Player", methodName : "extractAnimeInfo"});
+				break;
+			}
+		}
+		if(!patternMatched) {
+			haxe_Log.trace("No episode patterns matched original title: \"" + title + "\"",{ fileName : "src/client/Player.hx", lineNumber : 1017, className : "client.Player", methodName : "extractAnimeInfo"});
+		}
+		var _this_r = new RegExp("\\.(mp4|mkv|avi|webm|m4v)$","i".split("u").join(""));
+		cleanTitle = title.replace(_this_r,"");
+		var _this_r = new RegExp("\\s*(1080p|720p|480p|HD|SD|BluRay|WEB-DL|WEBRip|x264|x265|HEVC).*$","i".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s*\\[.*?\\]","g".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s*\\(.*?\\)","g".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s*-\\s*\\d+\\s*$","g".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s+episode\\s+\\d+.*$","i".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s+ep\\.?\\s*\\d+.*$","i".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s+e\\d+.*$","i".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s*-\\s*(END|FINAL)?\\s*$","i".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("^\\s*-\\s*","".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s*-\\s*$","".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r,"");
+		var _this_r = new RegExp("\\s+","g".split("u").join(""));
+		cleanTitle = cleanTitle.replace(_this_r," ");
+		cleanTitle = StringTools.trim(cleanTitle);
+		haxe_Log.trace("After title cleanup: \"" + cleanTitle + "\"",{ fileName : "src/client/Player.hx", lineNumber : 1039, className : "client.Player", methodName : "extractAnimeInfo"});
+		if(cleanTitle == "" || cleanTitle.length < 2) {
+			cleanTitle = title;
+			episode = 1;
+			haxe_Log.trace("Title cleanup failed, using original title",{ fileName : "src/client/Player.hx", lineNumber : 1045, className : "client.Player", methodName : "extractAnimeInfo"});
+		}
+		var normalizedTitle = this.normalizeAnimeTitle(cleanTitle);
+		haxe_Log.trace("Final extracted: title=\"" + normalizedTitle + "\", episode=" + episode,{ fileName : "src/client/Player.hx", lineNumber : 1051, className : "client.Player", methodName : "extractAnimeInfo"});
+		return { title : normalizedTitle, episode : episode};
+	}
+	,normalizeAnimeTitle: function(title) {
+		var titleMappings_h = Object.create(null);
+		titleMappings_h["Kaijuu 8 Gou"] = "Kaiju No. 8";
+		titleMappings_h["Kaijuu 8-gou"] = "Kaiju No. 8";
+		titleMappings_h["Monster #8"] = "Kaiju No. 8";
+		titleMappings_h["Shingeki no Kyojin"] = "Attack on Titan";
+		titleMappings_h["Kimetsu no Yaiba"] = "Demon Slayer";
+		titleMappings_h["Kimetsu no Yaiba: Demon Slayer"] = "Demon Slayer";
+		titleMappings_h["Jujutsu Kaisen"] = "Jujutsu Kaisen";
+		titleMappings_h["Boku no Hero Academia"] = "My Hero Academia";
+		titleMappings_h["Bokutachi no Remake"] = "Remake Our Life!";
+		titleMappings_h["One Punch Man"] = "One-Punch Man";
+		titleMappings_h["Dr. Stone"] = "Dr. STONE";
+		titleMappings_h["Spy x Family"] = "SPY×FAMILY";
+		titleMappings_h["Chainsaw Man"] = "Chainsaw Man";
+		titleMappings_h["Mob Psycho 100"] = "Mob Psycho 100";
+		titleMappings_h["Tokyo Ghoul"] = "Tokyo Ghoul";
+		titleMappings_h["Naruto"] = "Naruto";
+		titleMappings_h["One Piece"] = "One Piece";
+		titleMappings_h["Bleach"] = "Bleach";
+		titleMappings_h["신의 탑"] = "Tower of God";
+		titleMappings_h["갓 오브 하이스쿨"] = "The God of High School";
+		titleMappings_h["노블레스"] = "Noblesse";
+		titleMappings_h["Attack On Titan"] = "Attack on Titan";
+		titleMappings_h["My Hero Academia"] = "My Hero Academia";
+		titleMappings_h["Hunter X Hunter"] = "Hunter x Hunter";
+		titleMappings_h["JoJo's Bizarre Adventure"] = "JoJo's Bizarre Adventure";
+		titleMappings_h["Fullmetal Alchemist"] = "Fullmetal Alchemist";
+		titleMappings_h["Death Note"] = "Death Note";
+		titleMappings_h["One-Piece"] = "One Piece";
+		titleMappings_h["DragonBall"] = "Dragon Ball";
+		titleMappings_h["Dragon Ball Z"] = "Dragon Ball Z";
+		titleMappings_h["Cowboy Bebop"] = "Cowboy Bebop";
+		if(Object.prototype.hasOwnProperty.call(titleMappings_h,title)) {
+			var normalized = titleMappings_h[title];
+			haxe_Log.trace("Title normalized: \"" + title + "\" → \"" + normalized + "\"",{ fileName : "src/client/Player.hx", lineNumber : 1100, className : "client.Player", methodName : "normalizeAnimeTitle"});
+			return normalized;
+		}
+		var lowerTitle = title.toLowerCase();
+		var key_keys = Object.keys(titleMappings_h);
+		var key_length = key_keys.length;
+		var key_current = 0;
+		while(key_current < key_length) {
+			var key = key_keys[key_current++];
+			if(lowerTitle.indexOf(key.toLowerCase()) != -1) {
+				var normalized = titleMappings_h[key];
+				haxe_Log.trace("Title normalized (partial): \"" + title + "\" → \"" + normalized + "\"",{ fileName : "src/client/Player.hx", lineNumber : 1109, className : "client.Player", methodName : "normalizeAnimeTitle"});
+				return normalized;
+			}
+		}
+		var normalized = title;
+		var _this_r = new RegExp("\\bNo\\.\\s*(\\d+)","".split("u").join(""));
+		normalized = title.replace(_this_r,"No. $1");
+		var _this_r = new RegExp("\\b(\\d+)-gou\\b","i".split("u").join(""));
+		normalized = normalized.replace(_this_r,"No. $1");
+		var _this_r = new RegExp("\\b#(\\d+)\\b","".split("u").join(""));
+		normalized = normalized.replace(_this_r,"No. $1");
+		var _this_r = new RegExp("\\s+x\\s+","".split("u").join(""));
+		normalized = normalized.replace(_this_r,"×");
+		var _this_r = new RegExp("\\bDr\\.\\s*","i".split("u").join(""));
+		normalized = normalized.replace(_this_r,"Dr. ");
+		if(normalized != title) {
+			haxe_Log.trace("Title normalized (pattern): \"" + title + "\" → \"" + normalized + "\"",{ fileName : "src/client/Player.hx", lineNumber : 1127, className : "client.Player", methodName : "normalizeAnimeTitle"});
+		}
+		return normalized;
+	}
+	,queryAniSkipAPI: function(animeInfo,segmentTypes,callback) {
+		var _gthis = this;
+		haxe_Log.trace("Starting AniSkip API query chain for \"" + animeInfo.title + "\" episode " + animeInfo.episode,{ fileName : "src/client/Player.hx", lineNumber : 1134, className : "client.Player", methodName : "queryAniSkipAPI"});
+		var result = new Array(segmentTypes.length);
+		var _g = 0;
+		var _g1 = segmentTypes.length;
+		while(_g < _g1) {
+			var i = _g++;
+			result[i] = Std.string(segmentTypes[i]);
+		}
+		haxe_Log.trace("Request types: " + result.join(", "),{ fileName : "src/client/Player.hx", lineNumber : 1135, className : "client.Player", methodName : "queryAniSkipAPI"});
+		this.searchAniSkipShows(animeInfo.title,function(shows) {
+			if(shows.length == 0) {
+				haxe_Log.trace("No shows found for \"" + animeInfo.title + "\"",{ fileName : "src/client/Player.hx", lineNumber : 1140, className : "client.Player", methodName : "queryAniSkipAPI"});
+				callback([]);
+				return;
+			}
+			var bestShow = shows[0];
+			var _g = 0;
+			while(_g < shows.length) {
+				var show = shows[_g];
+				++_g;
+				var showName = show.name;
+				if(showName != null && showName.toLowerCase().indexOf(animeInfo.title.toLowerCase()) != -1) {
+					bestShow = show;
+					break;
+				}
+			}
+			haxe_Log.trace("Selected show: " + Std.string(bestShow.name) + " (ID: " + Std.string(bestShow.id) + ")",{ fileName : "src/client/Player.hx", lineNumber : 1155, className : "client.Player", methodName : "queryAniSkipAPI"});
+			_gthis.getAniSkipEpisodes(bestShow.id,function(episodes) {
+				if(episodes.length == 0) {
+					haxe_Log.trace("No episodes found for show ID " + Std.string(bestShow.id),{ fileName : "src/client/Player.hx", lineNumber : 1160, className : "client.Player", methodName : "queryAniSkipAPI"});
+					callback([]);
+					return;
+				}
+				var targetEpisode = null;
+				var _g = 0;
+				while(_g < episodes.length) {
+					var episode = episodes[_g];
+					++_g;
+					if(episode.number == animeInfo.episode) {
+						targetEpisode = episode;
+						break;
+					}
+				}
+				if(targetEpisode == null) {
+					haxe_Log.trace("Episode " + animeInfo.episode + " not found in " + episodes.length + " available episodes",{ fileName : "src/client/Player.hx", lineNumber : 1175, className : "client.Player", methodName : "queryAniSkipAPI"});
+					callback([]);
+					return;
+				}
+				haxe_Log.trace("Found episode " + Std.string(targetEpisode.number) + " (ID: " + Std.string(targetEpisode.id) + ")",{ fileName : "src/client/Player.hx", lineNumber : 1180, className : "client.Player", methodName : "queryAniSkipAPI"});
+				_gthis.getAniSkipTimestamps(targetEpisode.id,segmentTypes,callback);
+			});
+		});
+	}
+	,searchAniSkipShows: function(animeName,callback) {
+		this.executeAniSkipQuery({ query : "query SearchShows($" + "search: String!, $" + "limit: Int) {\r\n\t\t\t\tsearchShows(search: $" + "search, limit: $" + "limit) {\r\n\t\t\t\t\tid\r\n\t\t\t\t\tname\r\n\t\t\t\t\tcreatedAt\r\n\t\t\t\t}\r\n\t\t\t}", variables : { search : animeName, limit : 10}},function(data) {
+			if(data == null) {
+				haxe_Log.trace("AniSkip API error: null response for show search",{ fileName : "src/client/Player.hx", lineNumber : 1205, className : "client.Player", methodName : "searchAniSkipShows"});
+				callback([]);
+				return;
+			}
+			if(data.searchShows != null) {
+				var shows = data.searchShows;
+				haxe_Log.trace("Found " + shows.length + " shows for \"" + animeName + "\"",{ fileName : "src/client/Player.hx", lineNumber : 1212, className : "client.Player", methodName : "searchAniSkipShows"});
+				var _g = 0;
+				while(_g < shows.length) {
+					var show = shows[_g];
+					++_g;
+					haxe_Log.trace("  - " + Std.string(show.name) + " (" + Std.string(show.id) + ")",{ fileName : "src/client/Player.hx", lineNumber : 1214, className : "client.Player", methodName : "searchAniSkipShows"});
+				}
+				callback(shows);
+			} else {
+				haxe_Log.trace("No shows found in response for \"" + animeName + "\"",{ fileName : "src/client/Player.hx", lineNumber : 1218, className : "client.Player", methodName : "searchAniSkipShows"});
+				callback([]);
+			}
+		});
+	}
+	,getAniSkipEpisodes: function(showId,callback) {
+		this.executeAniSkipQuery({ query : "query FindEpisodesByShowId($" + "showId: ID!) {\r\n\t\t\t\tfindEpisodesByShowId(showId: $" + "showId) {\r\n\t\t\t\t\tid\r\n\t\t\t\t\tnumber\r\n\t\t\t\t\tname\r\n\t\t\t\t\tcreatedAt\r\n\t\t\t\t}\r\n\t\t\t}", variables : { showId : showId}},function(data) {
+			if(data == null) {
+				haxe_Log.trace("AniSkip API error: null response for episodes search",{ fileName : "src/client/Player.hx", lineNumber : 1241, className : "client.Player", methodName : "getAniSkipEpisodes"});
+				callback([]);
+				return;
+			}
+			if(data.findEpisodesByShowId != null) {
+				var episodes = data.findEpisodesByShowId;
+				haxe_Log.trace("Found " + episodes.length + " episodes for show " + showId,{ fileName : "src/client/Player.hx", lineNumber : 1248, className : "client.Player", methodName : "getAniSkipEpisodes"});
+				callback(episodes);
+			} else {
+				haxe_Log.trace("No episodes found in response for show " + showId,{ fileName : "src/client/Player.hx", lineNumber : 1251, className : "client.Player", methodName : "getAniSkipEpisodes"});
+				callback([]);
+			}
+		});
+	}
+	,getAniSkipTimestamps: function(episodeId,segmentTypes,callback) {
+		var _gthis = this;
+		this.executeAniSkipQuery({ query : "query FindTimestampsByEpisodeId($" + "episodeId: ID!) {\r\n\t\t\t\tfindTimestampsByEpisodeId(episodeId: $" + "episodeId) {\r\n\t\t\t\t\tid\r\n\t\t\t\t\tat\r\n\t\t\t\t\ttypeId\r\n\t\t\t\t\tcreatedAt\r\n\t\t\t\t}\r\n\t\t\t}", variables : { episodeId : episodeId}},function(data) {
+			if(data == null) {
+				haxe_Log.trace("AniSkip API error: null response for timestamps search",{ fileName : "src/client/Player.hx", lineNumber : 1274, className : "client.Player", methodName : "getAniSkipTimestamps"});
+				callback([]);
+				return;
+			}
+			if(data.findTimestampsByEpisodeId != null) {
+				var timestamps = data.findTimestampsByEpisodeId;
+				haxe_Log.trace("Found " + timestamps.length + " timestamps for episode " + episodeId,{ fileName : "src/client/Player.hx", lineNumber : 1281, className : "client.Player", methodName : "getAniSkipTimestamps"});
+				var segments = [];
+				var timestampsByType_h = Object.create(null);
+				var _g = 0;
+				while(_g < timestamps.length) {
+					var timestamp = timestamps[_g];
+					++_g;
+					haxe_Log.trace("Processing timestamp: " + JSON.stringify(timestamp),{ fileName : "src/client/Player.hx", lineNumber : 1289, className : "client.Player", methodName : "getAniSkipTimestamps"});
+					if(timestamp.typeId == null || timestamp.at == null) {
+						haxe_Log.trace("Skipping invalid timestamp: " + JSON.stringify(timestamp),{ fileName : "src/client/Player.hx", lineNumber : 1292, className : "client.Player", methodName : "getAniSkipTimestamps"});
+						continue;
+					}
+					var typeId = timestamp.typeId;
+					var at = timestamp.at;
+					if(at < 0) {
+						haxe_Log.trace("Skipping negative timestamp: " + at + "s",{ fileName : "src/client/Player.hx", lineNumber : 1301, className : "client.Player", methodName : "getAniSkipTimestamps"});
+						continue;
+					}
+					if(!Object.prototype.hasOwnProperty.call(timestampsByType_h,typeId)) {
+						timestampsByType_h[typeId] = [];
+					}
+					timestampsByType_h[typeId].push(timestamp);
+					haxe_Log.trace("Added timestamp to type " + typeId + ": " + at + "s",{ fileName : "src/client/Player.hx", lineNumber : 1309, className : "client.Player", methodName : "getAniSkipTimestamps"});
+				}
+				var _g_keys = Object.keys(timestampsByType_h);
+				var _g_length = _g_keys.length;
+				var _g_current = 0;
+				while(_g_current < _g_length) {
+					var key = _g_keys[_g_current++];
+					var _g_value = timestampsByType_h[key];
+					if(_g_value == null || _g_value.length == 0) {
+						continue;
+					}
+					_g_value.sort(function(a,b) {
+						if(a.at < b.at) {
+							return -1;
+						} else if(a.at > b.at) {
+							return 1;
+						} else {
+							return 0;
+						}
+					});
+					var segmentType;
+					switch(key) {
+					case "14550023-2589-46f0-bfb4-152976506b4c":
+						segmentType = "outro";
+						break;
+					case "2a730a51-a601-439b-bc1f-7b94a640ffb9":
+						segmentType = "recap";
+						break;
+					case "67321535-a4ea-4f21-8bed-fb3c8286b510":
+						segmentType = "ending";
+						break;
+					case "742d3889-2b60-4e17-958a-1e31b3a6e5b5":
+						segmentType = "intro";
+						break;
+					case "9edc0037-fa4e-47a7-a29a-d9c43368daa8":
+						segmentType = "opening";
+						break;
+					case "c7b1eddb-defa-4bc6-a598-f143081cfe4b":
+						segmentType = "ending";
+						break;
+					case "f38ac196-0d49-40a9-8fcf-f3ef2f40f127":
+						segmentType = "intro";
+						break;
+					case "f58634aa-f866-44f3-9e67-1d5d5c6b5e1c":
+						segmentType = "outro";
+						break;
+					default:
+						haxe_Log.trace("Unknown segment type UUID: " + key + " - treating as generic segment",{ fileName : "src/client/Player.hx", lineNumber : 1339, className : "client.Player", methodName : "getAniSkipTimestamps"});
+						segmentType = "opening";
+					}
+					haxe_Log.trace("Processing segment type " + segmentType + " (typeId: " + key + ")",{ fileName : "src/client/Player.hx", lineNumber : 1345, className : "client.Player", methodName : "getAniSkipTimestamps"});
+					if(segmentTypes.indexOf(segmentType) == -1) {
+						haxe_Log.trace("Segment type " + segmentType + " not requested, skipping",{ fileName : "src/client/Player.hx", lineNumber : 1349, className : "client.Player", methodName : "getAniSkipTimestamps"});
+						continue;
+					}
+					if(_g_value.length == 0) {
+						continue;
+					}
+					if(_g_value.length >= 2) {
+						var i = 0;
+						while(i < _g_value.length - 1) {
+							var startTime = _g_value[i].at;
+							var endTime = _g_value[i + 1].at;
+							if(endTime > startTime && endTime - startTime >= 5.0 && endTime - startTime < 600) {
+								segments.push({ start : startTime, end : endTime, type : segmentType});
+								haxe_Log.trace("Created " + segmentType + " segment: " + startTime + "s - " + endTime + "s (paired, duration: " + (endTime - startTime) + "s)",{ fileName : "src/client/Player.hx", lineNumber : 1370, className : "client.Player", methodName : "getAniSkipTimestamps"});
+								i += 2;
+							} else {
+								var duration = _gthis.getDefaultDuration(segmentType);
+								segments.push({ start : startTime, end : startTime + duration, type : segmentType});
+								haxe_Log.trace("Created " + segmentType + " segment: " + startTime + "s - " + (startTime + duration) + "s (single + default duration)",{ fileName : "src/client/Player.hx", lineNumber : 1380, className : "client.Player", methodName : "getAniSkipTimestamps"});
+								++i;
+							}
+						}
+						if(i < _g_value.length) {
+							var startTime1 = _g_value[i].at;
+							var duration1 = _gthis.getDefaultDuration(segmentType);
+							segments.push({ start : startTime1, end : startTime1 + duration1, type : segmentType});
+							haxe_Log.trace("Created " + segmentType + " segment: " + startTime1 + "s - " + (startTime1 + duration1) + "s (single remaining)",{ fileName : "src/client/Player.hx", lineNumber : 1394, className : "client.Player", methodName : "getAniSkipTimestamps"});
+						}
+					} else {
+						var startTime2 = _g_value[0].at;
+						var duration2 = _gthis.getDefaultDuration(segmentType);
+						segments.push({ start : startTime2, end : startTime2 + duration2, type : segmentType});
+						haxe_Log.trace("Created " + segmentType + " segment: " + startTime2 + "s - " + (startTime2 + duration2) + "s (single + default duration)",{ fileName : "src/client/Player.hx", lineNumber : 1405, className : "client.Player", methodName : "getAniSkipTimestamps"});
+					}
+				}
+				segments.sort(function(a,b) {
+					if(a.start < b.start) {
+						return -1;
+					} else if(a.start > b.start) {
+						return 1;
+					} else {
+						return 0;
+					}
+				});
+				haxe_Log.trace("Created " + segments.length + " skip segments total:",{ fileName : "src/client/Player.hx", lineNumber : 1415, className : "client.Player", methodName : "getAniSkipTimestamps"});
+				var _g = 0;
+				while(_g < segments.length) {
+					var segment = segments[_g];
+					++_g;
+					haxe_Log.trace("  " + segment.type + ": " + segment.start + "s - " + segment.end + "s (" + (segment.end - segment.start) + "s)",{ fileName : "src/client/Player.hx", lineNumber : 1417, className : "client.Player", methodName : "getAniSkipTimestamps"});
+				}
+				callback(segments);
+			} else {
+				haxe_Log.trace("No timestamps found in response for episode " + episodeId,{ fileName : "src/client/Player.hx", lineNumber : 1422, className : "client.Player", methodName : "getAniSkipTimestamps"});
+				callback([]);
+			}
+		});
+	}
+	,getDefaultDuration: function(segmentType) {
+		switch(segmentType) {
+		case "ending":
+			return 90.0;
+		case "intro":
+			return 30.0;
+		case "opening":
+			return 90.0;
+		case "outro":
+			return 30.0;
+		case "recap":
+			return 60.0;
+		default:
+			return 90.0;
+		}
+	}
+	,executeAniSkipQuery: function(query,callback) {
+		var http = new haxe_http_HttpJs("https://api.anime-skip.com/graphql");
+		http.addHeader("Content-Type","application/json");
+		var apiKey = this.main.getAnimeSkipApiKey();
+		if(apiKey != "") {
+			http.addHeader("X-Client-ID",apiKey);
+		} else {
+			http.addHeader("X-Client-ID","tuubi-sync");
+		}
+		http.setPostData(JSON.stringify(query));
+		http.onData = function(text) {
+			try {
+				var response = JSON.parse(text);
+				if(response.errors != null) {
+					var errors = response.errors;
+					var isAuthError = false;
+					var _g = 0;
+					while(_g < errors.length) {
+						var tmp = errors[_g++].message;
+						var message = tmp != null ? tmp : "";
+						haxe_Log.trace("AniSkip GraphQL error: " + message,{ fileName : "src/client/Player.hx", lineNumber : 1461, className : "client.Player", methodName : "executeAniSkipQuery"});
+						if(message.toLowerCase().indexOf("unauthorized") != -1 || message.toLowerCase().indexOf("forbidden") != -1 || message.toLowerCase().indexOf("client") != -1) {
+							isAuthError = true;
+						}
+					}
+					if(isAuthError) {
+						haxe_Log.trace("AniSkip authentication error - check X-Client-ID header and API key configuration",{ fileName : "src/client/Player.hx", lineNumber : 1472, className : "client.Player", methodName : "executeAniSkipQuery"});
+					}
+					callback(null);
+					return;
+				}
+				if(response.data != null) {
+					callback(response.data);
+				} else {
+					haxe_Log.trace("No data in AniSkip response",{ fileName : "src/client/Player.hx", lineNumber : 1482, className : "client.Player", methodName : "executeAniSkipQuery"});
+					callback(null);
+				}
+			} catch( _g ) {
+				haxe_Log.trace("Error parsing AniSkip JSON response: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Player.hx", lineNumber : 1487, className : "client.Player", methodName : "executeAniSkipQuery"});
+				haxe_Log.trace("Raw response text: " + text,{ fileName : "src/client/Player.hx", lineNumber : 1488, className : "client.Player", methodName : "executeAniSkipQuery"});
+				callback(null);
+			}
+		};
+		http.onError = function(msg) {
+			haxe_Log.trace("AniSkip API HTTP error: " + msg,{ fileName : "src/client/Player.hx", lineNumber : 1494, className : "client.Player", methodName : "executeAniSkipQuery"});
+			if(msg.indexOf("401") != -1) {
+				haxe_Log.trace("AniSkip authentication failed (401) - verify X-Client-ID header",{ fileName : "src/client/Player.hx", lineNumber : 1497, className : "client.Player", methodName : "executeAniSkipQuery"});
+			} else if(msg.indexOf("403") != -1) {
+				haxe_Log.trace("AniSkip access forbidden (403) - check API key permissions",{ fileName : "src/client/Player.hx", lineNumber : 1499, className : "client.Player", methodName : "executeAniSkipQuery"});
+			} else if(msg.indexOf("404") != -1) {
+				haxe_Log.trace("AniSkip endpoint not found (404) - verify API URL",{ fileName : "src/client/Player.hx", lineNumber : 1501, className : "client.Player", methodName : "executeAniSkipQuery"});
+			}
+			callback(null);
+		};
+		http.request();
+	}
+	,isAnimeContent: function(item) {
+		return item.isAnime;
 	}
 	,isPaused: function() {
 		if(this.player == null) {
@@ -8553,6 +9677,9 @@ haxe_http_HttpBase.prototype = {
 		}
 		this.headers.push({ name : name, value : value});
 	}
+	,addHeader: function(header,value) {
+		this.headers.push({ name : header, value : value});
+	}
 	,setPostData: function(data) {
 		this.postData = data;
 		this.postBytes = null;
@@ -9125,6 +10252,10 @@ if(ArrayBuffer.prototype.slice == null) {
 Lang.langs = new haxe_ds_StringMap();
 Lang.ids = ["en","ru"];
 Lang.lang = HxOverrides.substr($global.navigator.language,0,2).toLowerCase();
+client_AnimeTranslationService.titleTranslationCache = new haxe_ds_StringMap();
+client_AnimeTranslationService.cacheTimestamps = new haxe_ds_StringMap();
+client_AnimeTranslationService.CACHE_EXPIRATION = 604800000;
+client_AnimeTranslationService.ANILIST_API_URL = "https://graphql.anilist.co";
 client_Drawing.isDrawingUIVisible = false;
 client_Drawing.isDrawingEnabled = false;
 client_Drawing.isDrawing = false;

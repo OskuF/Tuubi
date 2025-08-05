@@ -60,7 +60,12 @@ typedef Config = {
 	filters:Array<Filter>,
 	allowedFileTypes:Array<String>,
 	?isVerbose:Bool,
-	?salt:String
+	?salt:String,
+	?animeSkipApiKey:String,
+	?enableAnimeSkip:Bool,
+	?autoSkipAnimeOpenings:Bool,
+	?autoSkipAnimeEndings:Bool,
+	?enableAnimeTitleTranslation:Bool
 }
 
 typedef Permissions = {
@@ -117,6 +122,22 @@ typedef Filter = {
 	replace:String
 };
 
+enum abstract SkipSegmentType(String) {
+	var Sponsor = "sponsor";
+	var Intro = "intro";
+	var Outro = "outro";
+	var Opening = "opening";
+	var Ending = "ending";
+	var Recap = "recap";
+}
+
+typedef SkipSegment = {
+	start:Float,
+	end:Float,
+	type:SkipSegmentType,
+	?title:String
+};
+
 typedef Message = {
 	text:String,
 	name:String,
@@ -141,6 +162,7 @@ typedef VideoItem = {
 	var ?voiceOverTrack:String;
 	var isTemp:Bool;
 	var doCache:Bool;
+	var isAnime:Bool;
 	var playerType:PlayerType;
 }
 
@@ -155,6 +177,7 @@ private class VideoItemTools {
 			voiceOverTrack: item.voiceOverTrack,
 			isTemp: item.isTemp,
 			doCache: item.doCache,
+			isAnime: item.isAnime,
 			playerType: item.playerType
 		};
 	}

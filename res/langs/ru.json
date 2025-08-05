@@ -90,6 +90,7 @@
 	"voteForSkip": "Голосовать за пропуск",
 	"addAsTemporary": "Добавить как временный",
 	"cacheOnServer": "Закэшировать на сервере",
+	"isAnime": "Аниме",
 	"mediaUrl": "Ссылка на видео",
 	"optionalTitle": "Заголовок (опционально)",
 	"subtitlesUrlOptional": "Ссылка на субтитры (опционально)",

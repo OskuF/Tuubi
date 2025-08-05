@@ -96,6 +96,7 @@ class Main {
 	var currentRandomVideoIndex = 0;
 	var currentRandomVideoQuery = "";
 	var currentRandomVideoAttemptCount = 0;
+
 	public var isRandomVideoOperation = false;
 
 	static function main():Void {
@@ -1110,6 +1111,8 @@ class Main {
 		final checkboxCache:InputElement = getEl("#cache-on-server");
 		final doCache = checkboxCache.checked
 			&& checkboxCache.parentElement.style.display != "none";
+		final checkboxAnime:InputElement = getEl("#is-anime");
+		final isAnime = checkboxAnime.checked;
 		final url = mediaUrl.value;
 		final subs = subsUrl.value;
 		if (url.length == 0) return;
@@ -1124,7 +1127,7 @@ class Main {
 		handleUrlMasks(links);
 		// if videos added as next, we need to load them in reverse order
 		if (!atEnd) sortItemsForQueueNext(links);
-		addVideoArray(links, atEnd, isTemp, doCache);
+		addVideoArray(links, atEnd, isTemp, doCache, isAnime);
 	}
 
 	public function getLinkPlayerType(url:String):PlayerType {
@@ -1152,14 +1155,14 @@ class Main {
 		if (first != null) items.unshift(first);
 	}
 
-	function addVideoArray(links:Array<String>, atEnd:Bool, isTemp:Bool, doCache:Bool):Void {
+	function addVideoArray(links:Array<String>, atEnd:Bool, isTemp:Bool, doCache:Bool, isAnime:Bool):Void {
 		if (links.length == 0) return;
 		final link = links.shift();
-		addVideo(link, atEnd, isTemp, doCache, () ->
-			addVideoArray(links, atEnd, isTemp, doCache));
+		addVideo(link, atEnd, isTemp, doCache, isAnime, () ->
+			addVideoArray(links, atEnd, isTemp, doCache, isAnime));
 	}
 
-	public function addVideo(url:String, atEnd:Bool, isTemp:Bool, doCache:Bool, ?callback:() -> Void):Void {
+	public function addVideo(url:String, atEnd:Bool, isTemp:Bool, doCache:Bool, isAnime:Bool, ?callback:() -> Void):Void {
 		final protocol = Browser.location.protocol;
 		if (url.startsWith("/")) {
 			final host = Browser.location.hostname;
@@ -1192,6 +1195,7 @@ class Main {
 						duration: data.duration,
 						isTemp: isTemp,
 						doCache: doCache,
+						isAnime: isAnime,
 						subs: data.subs,
 						voiceOverTrack: data.voiceOverTrack,
 						playerType: data.playerType
@@ -1214,6 +1218,8 @@ class Main {
 		mediaTitle.value = "";
 		final checkbox:InputElement = getEl("#customembed .add-temp");
 		final isTemp = checkbox.checked;
+		final checkboxAnime:InputElement = getEl("#is-anime");
+		final isAnime = checkboxAnime.checked;
 		final obj:VideoDataRequest = {
 			url: iframe,
 			atEnd: atEnd
@@ -1236,6 +1242,7 @@ class Main {
 						duration: data.duration,
 						isTemp: isTemp,
 						doCache: false,
+						isAnime: isAnime,
 						playerType: IframeType
 					},
 					atEnd: atEnd
@@ -1269,16 +1276,16 @@ class Main {
 			final spacedTags = ["IMG", "MVI", "MOV", "100", "SAM", "DSC", "SDV"];
 			final noSpaceTags = ["DSCF", "DSCN", "PICT", "MAQ0", "FILE", "GOPR", "GP01", "GX01"];
 			final dateFormats = ["YMD", "MDY", "DMY"];
-			
+
 			// Create combined array with equal probability for each individual item
 			final allOptions = [];
 			for (tag in spacedTags) allOptions.push({type: "spaced", value: tag});
 			for (tag in noSpaceTags) allOptions.push({type: "nospace", value: tag});
 			for (format in dateFormats) allOptions.push({type: "date", value: format});
-			
+
 			// Randomly select one option (equal probability for each)
 			final selectedOption = allOptions[Math.floor(Math.random() * allOptions.length)];
-			
+
 			switch (selectedOption.type) {
 				case "spaced":
 					// Spaced device tags
@@ -1286,26 +1293,28 @@ class Main {
 					final paddedNumber = StringTools.lpad(Std.string(randomNumber), "0", 4);
 					query = '${selectedOption.value} $paddedNumber'; // Format: TAG 0001
 					trace('Generated obscure search query (spaced): "$query"');
-				
+
 				case "nospace":
 					// No-space device tags
 					final randomNumber = Math.floor(Math.random() * 9999) + 1;
 					final paddedNumber = StringTools.lpad(Std.string(randomNumber), "0", 4);
 					query = '${selectedOption.value}$paddedNumber'; // Format: TAG0001
 					trace('Generated obscure search query (no-space): "$query"');
-				
+
 				case "date":
 					// Date format tags
 					// Generate random date (same range as before filter: 1-15 years ago)
 					final currentYear = Date.now().getFullYear();
-					final year = currentYear - (Math.floor(Math.random() * 15) + 1); // 1-15 years ago
+					final year = currentYear
+						- (Math.floor(Math.random() * 15) + 1); // 1-15 years ago
 					final month = Math.floor(Math.random() * 12) + 1;
-					final day = Math.floor(Math.random() * 28) + 1; // Use 1-28 to avoid month length issues
-					
+					final day = Math.floor(Math.random() * 28)
+						+ 1; // Use 1-28 to avoid month length issues
+
 					final yearStr = Std.string(year);
 					final monthStr = month < 10 ? "0" + month : "" + month;
 					final dayStr = day < 10 ? "0" + day : "" + day;
-					
+
 					// Apply date format
 					switch (selectedOption.value) {
 						case "YMD": query = '$yearStr$monthStr$dayStr'; // 20250706
@@ -1313,7 +1322,7 @@ class Main {
 						case "DMY": query = '$dayStr$monthStr$yearStr'; // 06072025
 						default: query = '$yearStr$monthStr$dayStr';
 					}
-					
+
 					isDateFormat = true;
 					trace('Generated obscure search query (date format ${selectedOption.value}): "$query"');
 			}
@@ -1355,7 +1364,7 @@ class Main {
 	public function addRandomYoutubeVideo():Void {
 		// Enhanced logging for random video button press
 		trace('[RANDOM VIDEO] User: "${personal.name}" pressed random video button | Starting search...');
-		
+
 		// Mark that we're starting a random video operation
 		isRandomVideoOperation = true;
 
@@ -1446,7 +1455,7 @@ class Main {
 
 				// Video is embeddable, add it to the playlist
 				trace('Found embeddable video: $videoId ($title)');
-				addVideo(youtubeUrl, true, true, false, () -> {
+				addVideo(youtubeUrl, true, true, false, false, () -> {
 					serverMessage('Added random video from search: "$query"');
 					// Note: Flag will be cleared when video successfully plays or fails
 				});
@@ -1594,14 +1603,14 @@ class Main {
 	}
 
 	public function handleRandomVideoPlaybackError(errorCode:Int):Void {
-		final errorType = switch(errorCode) {
+		final errorType = switch (errorCode) {
 			case 101: "Cannot embed (restricted by uploader)";
 			case 150: "Embedding disabled";
 			case 5: "Format not supported";
 			case 2: "Video not found";
 			default: "Unknown error ($errorCode)";
 		};
-		
+
 		sendRandomVideoNotification('[RANDOM VIDEO] User: "${personal.name}" | Error: $errorType | Action: Initiating reroll process...');
 
 		// Remove the failed video from the playlist
@@ -1655,7 +1664,7 @@ class Main {
 				final randomVideoId = knownVideoIds[Math.floor(Math.random() * knownVideoIds.length)];
 				final youtubeUrl = "https://www.youtube.com/watch?v=" + randomVideoId;
 
-				addVideo(youtubeUrl, true, true, false, () -> {
+				addVideo(youtubeUrl, true, true, false, false, () -> {
 					serverMessage("Added popular video (emergency fallback)");
 					// Note: Flag will be cleared when video successfully plays or fails
 				});
@@ -1666,7 +1675,7 @@ class Main {
 			final selectedVideoId = videoIds[randomIndex];
 			final youtubeUrl = "https://www.youtube.com/watch?v=" + selectedVideoId;
 
-			addVideo(youtubeUrl, true, true, false, () -> {
+			addVideo(youtubeUrl, true, true, false, false, () -> {
 				serverMessage('Added trending video: "$query"');
 				// Note: Flag will be cleared when video successfully plays or fails
 			});
@@ -2087,7 +2096,7 @@ class Main {
 			case RandomVideoNotification:
 				// RandomVideoNotification events are sent from client to server only
 				// This case is here for completeness but should not receive events
-				
+
 			case SetBackground:
 				// Process incoming background changes from other clients
 				Drawing.onSetBackground(data.setBackground.isTransparent, data.setBackground.color);
@@ -2790,6 +2799,15 @@ class Main {
 			case "ad":
 				player.skipAd();
 				return false;
+			case "skip-opening", "op":
+				player.skipAnimeOpening();
+				return false;
+			case "skip-ending", "ed":
+				player.skipAnimeEnding();
+				return false;
+			case "skip-anime":
+				player.skipAnimeSegments();
+				return false;
 			case "random":
 				fetchRandomEmote();
 				return true;
@@ -3067,6 +3085,26 @@ class Main {
 
 	public function getYoutubePlaylistLimit():Int {
 		return config.youtubePlaylistLimit;
+	}
+
+	public function getAnimeSkipApiKey():String {
+		return config.animeSkipApiKey ?? "";
+	}
+
+	public function getEnableAnimeSkip():Bool {
+		return config.enableAnimeSkip ?? true;
+	}
+
+	public function getAutoSkipAnimeOpenings():Bool {
+		return config.autoSkipAnimeOpenings ?? false;
+	}
+
+	public function getAutoSkipAnimeEndings():Bool {
+		return config.autoSkipAnimeEndings ?? false;
+	}
+
+	public function getEnableAnimeTitleTranslation():Bool {
+		return config.enableAnimeTitleTranslation ?? true;
 	}
 
 	public function isAutoplayAllowed():Bool {

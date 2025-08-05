@@ -772,7 +772,7 @@ class Buttons {
 					trace('[YOUTUBE SEARCH] Auto-queueing video: ${videoUrl} (random: ${randomVideoCheckbox.checked})');
 					
 					// Automatically add the selected video to the end of the playlist as temporary
-					main.addVideo(videoUrl, true, true, false);
+					main.addVideo(videoUrl, true, true, false, false);
 					
 					youtubeSearchStatus.textContent = 'Video added to playlist!';
 					trace('[YOUTUBE SEARCH] Video successfully queued');

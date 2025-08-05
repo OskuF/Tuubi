@@ -1,9 +1,12 @@
 package client;
 
 import Types.PlayerType;
+import Types.SkipSegment;
+import Types.SkipSegmentType;
 import Types.VideoData;
 import Types.VideoDataRequest;
 import Types.VideoItem;
+import client.AnimeTranslationService;
 import client.Main.getEl;
 import client.players.Iframe;
 import client.players.Peertube;
@@ -192,6 +195,10 @@ class Player {
 		addActiveLabel(videoList.pos);
 
 		isLoaded = false;
+		
+		// Clear AniSkip cache when changing videos
+		clearAniSkipCache();
+		
 		if (main.isVideoEnabled) {
 			player.loadVideo(item);
 			setExternalAudioTrack(item);
@@ -254,6 +261,7 @@ class Player {
 	}
 
 	public function removeVideo():Void {
+		stopAutoSkipMonitoring(); // Stop auto-skip monitoring
 		JsApi.fireVideoRemoveEvents(videoList.currentItem);
 		player.removeVideo();
 		getEl("#currenttitle").textContent = Lang.get("nothingPlaying");
@@ -276,6 +284,88 @@ class Player {
 		if (!isLoaded) main.send({type: VideoLoaded});
 		isLoaded = true;
 		Buttons.onViewportResize();
+		
+		// Check for auto-skip segments when video is ready
+		checkAutoSkipSegments();
+	}
+
+	function checkAutoSkipSegments():Void {
+		trace('Checking auto-skip segments...');
+		
+		if (!main.getEnableAnimeSkip()) {
+			trace('Anime skip is disabled in config');
+			return;
+		}
+		
+		final item = videoList.currentItem ?? return;
+		trace('Current item: ${item.title} (isAnime: ${item.isAnime})');
+		
+		if (!isAnimeContent(item)) {
+			trace('Item is not marked as anime content');
+			return;
+		}
+		
+		var autoSkipTypes:Array<SkipSegmentType> = [];
+		
+		if (main.getAutoSkipAnimeOpenings()) {
+			autoSkipTypes.push(Opening);
+			autoSkipTypes.push(Intro);
+			trace('Auto-skip openings enabled');
+		}
+		
+		if (main.getAutoSkipAnimeEndings()) {
+			autoSkipTypes.push(Ending);
+			autoSkipTypes.push(Outro);
+			trace('Auto-skip endings enabled');
+		}
+		
+		if (autoSkipTypes.length > 0) {
+			trace('Starting auto-skip monitoring for: ${autoSkipTypes.map(t -> Std.string(t)).join(", ")}');
+			startAutoSkipMonitoring(autoSkipTypes);
+		} else {
+			trace('No auto-skip types enabled');
+		}
+	}
+
+	var autoSkipTimer:Null<haxe.Timer>;
+	
+	// AniSkip segment caching
+	var aniSkipSegmentCache:Map<String, Array<SkipSegment>> = new Map();
+	
+	function getAniSkipCacheKey(animeInfo:{title:String, episode:Int}):String {
+		return '${animeInfo.title}:${animeInfo.episode}';
+	}
+	
+	function clearAniSkipCache():Void {
+		var count = 0;
+		for (key in aniSkipSegmentCache.keys()) count++;
+		trace('Clearing AniSkip segment cache ($count entries)');
+		aniSkipSegmentCache.clear();
+		
+		// Also clear the anime translation cache
+		AnimeTranslationService.clearCache();
+	}
+	
+	function startAutoSkipMonitoring(segmentTypes:Array<SkipSegmentType>):Void {
+		stopAutoSkipMonitoring(); // Stop any existing timer
+		
+		autoSkipTimer = new haxe.Timer(1000); // Check every second
+		autoSkipTimer.run = () -> {
+			if (!isVideoLoaded() || videoList.currentItem == null) {
+				stopAutoSkipMonitoring();
+				return;
+			}
+			
+			// Check if we should skip current segment
+			skipSegments(segmentTypes);
+		};
+	}
+	
+	function stopAutoSkipMonitoring():Void {
+		if (autoSkipTimer != null) {
+			autoSkipTimer.stop();
+			autoSkipTimer = null;
+		}
 	}
 
 	public function onPlay():Void {
@@ -714,8 +804,38 @@ class Player {
 	}
 
 	public function skipAd():Void {
+		skipSegments([Sponsor]);
+	}
+
+	public function skipAnimeOpening():Void {
+		skipSegments([Opening, Intro]);
+	}
+
+	public function skipAnimeEnding():Void {
+		skipSegments([Ending, Outro]);
+	}
+
+	public function skipAnimeSegments():Void {
+		skipSegments([Opening, Ending, Intro, Outro, Recap]);
+	}
+
+	function skipSegments(segmentTypes:Array<SkipSegmentType>):Void {
 		final item = videoList.currentItem ?? return;
 		var itemUrl = item.url;
+		
+		// First try SponsorBlock for sponsor segments
+		if (segmentTypes.contains(Sponsor)) {
+			skipSponsorBlockSegments(itemUrl);
+		}
+		
+		// Then try AniSkip for anime segments if enabled
+		final animeTypes = segmentTypes.filter(type -> type != Sponsor);
+		if (animeTypes.length > 0 && main.getEnableAnimeSkip() && isAnimeContent(item)) {
+			skipAniSkipSegments(itemUrl, animeTypes);
+		}
+	}
+
+	function skipSponsorBlockSegments(itemUrl:String):Void {
 		if (!youtube.isSupportedLink(itemUrl)) {
 			itemUrl = itemUrl.replace("/cache/", "youtu.be/");
 			if (!youtube.isSupportedLink(itemUrl)) return;
@@ -740,11 +860,717 @@ class Player {
 							time: end - time - 1
 						}
 					});
+					return; // Skip only first matching segment
 				}
 			}
 		}
 		http.onError = msg -> trace(msg);
 		http.request();
+	}
+
+	function skipAniSkipSegments(itemUrl:String, segmentTypes:Array<SkipSegmentType>):Void {
+		final item = videoList.currentItem;
+		if (item == null) return;
+		
+		// Extract anime title and episode info for AniSkip lookup
+		final animeInfo = extractAnimeInfo(item.title);
+		if (animeInfo.title == "") {
+			trace('Could not extract anime info from title: ${item.title}');
+			return;
+		}
+		
+		// Get title variations for better AniSkip database compatibility (if enabled)
+		if (main.getEnableAnimeTitleTranslation()) {
+			trace('Getting title variations for anime title: "${animeInfo.title}"');
+			AnimeTranslationService.getTitleVariations(animeInfo.title, (primaryTitle:String, variations:Array<String>) -> {
+				handleAniSkipWithVariations(animeInfo, primaryTitle, variations, segmentTypes);
+			});
+		} else {
+			trace('Anime title translation is disabled, using original title: "${animeInfo.title}"');
+			handleAniSkipWithVariations(animeInfo, animeInfo.title, [animeInfo.title], segmentTypes);
+		}
+	}
+	
+	function handleAniSkipWithVariations(animeInfo:{title:String, episode:Int}, primaryTitle:String, variations:Array<String>, segmentTypes:Array<SkipSegmentType>):Void {
+		// Try each title variation until we find skip segments
+		tryAniSkipWithVariations(animeInfo, primaryTitle, variations, segmentTypes, 0);
+	}
+	
+	function tryAniSkipWithVariations(animeInfo:{title:String, episode:Int}, primaryTitle:String, variations:Array<String>, segmentTypes:Array<SkipSegmentType>, varIndex:Int):Void {
+		if (varIndex >= variations.length) {
+			trace('No skip segments found with any title variation');
+			return;
+		}
+		
+		final currentTitle = variations[varIndex];
+		final currentAnimeInfo = {
+			title: currentTitle,
+			episode: animeInfo.episode
+		};
+		
+		final cacheKey = getAniSkipCacheKey(currentAnimeInfo);
+		
+		// Check cache first
+		if (aniSkipSegmentCache.exists(cacheKey)) {
+			final cachedSegments = aniSkipSegmentCache.get(cacheKey);
+			trace('Cache hit for: ${currentTitle} episode ${animeInfo.episode} (${cachedSegments.length} segments)');
+			processSkipSegments(cachedSegments, segmentTypes);
+			return;
+		}
+		
+		trace('Trying AniSkip query ${varIndex + 1}/${variations.length}: "${currentTitle}" episode ${animeInfo.episode}');
+		
+		// Query AniSkip API with current title variation
+		queryAniSkipAPI(currentAnimeInfo, segmentTypes, (segments:Array<SkipSegment>) -> {
+			// Cache the results
+			aniSkipSegmentCache.set(cacheKey, segments);
+			
+			if (segments.length > 0) {
+				trace('Success! Found ${segments.length} segments with title: "${currentTitle}"');
+				
+				// Cache under primary title and original title too for future lookups
+				if (currentTitle != primaryTitle) {
+					final primaryCacheKey = getAniSkipCacheKey({title: primaryTitle, episode: animeInfo.episode});
+					aniSkipSegmentCache.set(primaryCacheKey, segments);
+				}
+				if (currentTitle != animeInfo.title) {
+					final originalCacheKey = getAniSkipCacheKey(animeInfo);
+					aniSkipSegmentCache.set(originalCacheKey, segments);
+				}
+				
+				processSkipSegments(segments, segmentTypes);
+			} else {
+				trace('No segments found with "${currentTitle}", trying next variation...');
+				// Try next variation
+				tryAniSkipWithVariations(animeInfo, primaryTitle, variations, segmentTypes, varIndex + 1);
+			}
+		});
+	}
+	
+	function processSkipSegments(segments:Array<SkipSegment>, segmentTypes:Array<SkipSegmentType>):Void {
+		final currentTime = getTime();
+		trace('Current video time: ${currentTime}s, checking ${segments.length} segments');
+		
+		for (segment in segments) {
+			// Only process segments of requested types
+			if (!segmentTypes.contains(segment.type)) continue;
+			
+			if (currentTime >= segment.start - 1 && currentTime <= segment.end) {
+				trace('Skipping ${segment.type} segment: ${segment.start}-${segment.end}');
+				main.send({
+					type: Rewind,
+					rewind: {
+						time: segment.end - currentTime
+					}
+				});
+				return; // Skip only first matching segment
+			}
+		}
+		
+		trace('No segments match current time ${currentTime}s');
+	}
+
+	function extractAnimeInfo(title:String):{title:String, episode:Int} {
+		// Try to extract anime title and episode number from video title
+		var cleanTitle = title;
+		var episode = 1;
+		
+		trace('Original title: "$title"');
+		
+		// STEP 1: Try to extract episode number from original title first (before aggressive cleanup)
+		final episodePatterns = [
+			~/\s+episode\s+(\d+)/i,                    // " Episode 12"
+			~/\s+ep\.?\s*(\d+)/i,                      // " Ep 12" or " Ep. 12"
+			~/\s+e(\d+)(?:\s|$)/i,                     // " E12 "
+			~/\s*-\s*(\d+)\s*\[/,                      // "- 04 [" (common in release names)
+			~/\s+(\d+)\s*\[.*?\]\s*$/,                 // " 04 [tags]" at end
+			~/\s+(\d+)(?:\s*-\s*\d+)?\s*$/,            // " 12" or " 12-13" at end
+			~/\s*-\s*(\d+)(?:\s*-\s*\d+)?\s*$/,        // "- 12" or "- 12-13" at end
+			~/s(\d+)e(\d+)/i,                          // "S1E12" - capture episode as second group
+			~/season\s*\d+\s+episode\s+(\d+)/i,        // "Season 1 Episode 12"
+			~/\s+(\d+)(?:話|화)(?:\s|$)/,               // Japanese/Korean episode markers
+		];
+		
+		// Try episode extraction on original title first
+		var patternMatched = false;
+		for (i in 0...episodePatterns.length) {
+			final pattern = episodePatterns[i];
+			if (pattern.match(title)) {
+				trace('Pattern ${i} matched original title');
+				patternMatched = true;
+				// Special handling for S#E# pattern (episode is second group)
+				if (i == 7) { // s(\d+)e(\d+) pattern - index updated
+					episode = Std.parseInt(pattern.matched(2));
+					trace('Extracted episode from S#E# pattern: ${pattern.matched(2)}');
+				} else {
+					episode = Std.parseInt(pattern.matched(1));
+					trace('Extracted episode from pattern: ${pattern.matched(1)}');
+				}
+				
+				if (episode == null || episode <= 0) episode = 1;
+				trace('Found episode $episode using pattern ${i}');
+				break;
+			}
+		}
+		
+		if (!patternMatched) {
+			trace('No episode patterns matched original title: "$title"');
+		}
+		
+		// STEP 2: Clean up the title for anime name extraction
+		cleanTitle = ~/\.(mp4|mkv|avi|webm|m4v)$/i.replace(cleanTitle, ""); // Remove file extensions
+		cleanTitle = ~/\s*(1080p|720p|480p|HD|SD|BluRay|WEB-DL|WEBRip|x264|x265|HEVC).*$/i.replace(cleanTitle, ""); // Remove quality tags
+		cleanTitle = ~/\s*\[.*?\]/g.replace(cleanTitle, ""); // Remove [tags] like [SubGroup]
+		cleanTitle = ~/\s*\(.*?\)/g.replace(cleanTitle, ""); // Remove (tags) like (Eng Sub)
+		
+		// Remove episode numbers and common patterns from title
+		cleanTitle = ~/\s*-\s*\d+\s*$/g.replace(cleanTitle, ""); // Remove "- 04" at end
+		cleanTitle = ~/\s+episode\s+\d+.*$/i.replace(cleanTitle, ""); // Remove "Episode 04" and after
+		cleanTitle = ~/\s+ep\.?\s*\d+.*$/i.replace(cleanTitle, ""); // Remove "Ep 04" and after
+		cleanTitle = ~/\s+e\d+.*$/i.replace(cleanTitle, ""); // Remove "E04" and after
+		cleanTitle = ~/\s*-\s*(END|FINAL)?\s*$/i.replace(cleanTitle, ""); // Remove trailing dash
+		
+		// Final cleanup
+		cleanTitle = ~/^\s*-\s*/.replace(cleanTitle, ""); // Remove leading dash
+		cleanTitle = ~/\s*-\s*$/.replace(cleanTitle, ""); // Remove trailing dash
+		cleanTitle = ~/\s+/g.replace(cleanTitle, " "); // Normalize spaces
+		cleanTitle = StringTools.trim(cleanTitle);
+		
+		trace('After title cleanup: "$cleanTitle"');
+		
+		// Handle common edge cases
+		if (cleanTitle == "" || cleanTitle.length < 2) {
+			cleanTitle = title; // Fallback to original if cleaning went wrong
+			episode = 1;
+			trace('Title cleanup failed, using original title');
+		}
+		
+		// Normalize common anime title variations AFTER episode extraction
+		final normalizedTitle = normalizeAnimeTitle(cleanTitle);
+		
+		trace('Final extracted: title="$normalizedTitle", episode=$episode');
+		
+		return {title: normalizedTitle, episode: episode};
+	}
+
+	function normalizeAnimeTitle(title:String):String {
+		// Common anime title normalizations
+		final titleMappings = new Map<String, String>();
+		
+		// Popular anime title variations (Japanese -> English)
+		titleMappings.set("Kaijuu 8 Gou", "Kaiju No. 8");
+		titleMappings.set("Kaijuu 8-gou", "Kaiju No. 8");
+		titleMappings.set("Monster #8", "Kaiju No. 8");
+		titleMappings.set("Shingeki no Kyojin", "Attack on Titan");
+		titleMappings.set("Kimetsu no Yaiba", "Demon Slayer");
+		titleMappings.set("Kimetsu no Yaiba: Demon Slayer", "Demon Slayer");
+		titleMappings.set("Jujutsu Kaisen", "Jujutsu Kaisen");
+		titleMappings.set("Boku no Hero Academia", "My Hero Academia");
+		titleMappings.set("Bokutachi no Remake", "Remake Our Life!");
+		titleMappings.set("One Punch Man", "One-Punch Man");
+		titleMappings.set("Dr. Stone", "Dr. STONE");
+		titleMappings.set("Spy x Family", "SPY×FAMILY");
+		titleMappings.set("Chainsaw Man", "Chainsaw Man");
+		titleMappings.set("Mob Psycho 100", "Mob Psycho 100");
+		titleMappings.set("Tokyo Ghoul", "Tokyo Ghoul");
+		titleMappings.set("Naruto", "Naruto");
+		titleMappings.set("One Piece", "One Piece");
+		titleMappings.set("Bleach", "Bleach");
+		
+		// Korean title variations
+		titleMappings.set("신의 탑", "Tower of God");
+		titleMappings.set("갓 오브 하이스쿨", "The God of High School");
+		titleMappings.set("노블레스", "Noblesse");
+		
+		// Alternative English spellings/formats
+		titleMappings.set("Attack On Titan", "Attack on Titan");
+		titleMappings.set("My Hero Academia", "My Hero Academia");
+		titleMappings.set("Hunter X Hunter", "Hunter x Hunter");
+		titleMappings.set("JoJo's Bizarre Adventure", "JoJo's Bizarre Adventure");
+		titleMappings.set("Fullmetal Alchemist", "Fullmetal Alchemist");
+		titleMappings.set("Death Note", "Death Note");
+		titleMappings.set("One-Piece", "One Piece");
+		titleMappings.set("DragonBall", "Dragon Ball");
+		titleMappings.set("Dragon Ball Z", "Dragon Ball Z");
+		titleMappings.set("Cowboy Bebop", "Cowboy Bebop");
+		
+		// Check for exact matches first
+		if (titleMappings.exists(title)) {
+			final normalized = titleMappings.get(title);
+			trace('Title normalized: "$title" → "$normalized"');
+			return normalized;
+		}
+		
+		// Check for partial matches (case insensitive)
+		final lowerTitle = title.toLowerCase();
+		for (key in titleMappings.keys()) {
+			if (lowerTitle.indexOf(key.toLowerCase()) != -1) {
+				final normalized = titleMappings.get(key);
+				trace('Title normalized (partial): "$title" → "$normalized"');
+				return normalized;
+			}
+		}
+		
+		// Common patterns to normalize
+		var normalized = title;
+		
+		// Normalize numbering styles
+		normalized = ~/\bNo\.\s*(\d+)/.replace(normalized, "No. $1"); // "No.8" → "No. 8"
+		normalized = ~/\b(\d+)-gou\b/i.replace(normalized, "No. $1"); // "8-gou" → "No. 8"
+		normalized = ~/\b#(\d+)\b/.replace(normalized, "No. $1"); // "#8" → "No. 8"
+		
+		// Normalize spacing and punctuation
+		normalized = ~/\s+x\s+/.replace(normalized, "×"); // " x " → "×"
+		normalized = ~/\bDr\.\s*/i.replace(normalized, "Dr. "); // "Dr." normalization
+		
+		if (normalized != title) {
+			trace('Title normalized (pattern): "$title" → "$normalized"');
+		}
+		
+		return normalized;
+	}
+
+	function queryAniSkipAPI(animeInfo:{title:String, episode:Int}, segmentTypes:Array<SkipSegmentType>, callback:Array<SkipSegment>->Void):Void {
+		trace('Starting AniSkip API query chain for "${animeInfo.title}" episode ${animeInfo.episode}');
+		trace('Request types: ${segmentTypes.map(t -> Std.string(t)).join(", ")}');
+		
+		// Step 1: Search for shows
+		searchAniSkipShows(animeInfo.title, (shows:Array<Dynamic>) -> {
+			if (shows.length == 0) {
+				trace('No shows found for "${animeInfo.title}"');
+				callback([]);
+				return;
+			}
+			
+			// Find the best matching show
+			var bestShow:Dynamic = shows[0]; // Default to first result
+			for (show in shows) {
+				final showName:String = show.name;
+				if (showName != null && showName.toLowerCase().indexOf(animeInfo.title.toLowerCase()) != -1) {
+					bestShow = show;
+					break;
+				}
+			}
+			
+			trace('Selected show: ${bestShow.name} (ID: ${bestShow.id})');
+			
+			// Step 2: Get episodes for the selected show
+			getAniSkipEpisodes(bestShow.id, (episodes:Array<Dynamic>) -> {
+				if (episodes.length == 0) {
+					trace('No episodes found for show ID ${bestShow.id}');
+					callback([]);
+					return;
+				}
+				
+				// Find the matching episode
+				var targetEpisode:Dynamic = null;
+				for (episode in episodes) {
+					if (episode.number == animeInfo.episode) {
+						targetEpisode = episode;
+						break;
+					}
+				}
+				
+				if (targetEpisode == null) {
+					trace('Episode ${animeInfo.episode} not found in ${episodes.length} available episodes');
+					callback([]);
+					return;
+				}
+				
+				trace('Found episode ${targetEpisode.number} (ID: ${targetEpisode.id})');
+				
+				// Step 3: Get timestamps for the episode
+				getAniSkipTimestamps(targetEpisode.id, segmentTypes, callback);
+			});
+		});
+	}
+
+	function searchAniSkipShows(animeName:String, callback:Array<Dynamic>->Void):Void {
+		final query = {
+			query: 'query SearchShows($$search: String!, $$limit: Int) {
+				searchShows(search: $$search, limit: $$limit) {
+					id
+					name
+					createdAt
+				}
+			}',
+			variables: {
+				search: animeName,
+				limit: 10
+			}
+		};
+		
+		executeAniSkipQuery(query, (data:Dynamic) -> {
+			if (data == null) {
+				trace('AniSkip API error: null response for show search');
+				callback([]);
+				return;
+			}
+			
+			if (data.searchShows != null) {
+				final shows:Array<Dynamic> = data.searchShows;
+				trace('Found ${shows.length} shows for "${animeName}"');
+				for (show in shows) {
+					trace('  - ${show.name} (${show.id})');
+				}
+				callback(shows);
+			} else {
+				trace('No shows found in response for "${animeName}"');
+				callback([]);
+			}
+		});
+	}
+
+	function getAniSkipEpisodes(showId:String, callback:Array<Dynamic>->Void):Void {
+		final query = {
+			query: 'query FindEpisodesByShowId($$showId: ID!) {
+				findEpisodesByShowId(showId: $$showId) {
+					id
+					number
+					name
+					createdAt
+				}
+			}',
+			variables: {
+				showId: showId
+			}
+		};
+		
+		executeAniSkipQuery(query, (data:Dynamic) -> {
+			if (data == null) {
+				trace('AniSkip API error: null response for episodes search');
+				callback([]);
+				return;
+			}
+			
+			if (data.findEpisodesByShowId != null) {
+				final episodes:Array<Dynamic> = data.findEpisodesByShowId;
+				trace('Found ${episodes.length} episodes for show ${showId}');
+				callback(episodes);
+			} else {
+				trace('No episodes found in response for show ${showId}');
+				callback([]);
+			}
+		});
+	}
+
+	function getAniSkipTimestamps(episodeId:String, segmentTypes:Array<SkipSegmentType>, callback:Array<SkipSegment>->Void):Void {
+		final query = {
+			query: 'query FindTimestampsByEpisodeId($$episodeId: ID!) {
+				findTimestampsByEpisodeId(episodeId: $$episodeId) {
+					id
+					at
+					typeId
+					createdAt
+				}
+			}',
+			variables: {
+				episodeId: episodeId
+			}
+		};
+		
+		executeAniSkipQuery(query, (data:Dynamic) -> {
+			if (data == null) {
+				trace('AniSkip API error: null response for timestamps search');
+				callback([]);
+				return;
+			}
+			
+			if (data.findTimestampsByEpisodeId != null) {
+				final timestamps:Array<Dynamic> = data.findTimestampsByEpisodeId;
+				trace('Found ${timestamps.length} timestamps for episode ${episodeId}');
+				
+				// Convert timestamps to SkipSegments
+				final segments:Array<SkipSegment> = [];
+				
+				// Group timestamps by type and sort by time
+				final timestampsByType = new Map<String, Array<Dynamic>>();
+				for (timestamp in timestamps) {
+					trace('Processing timestamp: ${Json.stringify(timestamp)}');
+					// Validate timestamp data
+					if (timestamp.typeId == null || timestamp.at == null) {
+						trace('Skipping invalid timestamp: ${Json.stringify(timestamp)}');
+						continue;
+					}
+					
+					final typeId:String = timestamp.typeId;
+					final at:Float = timestamp.at;
+					
+					// Skip negative timestamps
+					if (at < 0) {
+						trace('Skipping negative timestamp: ${at}s');
+						continue;
+					}
+					
+					if (!timestampsByType.exists(typeId)) {
+						timestampsByType.set(typeId, []);
+					}
+					timestampsByType.get(typeId).push(timestamp);
+					trace('Added timestamp to type ${typeId}: ${at}s');
+				}
+				
+				// Process each type to create segments
+				for (typeId => typeTimestamps in timestampsByType) {
+					if (typeTimestamps == null || typeTimestamps.length == 0) {
+						continue;
+					}
+					
+					// Sort timestamps by time
+					typeTimestamps.sort((a, b) -> {
+						return (a.at < b.at) ? -1 : (a.at > b.at) ? 1 : 0;
+					});
+					
+					// Convert typeId to SkipSegmentType
+					// Map known AniSkip UUID types to our SkipSegmentType enum
+					final segmentType = switch (typeId) {
+						// Real AniSkip API type UUIDs (updated from actual API responses):
+						case "9edc0037-fa4e-47a7-a29a-d9c43368daa8": Opening; // Opening credits (confirmed)
+						case "c7b1eddb-defa-4bc6-a598-f143081cfe4b": Ending;  // Ending credits (from logs)
+						case "f38ac196-0d49-40a9-8fcf-f3ef2f40f127": Intro;   // Intro/recap (from logs)
+						case "14550023-2589-46f0-bfb4-152976506b4c": Outro;   // Outro/preview (from logs)
+						case "2a730a51-a601-439b-bc1f-7b94a640ffb9": Recap;   // Recap segment (from logs)
+						
+						// Legacy UUIDs (keep for backward compatibility)
+						case "67321535-a4ea-4f21-8bed-fb3c8286b510": Ending;  // Legacy ending
+						case "742d3889-2b60-4e17-958a-1e31b3a6e5b5": Intro;   // Legacy intro
+						case "f58634aa-f866-44f3-9e67-1d5d5c6b5e1c": Outro;   // Legacy outro
+						
+						default: {
+							trace('Unknown segment type UUID: ${typeId} - treating as generic segment');
+							// Don't skip unknown types, treat them as generic openings for now
+							Opening;
+						}
+					};
+					
+					trace('Processing segment type ${segmentType} (typeId: ${typeId})');
+					
+					// Check if this segment type is requested
+					if (!segmentTypes.contains(segmentType)) {
+						trace('Segment type ${segmentType} not requested, skipping');
+						continue;
+					}
+					
+					// Create segments from timestamps
+					if (typeTimestamps.length == 0) continue;
+					
+					if (typeTimestamps.length >= 2) {
+						// Multiple timestamps: try to pair them
+						var i = 0;
+						while (i < typeTimestamps.length - 1) {
+							final startTime:Float = typeTimestamps[i].at;
+							final endTime:Float = typeTimestamps[i + 1].at;
+							
+							// Only create segment if end time is after start time and duration is reasonable
+							if (endTime > startTime && (endTime - startTime) >= 5.0 && (endTime - startTime) < 600) { // Min 5s, Max 10 minutes
+								segments.push({
+									start: startTime,
+									end: endTime,
+									type: segmentType
+								});
+								trace('Created ${segmentType} segment: ${startTime}s - ${endTime}s (paired, duration: ${endTime - startTime}s)');
+								i += 2; // Skip to next pair
+							} else {
+								// If pairing fails, treat as single timestamp
+								final duration = getDefaultDuration(segmentType);
+								segments.push({
+									start: startTime,
+									end: startTime + duration,
+									type: segmentType
+								});
+								trace('Created ${segmentType} segment: ${startTime}s - ${startTime + duration}s (single + default duration)');
+								i += 1;
+							}
+						}
+						
+						// Handle odd remaining timestamp
+						if (i < typeTimestamps.length) {
+							final startTime:Float = typeTimestamps[i].at;
+							final duration = getDefaultDuration(segmentType);
+							segments.push({
+								start: startTime,
+								end: startTime + duration,
+								type: segmentType
+							});
+							trace('Created ${segmentType} segment: ${startTime}s - ${startTime + duration}s (single remaining)');
+						}
+					} else {
+						// Single timestamp: use default duration
+						final startTime:Float = typeTimestamps[0].at;
+						final duration = getDefaultDuration(segmentType);
+						segments.push({
+							start: startTime,
+							end: startTime + duration,
+							type: segmentType
+						});
+						trace('Created ${segmentType} segment: ${startTime}s - ${startTime + duration}s (single + default duration)');
+					}
+				}
+				
+				// Sort segments by start time and remove any overlaps
+				segments.sort((a, b) -> {
+					return (a.start < b.start) ? -1 : (a.start > b.start) ? 1 : 0;
+				});
+				
+				// Log final segment summary
+				trace('Created ${segments.length} skip segments total:');
+				for (segment in segments) {
+					trace('  ${segment.type}: ${segment.start}s - ${segment.end}s (${segment.end - segment.start}s)');
+				}
+				
+				callback(segments);
+			} else {
+				trace('No timestamps found in response for episode ${episodeId}');
+				callback([]);
+			}
+		});
+	}
+
+	function getDefaultDuration(segmentType:SkipSegmentType):Float {
+		return switch (segmentType) {
+			case Opening: 90.0;  // Typical anime opening is 90 seconds
+			case Ending: 90.0;   // Typical anime ending is 90 seconds
+			case Intro: 30.0;    // Intro/recap segments are usually shorter
+			case Outro: 30.0;    // Preview/next episode segments
+			case Recap: 60.0;    // Recap segments can be longer
+			default: 90.0;       // Default to 90 seconds
+		}
+	}
+	
+	function executeAniSkipQuery(query:Dynamic, callback:Dynamic->Void):Void {
+		final http = new Http("https://api.anime-skip.com/graphql");
+		http.addHeader("Content-Type", "application/json");
+		
+		final apiKey = main.getAnimeSkipApiKey();
+		if (apiKey != "") {
+			http.addHeader("X-Client-ID", apiKey);
+		} else {
+			http.addHeader("X-Client-ID", "tuubi-sync");
+		}
+		
+		http.setPostData(Json.stringify(query));
+		
+		http.onData = text -> {
+			try {
+				final response:Dynamic = Json.parse(text);
+				
+				if (response.errors != null) {
+					final errors:Array<Dynamic> = response.errors;
+					var isAuthError = false;
+					for (error in errors) {
+						final message:String = error.message ?? "";
+						trace('AniSkip GraphQL error: ${message}');
+						
+						// Check for authentication-related errors
+						if (message.toLowerCase().indexOf("unauthorized") != -1 ||
+							message.toLowerCase().indexOf("forbidden") != -1 ||
+							message.toLowerCase().indexOf("client") != -1) {
+							isAuthError = true;
+						}
+					}
+					
+					if (isAuthError) {
+						trace('AniSkip authentication error - check X-Client-ID header and API key configuration');
+					}
+					
+					callback(null);
+					return;
+				}
+				
+				if (response.data != null) {
+					callback(response.data);
+				} else {
+					trace('No data in AniSkip response');
+					callback(null);
+				}
+				
+			} catch (e:Dynamic) {
+				trace('Error parsing AniSkip JSON response: $e');
+				trace('Raw response text: $text');
+				callback(null);
+			}
+		};
+		
+		http.onError = msg -> {
+			trace('AniSkip API HTTP error: $msg');
+			// Check for common HTTP error codes that indicate authentication issues
+			if (msg.indexOf("401") != -1) {
+				trace('AniSkip authentication failed (401) - verify X-Client-ID header');
+			} else if (msg.indexOf("403") != -1) {
+				trace('AniSkip access forbidden (403) - check API key permissions');
+			} else if (msg.indexOf("404") != -1) {
+				trace('AniSkip endpoint not found (404) - verify API URL');
+			}
+			callback(null);
+		};
+		
+		http.request();
+	}
+
+	function buildAniSkipGraphQLQuery(animeName:String, episode:Int, segmentTypes:Array<SkipSegmentType>):{query:String, variables:Dynamic} {
+		// Step 1: Search for shows by name
+		return {
+			query: 'query SearchShows($$search: String!, $$limit: Int) {
+				searchShows(search: $$search, limit: $$limit) {
+					id
+					name
+					createdAt
+				}
+			}',
+			variables: {
+				search: animeName,
+				limit: 10
+			}
+		};
+	}
+
+	function parseAniSkipGraphQLResponse(data:Dynamic, requestedTypes:Array<SkipSegmentType>):Array<SkipSegment> {
+		final segments:Array<SkipSegment> = [];
+		
+		// Handle introspection response
+		if (data.__schema != null) {
+			trace('=== AniSkip GraphQL Schema Discovery ===');
+			final schema = data.__schema;
+			if (schema.queryType != null && schema.queryType.fields != null) {
+				final fields:Array<Dynamic> = schema.queryType.fields;
+				trace('Available root query fields:');
+				for (field in fields) {
+					trace('  - ${field.name}: ${field.type?.name ?? field.type?.kind}');
+					if (field.args != null && field.args.length > 0) {
+						final args:Array<Dynamic> = field.args;
+						trace('    Args: ${args.map(arg -> '${arg.name}(${arg.type?.name ?? arg.type?.kind})').join(", ")}');
+					}
+				}
+			}
+			trace('=== End Schema Discovery ===');
+			return segments; // Return empty for introspection
+		}
+		
+		// Handle actual search response (will implement after discovering schema)
+		if (data == null) {
+			trace('No data in response');
+			return segments;
+		}
+		
+		trace('Response data keys: ${Reflect.fields(data).join(", ")}');
+		
+		return segments;
+	}
+
+	function mapAniSkipGraphQLType(graphqlType:String):SkipSegmentType {
+		return switch (graphqlType.toUpperCase()) {
+			case "OP" | "OPENING": Opening;
+			case "ED" | "ENDING": Ending;
+			case "INTRO": Intro;
+			case "OUTRO": Outro;
+			case "RECAP": Recap;
+			default: Opening; // Default fallback
+		}
+	}
+
+
+	function isAnimeContent(item:VideoItem):Bool {
+		// Use the explicit anime flag from the checkbox
+		return item.isAnime;
 	}
 
 	public function isPaused():Bool {

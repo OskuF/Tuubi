@@ -24,6 +24,10 @@
 	"twitchClientId": "",
 	"cacheStorageLimitGiB": 3.0,
 	"allowedFileTypes": ["mp4", "mp3", "webm"],
+	"animeSkipApiKey": "",
+	"enableAnimeSkip": true,
+	"autoSkipAnimeOpenings": false,
+	"autoSkipAnimeEndings": false,
 	"permissions": {
 		"banned": [],
 		"guest": ["writeChat", "addVideo", "removeVideo", "changeOrder", "toggleItemType", "requestLeader", "rewind"],
