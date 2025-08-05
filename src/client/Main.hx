@@ -274,6 +274,16 @@ class Main {
 			});
 		}
 
+		final skipForward = getEl("#skipforward");
+		skipForward.onclick = e -> {
+			send({
+				type: Rewind,
+				rewind: {
+					time: settings.defaultSkipSeconds
+				}
+			});
+		}
+
 		final toggleDanmakuBtn = getEl("#toggledanmaku");
 		toggleDanmakuBtn.onclick = e -> {
 			toggleDanmaku();

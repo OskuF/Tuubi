@@ -89,6 +89,7 @@
 	"fullscreenPlayer": "Fullscreen player",
 	"retrievePlaylistLinks": "Retrieve playlist links",
 	"voteForSkip": "Vote for skip",
+	"skipForward": "Skip Forward",
 	"addAsTemporary": "Add as temporary",
 	"cacheOnServer": "Cache on server",
 	"mediaUrl": "Media URL",

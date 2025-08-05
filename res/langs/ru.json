@@ -89,6 +89,7 @@
 	"fullscreenPlayer": "Полноэкранный режим видео",
 	"retrievePlaylistLinks": "Получить ссылки на видео из плейлиста",
 	"voteForSkip": "Голосовать за пропуск",
+	"skipForward": "Перемотать вперёд",
 	"addAsTemporary": "Добавить как временный",
 	"cacheOnServer": "Закэшировать на сервере",
 	"mediaUrl": "Ссылка на видео",
