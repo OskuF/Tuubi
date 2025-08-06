@@ -544,6 +544,16 @@ body.pseudo-fullscreen #ytapiplayer {
   height: 98vh;
 }
 
+/* Hide scrollbars in pseudo-fullscreen while preserving scroll functionality */
+body.pseudo-fullscreen #video {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer/Edge */
+}
+
+body.pseudo-fullscreen #video::-webkit-scrollbar {
+  display: none; /* Safari/Chrome/Webkit browsers */
+}
+
 /* Enhanced rules when browser fullscreen (F11) is also active */
 body.pseudo-fullscreen:fullscreen .embed-responsive,
 body.pseudo-fullscreen:-webkit-full-screen .embed-responsive,
