@@ -212,4 +212,20 @@ class Utils {
 		final ctx = w.AudioContext ?? w.webkitAudioContext ?? return null;
 		return js.Syntax.code("new {0}()", ctx);
 	}
+
+	public static function isPseudoFullscreen():Bool {
+		return document.body.classList.contains("pseudo-fullscreen");
+	}
+
+	public static function togglePseudoFullscreen():Bool {
+		return document.body.classList.toggle("pseudo-fullscreen");
+	}
+
+	public static function enterPseudoFullscreen():Void {
+		document.body.classList.add("pseudo-fullscreen");
+	}
+
+	public static function exitPseudoFullscreen():Void {
+		document.body.classList.remove("pseudo-fullscreen");
+	}
 }

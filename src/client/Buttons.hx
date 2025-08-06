@@ -201,11 +201,15 @@ class Buttons {
 		}
 		final fullscreenBtn = getEl("#fullscreenbtn");
 		fullscreenBtn.onclick = e -> {
-			if ((Utils.isTouch() || main.isVerbose()) && !Utils.hasFullscreen()) {
-				window.scrollTo(0, 0);
-				Utils.requestFullscreen(document.documentElement);
+			// Use pseudo-fullscreen instead of native fullscreen to preserve danmaku overlay
+			final isPseudo = Utils.togglePseudoFullscreen();
+			final icon = fullscreenBtn.firstElementChild;
+			if (isPseudo) {
+				icon.setAttribute("name", "contract");
+				fullscreenBtn.title = Lang.get("exitFullscreen") ?? "Exit Fullscreen";
 			} else {
-				Utils.requestFullscreen(getEl("#ytapiplayer"));
+				icon.setAttribute("name", "expand");
+				fullscreenBtn.title = Lang.get("fullscreenPlayer") ?? "Fullscreen Player";
 			}
 		}
 		initPageFullscreen();

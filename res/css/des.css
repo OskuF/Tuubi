@@ -511,6 +511,122 @@ iframe#videoplayer {
   }
 }
 
+/* Pseudo-fullscreen mode */
+body.pseudo-fullscreen {
+  grid-template-areas: "video video video";
+  grid-template-columns: 1fr;
+}
+
+body.pseudo-fullscreen.swap {
+  grid-template-areas: "video video video";
+  grid-template-columns: 1fr;
+}
+
+body.pseudo-fullscreen #chat {
+  display: none;
+}
+
+body.pseudo-fullscreen .gutter {
+  display: none;
+}
+
+body.pseudo-fullscreen .embed-responsive {
+  max-height: 98vh;
+  min-height: 98vh;
+}
+
+body.pseudo-fullscreen #videoplayer {
+  max-height: 98vh;
+  min-height: 98vh;
+}
+
+body.pseudo-fullscreen #ytapiplayer {
+  height: 98vh;
+}
+
+/* Enhanced rules when browser fullscreen (F11) is also active */
+body.pseudo-fullscreen:fullscreen .embed-responsive,
+body.pseudo-fullscreen:-webkit-full-screen .embed-responsive,
+body.pseudo-fullscreen:-moz-full-screen .embed-responsive {
+  max-height: 100vh;
+  min-height: 100vh;
+}
+
+body.pseudo-fullscreen:fullscreen #videoplayer,
+body.pseudo-fullscreen:-webkit-full-screen #videoplayer,
+body.pseudo-fullscreen:-moz-full-screen #videoplayer {
+  max-height: 100vh;
+  min-height: 100vh;
+}
+
+body.pseudo-fullscreen:fullscreen #ytapiplayer,
+body.pseudo-fullscreen:-webkit-full-screen #ytapiplayer,
+body.pseudo-fullscreen:-moz-full-screen #ytapiplayer {
+  height: 100vh;
+}
+
+/* Mobile pseudo-fullscreen adjustments */
+@media only screen and (orientation: portrait) {
+  body.pseudo-fullscreen #video {
+    display: flex;
+    flex-direction: column;
+    height: 98vh;
+  }
+
+  body.pseudo-fullscreen #player {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  body.pseudo-fullscreen .embed-responsive {
+    max-height: 90vh;
+    min-height: 90vh;
+    flex: 1;
+  }
+
+  body.pseudo-fullscreen #videoplayer {
+    max-height: 90vh;
+    min-height: 90vh;
+  }
+
+  body.pseudo-fullscreen #ytapiplayer {
+    height: 90vh;
+  }
+
+  body.pseudo-fullscreen #playlist,
+  body.pseudo-fullscreen #footer {
+    display: none;
+  }
+
+  /* Mobile browser fullscreen combination */
+  body.pseudo-fullscreen:fullscreen #video,
+  body.pseudo-fullscreen:-webkit-full-screen #video,
+  body.pseudo-fullscreen:-moz-full-screen #video {
+    height: 100vh;
+  }
+
+  body.pseudo-fullscreen:fullscreen .embed-responsive,
+  body.pseudo-fullscreen:-webkit-full-screen .embed-responsive,
+  body.pseudo-fullscreen:-moz-full-screen .embed-responsive {
+    max-height: 95vh;
+    min-height: 95vh;
+  }
+
+  body.pseudo-fullscreen:fullscreen #videoplayer,
+  body.pseudo-fullscreen:-webkit-full-screen #videoplayer,
+  body.pseudo-fullscreen:-moz-full-screen #videoplayer {
+    max-height: 95vh;
+    min-height: 95vh;
+  }
+
+  body.pseudo-fullscreen:fullscreen #ytapiplayer,
+  body.pseudo-fullscreen:-webkit-full-screen #ytapiplayer,
+  body.pseudo-fullscreen:-moz-full-screen #ytapiplayer {
+    height: 95vh;
+  }
+}
+
 /* Playlist */
 
 #playlist {

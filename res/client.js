@@ -748,12 +748,18 @@ client_Buttons.init = function(main) {
 	window.document.querySelector("#mediarefresh").onclick = function(e) {
 		main.refreshPlayer();
 	};
-	window.document.querySelector("#fullscreenbtn").onclick = function(e) {
-		if((client_Utils.isTouch() || main.isVerbose()) && !client_Utils.hasFullscreen()) {
-			window.scrollTo(0,0);
-			return client_Utils.requestFullscreen(window.document.documentElement);
+	var fullscreenBtn = window.document.querySelector("#fullscreenbtn");
+	fullscreenBtn.onclick = function(e) {
+		var isPseudo = client_Utils.togglePseudoFullscreen();
+		var icon = fullscreenBtn.firstElementChild;
+		if(isPseudo) {
+			icon.setAttribute("name","contract");
+			var tmp = Lang.get("exitFullscreen");
+			return fullscreenBtn.title = tmp != null ? tmp : "Exit Fullscreen";
 		} else {
-			return client_Utils.requestFullscreen(window.document.querySelector("#ytapiplayer"));
+			icon.setAttribute("name","expand");
+			var tmp = Lang.get("fullscreenPlayer");
+			return fullscreenBtn.title = tmp != null ? tmp : "Fullscreen Player";
 		}
 	};
 	client_Buttons.initPageFullscreen();
@@ -910,7 +916,7 @@ client_Buttons.init = function(main) {
 				try {
 					data = JSON.parse(request.responseText);
 				} catch( _g ) {
-					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 391, className : "client.Buttons", methodName : "init"});
+					haxe_Log.trace(haxe_Exception.caught(_g),{ fileName : "src/client/Buttons.hx", lineNumber : 395, className : "client.Buttons", methodName : "init"});
 					return;
 				}
 				if(data.errorId == null) {
@@ -1250,9 +1256,9 @@ client_Buttons.initChatInputs = function(main) {
 	};
 	youtubeSearchBtn.onclick = function(e) {
 		var searchTerm = StringTools.trim(youtubeSearchInput.value);
-		haxe_Log.trace("[YOUTUBE SEARCH] Search button clicked, searchTerm: \"" + searchTerm + "\"",{ fileName : "src/client/Buttons.hx", lineNumber : 741, className : "client.Buttons", methodName : "initChatInputs"});
+		haxe_Log.trace("[YOUTUBE SEARCH] Search button clicked, searchTerm: \"" + searchTerm + "\"",{ fileName : "src/client/Buttons.hx", lineNumber : 745, className : "client.Buttons", methodName : "initChatInputs"});
 		if(searchTerm == "") {
-			haxe_Log.trace("[YOUTUBE SEARCH] Empty search term, returning",{ fileName : "src/client/Buttons.hx", lineNumber : 743, className : "client.Buttons", methodName : "initChatInputs"});
+			haxe_Log.trace("[YOUTUBE SEARCH] Empty search term, returning",{ fileName : "src/client/Buttons.hx", lineNumber : 747, className : "client.Buttons", methodName : "initChatInputs"});
 			return;
 		}
 		var query = searchTerm;
@@ -1273,10 +1279,10 @@ client_Buttons.initChatInputs = function(main) {
 		}
 		youtubeSearchStatus.textContent = "Searching...";
 		var maxResults = randomVideoCheckbox.checked ? 50 : 20;
-		haxe_Log.trace("[YOUTUBE SEARCH] About to call main.searchYoutubeVideos with query: \"" + query + "\", maxResults: " + maxResults,{ fileName : "src/client/Buttons.hx", lineNumber : 780, className : "client.Buttons", methodName : "initChatInputs"});
+		haxe_Log.trace("[YOUTUBE SEARCH] About to call main.searchYoutubeVideos with query: \"" + query + "\", maxResults: " + maxResults,{ fileName : "src/client/Buttons.hx", lineNumber : 784, className : "client.Buttons", methodName : "initChatInputs"});
 		main.searchYoutubeVideos(query,maxResults,function(videoIds) {
-			haxe_Log.trace("[YOUTUBE SEARCH] Callback received videoIds: " + Std.string(videoIds),{ fileName : "src/client/Buttons.hx", lineNumber : 784, className : "client.Buttons", methodName : "initChatInputs"});
-			haxe_Log.trace("[YOUTUBE SEARCH] VideoIds length (before dedup): " + videoIds.length,{ fileName : "src/client/Buttons.hx", lineNumber : 785, className : "client.Buttons", methodName : "initChatInputs"});
+			haxe_Log.trace("[YOUTUBE SEARCH] Callback received videoIds: " + Std.string(videoIds),{ fileName : "src/client/Buttons.hx", lineNumber : 788, className : "client.Buttons", methodName : "initChatInputs"});
+			haxe_Log.trace("[YOUTUBE SEARCH] VideoIds length (before dedup): " + videoIds.length,{ fileName : "src/client/Buttons.hx", lineNumber : 789, className : "client.Buttons", methodName : "initChatInputs"});
 			var uniqueVideoIds = [];
 			var _g = 0;
 			while(_g < videoIds.length) {
@@ -1286,7 +1292,7 @@ client_Buttons.initChatInputs = function(main) {
 					uniqueVideoIds.push(videoId);
 				}
 			}
-			haxe_Log.trace("[YOUTUBE SEARCH] VideoIds length (after dedup): " + uniqueVideoIds.length,{ fileName : "src/client/Buttons.hx", lineNumber : 795, className : "client.Buttons", methodName : "initChatInputs"});
+			haxe_Log.trace("[YOUTUBE SEARCH] VideoIds length (after dedup): " + uniqueVideoIds.length,{ fileName : "src/client/Buttons.hx", lineNumber : 799, className : "client.Buttons", methodName : "initChatInputs"});
 			if(uniqueVideoIds.length > 0) {
 				var selectedVideoId;
 				if(randomVideoCheckbox.checked) {
@@ -1296,16 +1302,16 @@ client_Buttons.initChatInputs = function(main) {
 					selectedVideoId = uniqueVideoIds[0];
 				}
 				var videoUrl = "https://www.youtube.com/watch?v=" + selectedVideoId;
-				haxe_Log.trace("[YOUTUBE SEARCH] Auto-queueing video: " + videoUrl + " (random: " + (randomVideoCheckbox.checked == null ? "null" : "" + randomVideoCheckbox.checked) + ")",{ fileName : "src/client/Buttons.hx", lineNumber : 809, className : "client.Buttons", methodName : "initChatInputs"});
+				haxe_Log.trace("[YOUTUBE SEARCH] Auto-queueing video: " + videoUrl + " (random: " + (randomVideoCheckbox.checked == null ? "null" : "" + randomVideoCheckbox.checked) + ")",{ fileName : "src/client/Buttons.hx", lineNumber : 813, className : "client.Buttons", methodName : "initChatInputs"});
 				main.addVideo(videoUrl,true,true,false);
 				youtubeSearchStatus.textContent = "Video added to playlist!";
-				haxe_Log.trace("[YOUTUBE SEARCH] Video successfully queued",{ fileName : "src/client/Buttons.hx", lineNumber : 815, className : "client.Buttons", methodName : "initChatInputs"});
+				haxe_Log.trace("[YOUTUBE SEARCH] Video successfully queued",{ fileName : "src/client/Buttons.hx", lineNumber : 819, className : "client.Buttons", methodName : "initChatInputs"});
 				haxe_Timer.delay(function() {
 					youtubeSearchStatus.textContent = "";
 				},3000);
 			} else {
 				youtubeSearchStatus.textContent = "No videos found for this search";
-				haxe_Log.trace("[YOUTUBE SEARCH] No videos found in callback",{ fileName : "src/client/Buttons.hx", lineNumber : 823, className : "client.Buttons", methodName : "initChatInputs"});
+				haxe_Log.trace("[YOUTUBE SEARCH] No videos found in callback",{ fileName : "src/client/Buttons.hx", lineNumber : 827, className : "client.Buttons", methodName : "initChatInputs"});
 				haxe_Timer.delay(function() {
 					youtubeSearchStatus.textContent = "";
 				},3000);
@@ -5125,9 +5131,6 @@ client_Main.prototype = {
 		}
 		return this.gotFirstPageInteraction;
 	}
-	,isVerbose: function() {
-		return this.config.isVerbose;
-	}
 	,initTts: function() {
 		var _gthis = this;
 		this.speechSynthesis = window.speechSynthesis;
@@ -6247,17 +6250,6 @@ client_Utils.hasFullscreen = function() {
 		return true;
 	}
 };
-client_Utils.requestFullscreen = function(el) {
-	var el2 = el;
-	if(el.requestFullscreen != null) {
-		el.requestFullscreen();
-	} else if(el2.webkitRequestFullscreen != null) {
-		el2.webkitRequestFullscreen(HTMLElement.ALLOW_KEYBOARD_INPUT);
-	} else {
-		return false;
-	}
-	return true;
-};
 client_Utils.copyToClipboard = function(text) {
 	var clipboardData = window.clipboardData;
 	if(clipboardData != null && clipboardData.setData != null) {
@@ -6357,6 +6349,9 @@ client_Utils.createAudioContext = function() {
 		return null;
 	}
 	return new ctx();
+};
+client_Utils.togglePseudoFullscreen = function() {
+	return window.document.body.classList.toggle("pseudo-fullscreen");
 };
 var client_YoutubeCrawler = function() { };
 client_YoutubeCrawler.__name__ = true;
