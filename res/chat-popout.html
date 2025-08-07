@@ -310,8 +310,8 @@
 
     // State management for infinite scrolling
     window.emoteState = {
-      ffz: { currentPage: 1, isLoading: false, hasMore: true },
-      seventv: { currentPage: 1, isLoading: false, hasMore: true }
+      ffz: { currentPage: 1, isLoading: false, hasMore: true, autoLoadDepth: 0, lastLoadTime: 0 },
+      seventv: { currentPage: 1, isLoading: false, hasMore: true, autoLoadDepth: 0, lastLoadTime: 0 }
     };
 
     // Debug connection status
@@ -521,21 +521,34 @@
       let isResizing = false;
 
       // Helper function to check if all emotes are visible and auto-load if needed
-      function checkVisibilityAndAutoLoad() {
+      function checkVisibilityAndAutoLoad(depth = 0) {
         const state = window.emoteState[emoteType];
         if (!state || state.isLoading || !state.hasMore || isResizing) return;
+
+        // Safety limit to prevent infinite recursion
+        if (depth > 10) {
+          console.log('Reached max auto-load depth for', emoteType, 'emotes');
+          return;
+        }
 
         const scrollHeight = grid.scrollHeight;
         const clientHeight = grid.clientHeight;
 
         // If all content is visible (no scrollbar), load more emotes
         if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
-          console.log('Auto-loading more', emoteType, 'emotes via visibility check');
+          console.log('Auto-loading more', emoteType, 'emotes via visibility check (depth:', depth, ')');
+          state.autoLoadDepth = depth + 1;
+          
           if (emoteType === 'ffz') {
             loadMoreFFZEmotes();
           } else if (emoteType === 'seventv') {
             loadMore7TVEmotes();
           }
+          
+          // Schedule another check after a short delay to continue loading if needed
+          setTimeout(() => {
+            checkVisibilityAndAutoLoad(depth + 1);
+          }, 300);
         }
       }
 
@@ -582,18 +595,62 @@
       if (!window.emoteState.ffz.hasMore || window.emoteState.ffz.isLoading) return;
       if (!window.parentMain || !window.parentMain.loadMoreFFZEmotesForPopout) return;
 
+      // Prevent rapid successive calls
+      const now = Date.now();
+      if (now - window.emoteState.ffz.lastLoadTime < 100) return;
+      
       window.emoteState.ffz.isLoading = true;
+      window.emoteState.ffz.lastLoadTime = now;
       window.emoteState.ffz.currentPage++;
       window.parentMain.loadMoreFFZEmotesForPopout(window.emoteState.ffz.currentPage);
+      
+      // Set up a post-load callback after a reasonable delay
+      setTimeout(() => {
+        if (window.emoteState.ffz.isLoading) {
+          // If still loading after 3 seconds, consider it done
+          window.emoteState.ffz.isLoading = false;
+        }
+        // Trigger another visibility check
+        const grid = document.getElementById('ffz-list');
+        if (grid) {
+          const scrollHeight = grid.scrollHeight;
+          const clientHeight = grid.clientHeight;
+          if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0 && window.emoteState.ffz.hasMore) {
+            setTimeout(() => loadMoreFFZEmotes(), 200);
+          }
+        }
+      }, 1000);
     }
 
     function loadMore7TVEmotes() {
       if (!window.emoteState.seventv.hasMore || window.emoteState.seventv.isLoading) return;
       if (!window.parentMain || !window.parentMain.loadMore7TVEmotesForPopout) return;
 
+      // Prevent rapid successive calls
+      const now = Date.now();
+      if (now - window.emoteState.seventv.lastLoadTime < 100) return;
+      
       window.emoteState.seventv.isLoading = true;
+      window.emoteState.seventv.lastLoadTime = now;
       window.emoteState.seventv.currentPage++;
       window.parentMain.loadMore7TVEmotesForPopout(window.emoteState.seventv.currentPage);
+      
+      // Set up a post-load callback after a reasonable delay
+      setTimeout(() => {
+        if (window.emoteState.seventv.isLoading) {
+          // If still loading after 3 seconds, consider it done
+          window.emoteState.seventv.isLoading = false;
+        }
+        // Trigger another visibility check
+        const grid = document.getElementById('seventv-list');
+        if (grid) {
+          const scrollHeight = grid.scrollHeight;
+          const clientHeight = grid.clientHeight;
+          if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0 && window.emoteState.seventv.hasMore) {
+            setTimeout(() => loadMore7TVEmotes(), 200);
+          }
+        }
+      }, 1000);
     }
 
 
@@ -613,10 +670,47 @@
         panels.style.display = 'block';
         if (window.parentMain) {
           window.parentMain.loadEmotesForPopout(panelId);
+          
+          // Set up multiple delayed checks to ensure emotes fill the container
+          const emoteType = panelId === 'ffz-wrap' ? 'ffz' : (panelId === 'seventv-wrap' ? 'seventv' : null);
+          if (emoteType) {
+            // Reset state for new panel
+            window.emoteState[emoteType].autoLoadDepth = 0;
+            
+            // Multiple timed checks to ensure container gets filled
+            setTimeout(() => triggerVisibilityCheck(emoteType), 300);
+            setTimeout(() => triggerVisibilityCheck(emoteType), 800);
+            setTimeout(() => triggerVisibilityCheck(emoteType), 1500);
+            setTimeout(() => triggerVisibilityCheck(emoteType), 2500);
+          }
         }
       } else {
         panel.style.display = 'none';
         panels.style.display = 'none';
+      }
+    }
+    
+    function triggerVisibilityCheck(emoteType) {
+      const gridId = emoteType === 'ffz' ? 'ffz-list' : 'seventv-list';
+      const grid = document.getElementById(gridId);
+      if (!grid) return;
+      
+      const state = window.emoteState[emoteType];
+      if (!state || state.isLoading || !state.hasMore) return;
+
+      const scrollHeight = grid.scrollHeight;
+      const clientHeight = grid.clientHeight;
+      
+      console.log(`Visibility check for ${emoteType}: scrollHeight=${scrollHeight}, clientHeight=${clientHeight}`);
+
+      // If all content is visible (no scrollbar), trigger loading
+      if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
+        console.log(`Triggering auto-load for ${emoteType} - container not scrollable`);
+        if (emoteType === 'ffz') {
+          loadMoreFFZEmotes();
+        } else if (emoteType === 'seventv') {
+          loadMore7TVEmotes();
+        }
       }
     }
 
@@ -630,6 +724,31 @@
         }
       }
     }
+    
+    // Callback function for when emotes finish loading
+    window.onEmotesLoaded = function(emoteType, hasMore) {
+      console.log('Emotes loaded callback:', emoteType, 'hasMore:', hasMore);
+      const state = window.emoteState[emoteType];
+      if (state) {
+        state.isLoading = false;
+        state.hasMore = hasMore;
+        
+        // Trigger a visibility check after a short delay to allow DOM to update
+        setTimeout(() => {
+          triggerVisibilityCheck(emoteType);
+        }, 100);
+      }
+    };
+    
+    // Callback function for when emote loading fails
+    window.onEmoteLoadError = function(emoteType, error) {
+      console.log('Emotes load error callback:', emoteType, error);
+      const state = window.emoteState[emoteType];
+      if (state) {
+        state.isLoading = false;
+        // Don't retry immediately on error, wait for user action
+      }
+    };
 
     // Handle window closing
     window.addEventListener('beforeunload', function () {

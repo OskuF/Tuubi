@@ -3651,8 +3651,26 @@ class Main {
 						}
 					}
 					
+					// Call callback to notify popout that loading is complete
+					try {
+						final hasMore = popoutState != null ? popoutState.ffz.hasMore : false;
+						if (chatPopoutWindow.onEmotesLoaded != null) {
+							chatPopoutWindow.onEmotesLoaded("ffz", hasMore);
+						}
+					} catch (e:Dynamic) {
+						trace("Error calling FFZ emotes loaded callback: " + e);
+					}
+					
 				} catch (e:Dynamic) {
 					trace("Error parsing FFZ emotes: " + e);
+					// Call error callback
+					try {
+						if (chatPopoutWindow.onEmoteLoadError != null) {
+							chatPopoutWindow.onEmoteLoadError("ffz", e);
+						}
+					} catch (callbackError:Dynamic) {
+						trace("Error calling FFZ error callback: " + callbackError);
+					}
 				}
 			}
 		};
@@ -3662,6 +3680,15 @@ class Main {
 			final popoutState:Dynamic = chatPopoutWindow.emoteState;
 			if (popoutState != null) {
 				popoutState.ffz.isLoading = false;
+			}
+			
+			// Call error callback
+			try {
+				if (chatPopoutWindow.onEmoteLoadError != null) {
+					chatPopoutWindow.onEmoteLoadError("ffz", "Network error");
+				}
+			} catch (e:Dynamic) {
+				trace("Error calling FFZ error callback: " + e);
 			}
 		};
 		xhr.send();
@@ -3750,8 +3777,26 @@ class Main {
 						}
 					}
 					
+					// Call callback to notify popout that loading is complete
+					try {
+						final hasMore = popoutState != null ? popoutState.seventv.hasMore : false;
+						if (chatPopoutWindow.onEmotesLoaded != null) {
+							chatPopoutWindow.onEmotesLoaded("seventv", hasMore);
+						}
+					} catch (e:Dynamic) {
+						trace("Error calling 7TV emotes loaded callback: " + e);
+					}
+					
 				} catch (e:Dynamic) {
 					trace("Error parsing 7TV emotes: " + e);
+					// Call error callback
+					try {
+						if (chatPopoutWindow.onEmoteLoadError != null) {
+							chatPopoutWindow.onEmoteLoadError("seventv", e);
+						}
+					} catch (callbackError:Dynamic) {
+						trace("Error calling 7TV error callback: " + callbackError);
+					}
 				}
 			}
 		};
@@ -3761,6 +3806,15 @@ class Main {
 			final popoutState:Dynamic = chatPopoutWindow.emoteState;
 			if (popoutState != null) {
 				popoutState.seventv.isLoading = false;
+			}
+			
+			// Call error callback
+			try {
+				if (chatPopoutWindow.onEmoteLoadError != null) {
+					chatPopoutWindow.onEmoteLoadError("seventv", "Network error");
+				}
+			} catch (e:Dynamic) {
+				trace("Error calling 7TV error callback: " + e);
 			}
 		};
 		xhr.send(graphqlQuery);

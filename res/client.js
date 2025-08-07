@@ -5604,8 +5604,23 @@ client_Main.prototype = {
 							popoutState.ffz.hasMore = false;
 						}
 					}
+					try {
+						if(_gthis.chatPopoutWindow.onEmotesLoaded != null) {
+							_gthis.chatPopoutWindow.onEmotesLoaded("ffz",popoutState != null && popoutState.ffz.hasMore);
+						}
+					} catch( _g ) {
+						haxe_Log.trace("Error calling FFZ emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3661, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3655, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+					var _g1 = haxe_Exception.caught(_g).unwrap();
+					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3665, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+					try {
+						if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
+							_gthis.chatPopoutWindow.onEmoteLoadError("ffz",_g1);
+						}
+					} catch( _g1 ) {
+						haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3672, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+					}
 				}
 			}
 		};
@@ -5616,6 +5631,13 @@ client_Main.prototype = {
 			var popoutState = _gthis.chatPopoutWindow.emoteState;
 			if(popoutState != null) {
 				popoutState.ffz.isLoading = false;
+			}
+			try {
+				if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
+					_gthis.chatPopoutWindow.onEmoteLoadError("ffz","Network error");
+				}
+			} catch( _g ) {
+				haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3691, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 			}
 		};
 		xhr.send();
@@ -5702,8 +5724,23 @@ client_Main.prototype = {
 							popoutState.seventv.hasMore = false;
 						}
 					}
+					try {
+						if(_gthis.chatPopoutWindow.onEmotesLoaded != null) {
+							_gthis.chatPopoutWindow.onEmotesLoaded("seventv",popoutState != null && popoutState.seventv.hasMore);
+						}
+					} catch( _g ) {
+						haxe_Log.trace("Error calling 7TV emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3787, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3754, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+					var _g1 = haxe_Exception.caught(_g).unwrap();
+					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3791, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+					try {
+						if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
+							_gthis.chatPopoutWindow.onEmoteLoadError("seventv",_g1);
+						}
+					} catch( _g1 ) {
+						haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3798, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+					}
 				}
 			}
 		};
@@ -5714,6 +5751,13 @@ client_Main.prototype = {
 			var popoutState = _gthis.chatPopoutWindow.emoteState;
 			if(popoutState != null) {
 				popoutState.seventv.isLoading = false;
+			}
+			try {
+				if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
+					_gthis.chatPopoutWindow.onEmoteLoadError("seventv","Network error");
+				}
+			} catch( _g ) {
+				haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3817, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 			}
 		};
 		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "sort: Sort, $" + "limit: Int, $" + "filter: EmoteSearchFilter) { emotes(query: $" + "query, page: $" + "page, sort: $" + "sort, limit: $" + "limit, filter: $" + "filter) { count items { id name host { url files { name format width height } } } } }\", \"variables\": {\"query\": \"\", \"limit\": 50, \"page\": " + page + ", \"sort\": {\"value\": \"popularity\", \"order\": \"DESCENDING\"}, \"filter\": {\"exact_match\": false, \"case_sensitive\": false, \"ignore_tags\": true, \"category\": \"TOP\"}}}");
@@ -5761,7 +5805,7 @@ client_Main.prototype = {
 						listEl.appendChild(imgEl);
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3813, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
+					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3867, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
 				}
 			}
 		};
@@ -5834,7 +5878,7 @@ client_Main.prototype = {
 						}
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3885, className : "client.Main", methodName : "search7TVEmotesForPopout"});
+					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3939, className : "client.Main", methodName : "search7TVEmotesForPopout"});
 				}
 			}
 		};
