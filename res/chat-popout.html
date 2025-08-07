@@ -139,13 +139,17 @@
     .emote-panels {
       background: #2d2d2d;
       border-top: 1px solid #404040;
-      max-height: 200px;
-      overflow-y: auto;
+      height: 320px;
+      overflow: visible;
       display: none;
     }
 
     .emote-panel {
       padding: 8px;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .emote-search {
@@ -153,15 +157,39 @@
       background: #404040;
       border: 1px solid #555;
       color: white;
-      padding: 6px;
+      padding: 4px;
       border-radius: 4px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    .emote-grid-container {
+      position: relative;
+      height: 280px;
+      flex-shrink: 0;
     }
 
     .emote-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
       gap: 4px;
+      height: 100%;
+      align-content: start;
+      overflow-y: auto;
+    }
+
+    .loading-indicator {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(45, 45, 45, 0.95);
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      color: white;
+      font-size: 12px;
+      z-index: 10;
     }
 
     .emote {
@@ -220,23 +248,29 @@
   <div class="emote-panels">
     <div id="smiles-wrap" class="emote-panel" style="display: none;">
       <input id="smiles-search" class="emote-search" type="text" placeholder="Search emotes...">
-      <div id="smiles-list" class="emote-grid"></div>
-      <div id="smiles-loading" style="display: none; text-align: center; padding: 10px;">
-        <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+      <div class="emote-grid-container">
+        <div id="smiles-list" class="emote-grid"></div>
+        <div id="smiles-loading" class="loading-indicator" style="display: none;">
+          <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+        </div>
       </div>
     </div>
     <div id="ffz-wrap" class="emote-panel" style="display: none;">
       <input id="ffz-search" class="emote-search" type="text" placeholder="Search FrankerFaceZ emotes...">
-      <div id="ffz-list" class="emote-grid"></div>
-      <div id="ffz-loading" style="display: none; text-align: center; padding: 10px;">
-        <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+      <div class="emote-grid-container">
+        <div id="ffz-list" class="emote-grid"></div>
+        <div id="ffz-loading" class="loading-indicator" style="display: none;">
+          <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+        </div>
       </div>
     </div>
     <div id="seventv-wrap" class="emote-panel" style="display: none;">
       <input id="seventv-search" class="emote-search" type="text" placeholder="Search 7TV emotes...">
-      <div id="seventv-list" class="emote-grid"></div>
-      <div id="seventv-loading" style="display: none; text-align: center; padding: 10px;">
-        <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+      <div class="emote-grid-container">
+        <div id="seventv-list" class="emote-grid"></div>
+        <div id="seventv-loading" class="loading-indicator" style="display: none;">
+          <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+        </div>
       </div>
     </div>
   </div>
@@ -252,15 +286,7 @@
     </button>
     <button id="ffzbtn" title="FrankerFaceZ Emotes">
       <svg class="ffz-logo" xmlns="http://www.w3.org/2000/svg" width="20" height="15" viewBox="0 0 40 30">
-        <path
-          d="M20.7465 5.48825L21.9799 3.33745L22.646 2.20024L21.4125 0.0494437V0H14.8259L17.2928 4.3016L17.9836 5.48825H20.7465Z"
-          fill="#FFFFFF" />
-        <path
-          d="M7.15395 19.9258L14.5546 7.02104L15.4673 5.43884L13.0004 1.13724L12.3097 0.0247596H1.8995L0.666057 2.17556L0 3.31276L1.23344 5.46356V5.51301H9.12745L2.96025 16.267L2.09685 17.7998L3.33029 19.9506V20H7.15395"
-          fill="#FFFFFF" />
-        <path
-          d="M17.4655 19.9257H21.2398L26.1736 11.3225L27.037 9.83924L25.8036 7.68844V7.63899H22.0046L19.5377 11.9406L19.365 12.262L16.8981 7.96038L16.7255 7.63899L14.2586 11.9406L13.5679 13.1272L17.2682 19.5796L17.4655 19.9257Z"
-          fill="#FFFFFF" />
+        <path d="M0 0 C2.16047869 2.4250271 3.58587233 5.08993562 5 8 C5.33 8.66 5.66 9.32 6 10 C6.66 9.01 7.32 8.02 8 7 C10.25 7 10.25 7 13 8 C15.52766881 11.38368444 16.75848001 15.07107696 17.8125 19.125 C16.62879885 23.31348099 14.07849513 24.57003098 10.43359375 26.7421875 C4.58966365 29.76264575 -1.48501 31.04875449 -8 30 C-11.55782242 28.66913051 -14.74677826 26.94966599 -18 25 C-19.546875 24.13375 -19.546875 24.13375 -21.125 23.25 C-23.64940917 20.22070899 -23.57854088 18.04986793 -23.375 14.1953125 C-22.88257477 11.31257311 -21.78042787 9.29971934 -20 7 C-17.625 7.25 -17.625 7.25 -15 8 C-13.8359375 10.046875 -13.8359375 10.046875 -13 12 C-12.81824219 11.30132812 -12.63648438 10.60265625 -12.44921875 9.8828125 C-12.19785156 8.97273437 -11.94648438 8.06265625 -11.6875 7.125 C-11.44386719 6.22007812 -11.20023438 5.31515625 -10.94921875 4.3828125 C-8.9221256 -0.70577523 -4.85725817 -0.83745831 0 0 Z " fill="#FFFFFF" transform="translate(23,0)"/>
       </svg>
     </button>
     <button id="seventvbtn" title="7TV Emotes">
@@ -281,6 +307,12 @@
     // This will be populated by the parent window
     window.parentMain = null;
     window.chatPopout = true;
+
+    // State management for infinite scrolling
+    window.emoteState = {
+      ffz: { currentPage: 1, isLoading: false, hasMore: true },
+      seventv: { currentPage: 1, isLoading: false, hasMore: true }
+    };
 
     // Debug connection status
     function debugConnection() {
@@ -421,7 +453,149 @@
           toggleEmotePanel('seventv-wrap');
         });
       }
+
+      // Handle emote search inputs
+      setupEmoteSearch();
+      
+      // Setup infinite scrolling
+      setupInfiniteScroll();
     }
+
+    function setupEmoteSearch() {
+      // App emotes search
+      const smilesSearch = document.getElementById('smiles-search');
+      if (smilesSearch) {
+        smilesSearch.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (window.parentMain && window.parentMain.searchPopoutEmotes) {
+              window.parentMain.searchPopoutEmotes('smiles', this.value);
+            }
+          }
+        });
+        smilesSearch.addEventListener('input', function(e) {
+          if (window.parentMain && window.parentMain.searchPopoutEmotes) {
+            window.parentMain.searchPopoutEmotes('smiles', this.value);
+          }
+        });
+      }
+
+      // FFZ emotes search
+      const ffzSearch = document.getElementById('ffz-search');
+      if (ffzSearch) {
+        ffzSearch.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (window.parentMain && window.parentMain.searchPopoutEmotes) {
+              window.parentMain.searchPopoutEmotes('ffz', this.value);
+            }
+          }
+        });
+      }
+
+      // 7TV emotes search
+      const seventvSearch = document.getElementById('seventv-search');
+      if (seventvSearch) {
+        seventvSearch.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (window.parentMain && window.parentMain.searchPopoutEmotes) {
+              window.parentMain.searchPopoutEmotes('seventv', this.value);
+            }
+          }
+        });
+      }
+    }
+
+    // Infinite scroll detection with ResizeObserver and timing controls like main chat
+    function setupInfiniteScroll() {
+      setupGridInfiniteScroll('ffz-list', 'ffz');
+      setupGridInfiniteScroll('seventv-list', 'seventv');
+    }
+
+    function setupGridInfiniteScroll(gridId, emoteType) {
+      const grid = document.getElementById(gridId);
+      if (!grid) return;
+
+      let scrollTimeout = 0;
+      let isResizing = false;
+
+      // Helper function to check if all emotes are visible and auto-load if needed
+      function checkVisibilityAndAutoLoad() {
+        const state = window.emoteState[emoteType];
+        if (!state || state.isLoading || !state.hasMore || isResizing) return;
+
+        const scrollHeight = grid.scrollHeight;
+        const clientHeight = grid.clientHeight;
+
+        // If all content is visible (no scrollbar), load more emotes
+        if (scrollHeight <= clientHeight && scrollHeight > 0 && clientHeight > 0) {
+          console.log('Auto-loading more', emoteType, 'emotes via visibility check');
+          if (emoteType === 'ffz') {
+            loadMoreFFZEmotes();
+          } else if (emoteType === 'seventv') {
+            loadMore7TVEmotes();
+          }
+        }
+      }
+
+      // Add ResizeObserver to detect layout changes
+      if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver((entries, observer) => {
+          isResizing = true;
+          if (scrollTimeout !== 0) {
+            clearTimeout(scrollTimeout);
+          }
+          scrollTimeout = setTimeout(() => {
+            isResizing = false;
+            scrollTimeout = 0;
+            // Check if we need to auto-load after resize
+            checkVisibilityAndAutoLoad();
+          }, 100);
+        });
+        resizeObserver.observe(grid);
+      }
+
+      // Add scroll event listener for when user scrolls near bottom
+      grid.addEventListener('scroll', function() {
+        if (isResizing) return;
+        
+        const scrollTop = this.scrollTop;
+        const scrollHeight = this.scrollHeight;
+        const clientHeight = this.clientHeight;
+        
+        // Trigger load more when 90% scrolled
+        if (scrollTop + clientHeight >= scrollHeight * 0.9) {
+          if (emoteType === 'ffz') {
+            loadMoreFFZEmotes();
+          } else if (emoteType === 'seventv') {
+            loadMore7TVEmotes();
+          }
+        }
+      });
+
+      // Initial check for visibility
+      setTimeout(checkVisibilityAndAutoLoad, 100);
+    }
+
+    function loadMoreFFZEmotes() {
+      if (!window.emoteState.ffz.hasMore || window.emoteState.ffz.isLoading) return;
+      if (!window.parentMain || !window.parentMain.loadMoreFFZEmotesForPopout) return;
+
+      window.emoteState.ffz.isLoading = true;
+      window.emoteState.ffz.currentPage++;
+      window.parentMain.loadMoreFFZEmotesForPopout(window.emoteState.ffz.currentPage);
+    }
+
+    function loadMore7TVEmotes() {
+      if (!window.emoteState.seventv.hasMore || window.emoteState.seventv.isLoading) return;
+      if (!window.parentMain || !window.parentMain.loadMore7TVEmotesForPopout) return;
+
+      window.emoteState.seventv.isLoading = true;
+      window.emoteState.seventv.currentPage++;
+      window.parentMain.loadMore7TVEmotesForPopout(window.emoteState.seventv.currentPage);
+    }
+
 
     function toggleEmotePanel(panelId) {
       const panels = document.querySelector('.emote-panels');

@@ -3315,6 +3315,15 @@ class Main {
 					loadEmotesForPopout: function(panelType:String) {
 						return self.loadEmotesForPopout(panelType);
 					},
+					searchPopoutEmotes: function(emoteType:String, query:String) {
+						return self.searchPopoutEmotes(emoteType, query);
+					},
+					loadMoreFFZEmotesForPopout: function(page:Int) {
+						return self.loadMoreFFZEmotesForPopout(page);
+					},
+					loadMore7TVEmotesForPopout: function(page:Int) {
+						return self.loadMore7TVEmotesForPopout(page);
+					},
 					onPopoutClosed: function() {
 						return self.onPopoutClosed();
 					},
@@ -3337,6 +3346,15 @@ class Main {
 						},
 						loadEmotesForPopout: function(panelType:String) {
 							return self.loadEmotesForPopout(panelType);
+						},
+						searchPopoutEmotes: function(emoteType:String, query:String) {
+							return self.searchPopoutEmotes(emoteType, query);
+						},
+						loadMoreFFZEmotesForPopout: function(page:Int) {
+							return self.loadMoreFFZEmotesForPopout(page);
+						},
+						loadMore7TVEmotesForPopout: function(page:Int) {
+							return self.loadMore7TVEmotesForPopout(page);
 						},
 						onPopoutClosed: function() {
 							return self.onPopoutClosed();
@@ -3371,6 +3389,15 @@ class Main {
 							},
 							loadEmotesForPopout: function(panelType:String) {
 								return self.loadEmotesForPopout(panelType);
+							},
+							searchPopoutEmotes: function(emoteType:String, query:String) {
+								return self.searchPopoutEmotes(emoteType, query);
+							},
+							loadMoreFFZEmotesForPopout: function(page:Int) {
+								return self.loadMoreFFZEmotesForPopout(page);
+							},
+							loadMore7TVEmotesForPopout: function(page:Int) {
+								return self.loadMore7TVEmotesForPopout(page);
 							},
 							onPopoutClosed: function() {
 								return self.onPopoutClosed();
@@ -3448,6 +3475,19 @@ class Main {
 		}
 	}
 
+	public function searchPopoutEmotes(emoteType:String, query:String):Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+
+		switch (emoteType) {
+			case "smiles":
+				searchAppEmotesForPopout(query);
+			case "ffz":
+				searchFFZEmotesForPopout(query);
+			case "seventv":
+				search7TVEmotesForPopout(query);
+		}
+	}
+
 	function loadAppEmotesForPopout():Void {
 		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
 
@@ -3476,20 +3516,257 @@ class Main {
 				imgEl.src = emote.image;
 			}
 
-			// Add click handler for emote insertion
+			// Add click handler for emote insertion with danmaku support
 			final self = this;
 			el.onclick = function() {
+				final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 				final emoteHtml = isVideoExt 
 					? '<video src="${emote.image}" title="${emote.name}" autoplay loop muted class="emote-inline">'
 					: '<img src="${emote.image}" title="${emote.name}" class="emote-inline">';
-				self.emoteMessage(emoteHtml);
+				self.sendChatMessage(emoteHtml, isDanmaku);
 			};
 
 			listEl.appendChild(el);
 		}
 	}
 
-	function loadFfzEmotesForPopout():Void {
+	function searchAppEmotesForPopout(query:String):Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+
+		final listEl = chatPopoutWindow.document.getElementById("smiles-list");
+		if (listEl == null) return;
+		
+		listEl.innerHTML = "";
+
+		// Filter emotes based on search query
+		var filteredEmotes = allAppEmotes;
+		if (query.length > 0) {
+			filteredEmotes = allAppEmotes.filter(emote -> {
+				return emote.name.toLowerCase().contains(query.toLowerCase());
+			});
+		}
+
+		// Display filtered emotes
+		for (emote in filteredEmotes) {
+			final isVideoExt = emote.image.endsWith("mp4") || emote.image.endsWith("webm");
+			final tag = isVideoExt ? "video" : "img";
+			final el = chatPopoutWindow.document.createElement(tag);
+			el.className = "emote";
+			el.title = emote.name;
+
+			// Set the actual src attribute for display
+			if (isVideoExt) {
+				final videoEl:Dynamic = el;
+				videoEl.src = emote.image;
+				videoEl.autoplay = true;
+				videoEl.loop = true;
+				videoEl.muted = true;
+			} else {
+				final imgEl:Dynamic = el;
+				imgEl.src = emote.image;
+			}
+
+			// Add click handler for emote insertion with danmaku support
+			final self = this;
+			el.onclick = function() {
+				final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+				final emoteHtml = isVideoExt 
+					? '<video src="${emote.image}" title="${emote.name}" autoplay loop muted class="emote-inline">'
+					: '<img src="${emote.image}" title="${emote.name}" class="emote-inline">';
+				self.sendChatMessage(emoteHtml, isDanmaku);
+			};
+
+			listEl.appendChild(el);
+		}
+	}
+
+	function loadFfzEmotesForPopout(page:Int = 1, appendMode:Bool = false):Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+
+		final listEl = chatPopoutWindow.document.getElementById("ffz-list");
+		if (listEl == null) return;
+		
+		// Show loading indicator
+		final loadingEl = chatPopoutWindow.document.getElementById("ffz-loading");
+		if (loadingEl != null) loadingEl.style.display = "block";
+		
+		// Clear list only if not in append mode (first load)
+		if (!appendMode) {
+			listEl.innerHTML = "";
+			// Reset popout state for new load
+			final popoutState:Dynamic = chatPopoutWindow.emoteState;
+			if (popoutState != null) {
+				popoutState.ffz.currentPage = 1;
+				popoutState.ffz.hasMore = true;
+			}
+		}
+
+		// Fetch FFZ emotes with pagination
+		final apiUrl = 'https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=${page}&per_page=50';
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("GET", apiUrl, true);
+		final self = this;
+		xhr.onload = () -> {
+			if (loadingEl != null) loadingEl.style.display = "none";
+			
+			// Reset loading state
+			final popoutState:Dynamic = chatPopoutWindow.emoteState;
+			if (popoutState != null) {
+				popoutState.ffz.isLoading = false;
+			}
+			
+			if (xhr.status == 200) {
+				try {
+					final response = Json.parse(xhr.responseText);
+					final emotes:Array<Dynamic> = response.emoticons;
+					
+					// Check if we have reached the end (no more emotes)
+					if (emotes.length == 0) {
+						if (popoutState != null) {
+							popoutState.ffz.hasMore = false;
+						}
+						return;
+					}
+					
+					for (emoteData in emotes) {
+						final imgEl = chatPopoutWindow.document.createElement("img");
+						imgEl.className = "emote";
+						imgEl.src = 'https://cdn.frankerfacez.com/emote/${emoteData.id}/2';
+						imgEl.title = emoteData.name;
+						
+						// Add click handler with danmaku support
+						imgEl.onclick = function() {
+							final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+							final emoteHtml = '<img src="https://cdn.frankerfacez.com/emote/${emoteData.id}/2" title="${emoteData.name}" class="emote-inline">';
+							self.sendChatMessage(emoteHtml, isDanmaku);
+						};
+						
+						listEl.appendChild(imgEl);
+					}
+					
+					// If we got less than 50 emotes, we've reached the end
+					if (emotes.length < 50) {
+						if (popoutState != null) {
+							popoutState.ffz.hasMore = false;
+						}
+					}
+					
+				} catch (e:Dynamic) {
+					trace("Error parsing FFZ emotes: " + e);
+				}
+			}
+		};
+		xhr.onerror = () -> {
+			if (loadingEl != null) loadingEl.style.display = "none";
+			// Reset loading state on error
+			final popoutState:Dynamic = chatPopoutWindow.emoteState;
+			if (popoutState != null) {
+				popoutState.ffz.isLoading = false;
+			}
+		};
+		xhr.send();
+	}
+
+	function load7tvEmotesForPopout(page:Int = 1, appendMode:Bool = false):Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+
+		final listEl = chatPopoutWindow.document.getElementById("seventv-list");
+		if (listEl == null) return;
+		
+		// Show loading indicator
+		final loadingEl = chatPopoutWindow.document.getElementById("seventv-loading");
+		if (loadingEl != null) loadingEl.style.display = "block";
+		
+		// Clear list only if not in append mode (first load)
+		if (!appendMode) {
+			listEl.innerHTML = "";
+			// Reset popout state for new load
+			final popoutState:Dynamic = chatPopoutWindow.emoteState;
+			if (popoutState != null) {
+				popoutState.seventv.currentPage = 1;
+				popoutState.seventv.hasMore = true;
+			}
+		}
+
+		// 7TV GraphQL query with pagination
+		final graphqlQuery = '{"query":"query SearchEmotes($$query: String!, $$page: Int, $$sort: Sort, $$limit: Int, $$filter: EmoteSearchFilter) { emotes(query: $$query, page: $$page, sort: $$sort, limit: $$limit, filter: $$filter) { count items { id name host { url files { name format width height } } } } }", "variables": {"query": "", "limit": 50, "page": ${page}, "sort": {"value": "popularity", "order": "DESCENDING"}, "filter": {"exact_match": false, "case_sensitive": false, "ignore_tags": true, "category": "TOP"}}}';
+		
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("POST", "https://7tv.io/v3/gql", true);
+		xhr.setRequestHeader("Content-Type", "application/json");
+		final self = this;
+		xhr.onload = () -> {
+			if (loadingEl != null) loadingEl.style.display = "none";
+			
+			// Reset loading state
+			final popoutState:Dynamic = chatPopoutWindow.emoteState;
+			if (popoutState != null) {
+				popoutState.seventv.isLoading = false;
+			}
+			
+			if (xhr.status == 200) {
+				try {
+					final response = Json.parse(xhr.responseText);
+					final emotes:Array<Dynamic> = response.data.emotes.items;
+					
+					// Check if we have reached the end (no more emotes)
+					if (emotes.length == 0) {
+						if (popoutState != null) {
+							popoutState.seventv.hasMore = false;
+						}
+						return;
+					}
+					
+					for (emoteData in emotes) {
+						// Find the best file (prefer webp 2x, fallback to 1x)
+						var bestFile:Dynamic = null;
+						for (file in cast(emoteData.host.files, Array<Dynamic>)) {
+							if (file.name == "2x.webp" || (bestFile == null && file.name == "1x.webp")) {
+								bestFile = file;
+							}
+						}
+						
+						if (bestFile != null) {
+							final imgEl = chatPopoutWindow.document.createElement("img");
+							imgEl.className = "emote";
+							imgEl.src = '${emoteData.host.url}/${bestFile.name}';
+							imgEl.title = emoteData.name;
+							
+							// Add click handler with danmaku support
+							imgEl.onclick = function() {
+								final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+								final emoteHtml = '<img src="${emoteData.host.url}/${bestFile.name}" title="${emoteData.name}" class="emote-inline">';
+								self.sendChatMessage(emoteHtml, isDanmaku);
+							};
+							
+							listEl.appendChild(imgEl);
+						}
+					}
+					
+					// If we got less than 50 emotes, we've reached the end
+					if (emotes.length < 50) {
+						if (popoutState != null) {
+							popoutState.seventv.hasMore = false;
+						}
+					}
+					
+				} catch (e:Dynamic) {
+					trace("Error parsing 7TV emotes: " + e);
+				}
+			}
+		};
+		xhr.onerror = () -> {
+			if (loadingEl != null) loadingEl.style.display = "none";
+			// Reset loading state on error
+			final popoutState:Dynamic = chatPopoutWindow.emoteState;
+			if (popoutState != null) {
+				popoutState.seventv.isLoading = false;
+			}
+		};
+		xhr.send(graphqlQuery);
+	}
+
+	function searchFFZEmotesForPopout(query:String):Void {
 		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
 
 		final listEl = chatPopoutWindow.document.getElementById("ffz-list");
@@ -3501,8 +3778,11 @@ class Main {
 		
 		listEl.innerHTML = "";
 
-		// Fetch FFZ emotes
-		final apiUrl = "https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=1&per_page=30";
+		// Use FFZ search API if query is provided, otherwise use recent emotes
+		final apiUrl = query.length > 0 
+			? 'https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=count-desc&per_page=50&q=${query}'
+			: "https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=1&per_page=50";
+		
 		final xhr = new js.html.XMLHttpRequest();
 		xhr.open("GET", apiUrl, true);
 		final self = this;
@@ -3520,16 +3800,17 @@ class Main {
 						imgEl.src = 'https://cdn.frankerfacez.com/emote/${emoteData.id}/2';
 						imgEl.title = emoteData.name;
 						
-						// Add click handler
+						// Add click handler with danmaku support
 						imgEl.onclick = function() {
+							final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 							final emoteHtml = '<img src="https://cdn.frankerfacez.com/emote/${emoteData.id}/2" title="${emoteData.name}" class="emote-inline">';
-							self.emoteMessage(emoteHtml);
+							self.sendChatMessage(emoteHtml, isDanmaku);
 						};
 						
 						listEl.appendChild(imgEl);
 					}
 				} catch (e:Dynamic) {
-					trace("Error parsing FFZ emotes: " + e);
+					trace("Error parsing FFZ search emotes: " + e);
 				}
 			}
 		};
@@ -3539,7 +3820,15 @@ class Main {
 		xhr.send();
 	}
 
-	function load7tvEmotesForPopout():Void {
+	public function loadMoreFFZEmotesForPopout(page:Int):Void {
+		loadFfzEmotesForPopout(page, true);
+	}
+
+	public function loadMore7TVEmotesForPopout(page:Int):Void {
+		load7tvEmotesForPopout(page, true);
+	}
+
+	function search7TVEmotesForPopout(query:String):Void {
 		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
 
 		final listEl = chatPopoutWindow.document.getElementById("seventv-list");
@@ -3551,8 +3840,9 @@ class Main {
 		
 		listEl.innerHTML = "";
 
-		// 7TV GraphQL query
-		final graphqlQuery = '{"query":"query SearchEmotes($$query: String!, $$page: Int, $$sort: Sort, $$limit: Int, $$filter: EmoteSearchFilter) { emotes(query: $$query, page: $$page, sort: $$sort, limit: $$limit, filter: $$filter) { count items { id name host { url files { name format width height } } } } }", "variables": {"query": "", "limit": 30, "page": 1, "sort": {"value": "popularity", "order": "DESCENDING"}, "filter": {"exact_match": false, "case_sensitive": false, "ignore_tags": true, "category": "TOP"}}}';
+		// 7TV GraphQL query with search term
+		final searchQuery = query.length > 0 ? query : "";
+		final graphqlQuery = '{"query":"query SearchEmotes($$query: String!, $$page: Int, $$sort: Sort, $$limit: Int, $$filter: EmoteSearchFilter) { emotes(query: $$query, page: $$page, sort: $$sort, limit: $$limit, filter: $$filter) { count items { id name host { url files { name format width height } } } } }", "variables": {"query": "${searchQuery}", "limit": 50, "page": 1, "sort": {"value": "popularity", "order": "DESCENDING"}, "filter": {"exact_match": false, "case_sensitive": false, "ignore_tags": true, "category": "TOP"}}}';
 		
 		final xhr = new js.html.XMLHttpRequest();
 		xhr.open("POST", "https://7tv.io/v3/gql", true);
@@ -3581,17 +3871,18 @@ class Main {
 							imgEl.src = '${emoteData.host.url}/${bestFile.name}';
 							imgEl.title = emoteData.name;
 							
-							// Add click handler
+							// Add click handler with danmaku support
 							imgEl.onclick = function() {
+								final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 								final emoteHtml = '<img src="${emoteData.host.url}/${bestFile.name}" title="${emoteData.name}" class="emote-inline">';
-								self.emoteMessage(emoteHtml);
+								self.sendChatMessage(emoteHtml, isDanmaku);
 							};
 							
 							listEl.appendChild(imgEl);
 						}
 					}
 				} catch (e:Dynamic) {
-					trace("Error parsing 7TV emotes: " + e);
+					trace("Error parsing 7TV search emotes: " + e);
 				}
 			}
 		};

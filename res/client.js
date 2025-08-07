@@ -5310,14 +5310,20 @@ client_Main.prototype = {
 					self.sendChatMessage(message,isDanmaku);
 				}, loadEmotesForPopout : function(panelType) {
 					self.loadEmotesForPopout(panelType);
+				}, searchPopoutEmotes : function(emoteType,query) {
+					self.searchPopoutEmotes(emoteType,query);
+				}, loadMoreFFZEmotesForPopout : function(page) {
+					self.loadMoreFFZEmotesForPopout(page);
+				}, loadMore7TVEmotesForPopout : function(page) {
+					self.loadMore7TVEmotesForPopout(page);
 				}, onPopoutClosed : function() {
 					self.onPopoutClosed();
 				}, emoteMessage : function(emoteHtml) {
 					self.emoteMessage(emoteHtml);
 				}};
-				haxe_Log.trace("Set parentMain immediately with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3325, className : "client.Main", methodName : "openChatPopout"});
+				haxe_Log.trace("Set parentMain immediately with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3334, className : "client.Main", methodName : "openChatPopout"});
 			} catch( _g ) {
-				haxe_Log.trace("Failed to set parentMain immediately: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3327, className : "client.Main", methodName : "openChatPopout"});
+				haxe_Log.trace("Failed to set parentMain immediately: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3336, className : "client.Main", methodName : "openChatPopout"});
 			}
 			this.chatPopoutWindow.addEventListener("load",function() {
 				try {
@@ -5325,15 +5331,21 @@ client_Main.prototype = {
 						self.sendChatMessage(message,isDanmaku);
 					}, loadEmotesForPopout : function(panelType) {
 						self.loadEmotesForPopout(panelType);
+					}, searchPopoutEmotes : function(emoteType,query) {
+						self.searchPopoutEmotes(emoteType,query);
+					}, loadMoreFFZEmotesForPopout : function(page) {
+						self.loadMoreFFZEmotesForPopout(page);
+					}, loadMore7TVEmotesForPopout : function(page) {
+						self.loadMore7TVEmotesForPopout(page);
 					}, onPopoutClosed : function() {
 						self.onPopoutClosed();
 					}, emoteMessage : function(emoteHtml) {
 						self.emoteMessage(emoteHtml);
 					}};
 					self.syncChatToPopout();
-					haxe_Log.trace("Set parentMain on load event with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3349, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Set parentMain on load event with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3367, className : "client.Main", methodName : "openChatPopout"});
 				} catch( _g ) {
-					haxe_Log.trace("Failed to set parentMain on load: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3351, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Failed to set parentMain on load: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3369, className : "client.Main", methodName : "openChatPopout"});
 				}
 			});
 			var pollAttempts = 0;
@@ -5341,7 +5353,7 @@ client_Main.prototype = {
 			pollForConnection = function() {
 				pollAttempts += 1;
 				if(_gthis.chatPopoutWindow == null || _gthis.chatPopoutWindow.closed) {
-					haxe_Log.trace("Popout window closed during polling",{ fileName : "src/client/Main.hx", lineNumber : 3360, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Popout window closed during polling",{ fileName : "src/client/Main.hx", lineNumber : 3378, className : "client.Main", methodName : "openChatPopout"});
 					return;
 				}
 				try {
@@ -5350,23 +5362,29 @@ client_Main.prototype = {
 							self.sendChatMessage(message,isDanmaku);
 						}, loadEmotesForPopout : function(panelType) {
 							self.loadEmotesForPopout(panelType);
+						}, searchPopoutEmotes : function(emoteType,query) {
+							self.searchPopoutEmotes(emoteType,query);
+						}, loadMoreFFZEmotesForPopout : function(page) {
+							self.loadMoreFFZEmotesForPopout(page);
+						}, loadMore7TVEmotesForPopout : function(page) {
+							self.loadMore7TVEmotesForPopout(page);
 						}, onPopoutClosed : function() {
 							self.onPopoutClosed();
 						}, emoteMessage : function(emoteHtml) {
 							self.emoteMessage(emoteHtml);
 						}};
 						self.syncChatToPopout();
-						haxe_Log.trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3383, className : "client.Main", methodName : "openChatPopout"});
+						haxe_Log.trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3410, className : "client.Main", methodName : "openChatPopout"});
 						return;
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Polling attempt " + pollAttempts + " failed: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3387, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Polling attempt " + pollAttempts + " failed: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3414, className : "client.Main", methodName : "openChatPopout"});
 				}
 				if(pollAttempts < 20) {
 					haxe_Timer.delay(pollForConnection,100);
 				} else {
-					haxe_Log.trace("Failed to establish connection after " + pollAttempts + " attempts",{ fileName : "src/client/Main.hx", lineNumber : 3394, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Failed to establish connection after " + pollAttempts + " attempts",{ fileName : "src/client/Main.hx", lineNumber : 3421, className : "client.Main", methodName : "openChatPopout"});
 				}
 			};
 			haxe_Timer.delay(pollForConnection,50);
@@ -5414,7 +5432,24 @@ client_Main.prototype = {
 			break;
 		}
 	}
+	,searchPopoutEmotes: function(emoteType,query) {
+		if(this.chatPopoutWindow == null || this.chatPopoutWindow.closed) {
+			return;
+		}
+		switch(emoteType) {
+		case "ffz":
+			this.searchFFZEmotesForPopout(query);
+			break;
+		case "seventv":
+			this.search7TVEmotesForPopout(query);
+			break;
+		case "smiles":
+			this.searchAppEmotesForPopout(query);
+			break;
+		}
+	}
 	,loadAppEmotesForPopout: function() {
+		var _gthis = this;
 		if(this.chatPopoutWindow == null || this.chatPopoutWindow.closed) {
 			return;
 		}
@@ -5443,13 +5478,247 @@ client_Main.prototype = {
 			}
 			el.onclick = (function(self,isVideoExt,emote) {
 				return function() {
-					self[0].emoteMessage(isVideoExt[0] ? "<video src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" autoplay loop muted class=\"emote-inline\">" : "<img src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" class=\"emote-inline\">");
+					var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+					self[0].sendChatMessage(isVideoExt[0] ? "<video src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" autoplay loop muted class=\"emote-inline\">" : "<img src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" class=\"emote-inline\">",isDanmaku);
 				};
 			})([this],isVideoExt,emote);
 			listEl.appendChild(el);
 		}
 	}
-	,loadFfzEmotesForPopout: function() {
+	,searchAppEmotesForPopout: function(query) {
+		var _gthis = this;
+		if(this.chatPopoutWindow == null || this.chatPopoutWindow.closed) {
+			return;
+		}
+		var listEl = this.chatPopoutWindow.document.getElementById("smiles-list");
+		if(listEl == null) {
+			return;
+		}
+		listEl.innerHTML = "";
+		var filteredEmotes = this.allAppEmotes;
+		if(query.length > 0) {
+			var _this = this.allAppEmotes;
+			var _g = [];
+			var _g1 = 0;
+			while(_g1 < _this.length) {
+				var v = _this[_g1];
+				++_g1;
+				if(v.name.toLowerCase().indexOf(query.toLowerCase()) != -1) {
+					_g.push(v);
+				}
+			}
+			filteredEmotes = _g;
+		}
+		var _g = 0;
+		while(_g < filteredEmotes.length) {
+			var emote = [filteredEmotes[_g]];
+			++_g;
+			var isVideoExt = [StringTools.endsWith(emote[0].image,"mp4") || StringTools.endsWith(emote[0].image,"webm")];
+			var el = this.chatPopoutWindow.document.createElement(isVideoExt[0] ? "video" : "img");
+			el.className = "emote";
+			el.title = emote[0].name;
+			if(isVideoExt[0]) {
+				var videoEl = el;
+				videoEl.src = emote[0].image;
+				videoEl.autoplay = true;
+				videoEl.loop = true;
+				videoEl.muted = true;
+			} else {
+				el.src = emote[0].image;
+			}
+			el.onclick = (function(self,isVideoExt,emote) {
+				return function() {
+					var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+					self[0].sendChatMessage(isVideoExt[0] ? "<video src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" autoplay loop muted class=\"emote-inline\">" : "<img src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" class=\"emote-inline\">",isDanmaku);
+				};
+			})([this],isVideoExt,emote);
+			listEl.appendChild(el);
+		}
+	}
+	,loadFfzEmotesForPopout: function(page,appendMode) {
+		if(appendMode == null) {
+			appendMode = false;
+		}
+		if(page == null) {
+			page = 1;
+		}
+		var _gthis = this;
+		if(this.chatPopoutWindow == null || this.chatPopoutWindow.closed) {
+			return;
+		}
+		var listEl = this.chatPopoutWindow.document.getElementById("ffz-list");
+		if(listEl == null) {
+			return;
+		}
+		var loadingEl = this.chatPopoutWindow.document.getElementById("ffz-loading");
+		if(loadingEl != null) {
+			loadingEl.style.display = "block";
+		}
+		if(!appendMode) {
+			listEl.innerHTML = "";
+			var popoutState = this.chatPopoutWindow.emoteState;
+			if(popoutState != null) {
+				popoutState.ffz.currentPage = 1;
+				popoutState.ffz.hasMore = true;
+			}
+		}
+		var xhr = new XMLHttpRequest();
+		xhr.open("GET","https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=" + page + "&per_page=50",true);
+		var self = this;
+		xhr.onload = function() {
+			if(loadingEl != null) {
+				loadingEl.style.display = "none";
+			}
+			var popoutState = _gthis.chatPopoutWindow.emoteState;
+			if(popoutState != null) {
+				popoutState.ffz.isLoading = false;
+			}
+			if(xhr.status == 200) {
+				try {
+					var response = JSON.parse(xhr.responseText);
+					var emotes = response.emoticons;
+					if(emotes.length == 0) {
+						if(popoutState != null) {
+							popoutState.ffz.hasMore = false;
+						}
+						return;
+					}
+					var _g = 0;
+					while(_g < emotes.length) {
+						var emoteData = [emotes[_g]];
+						++_g;
+						var imgEl = _gthis.chatPopoutWindow.document.createElement("img");
+						imgEl.className = "emote";
+						imgEl.src = "https://cdn.frankerfacez.com/emote/" + Std.string(emoteData[0].id) + "/2";
+						imgEl.title = emoteData[0].name;
+						imgEl.onclick = (function(emoteData) {
+							return function() {
+								var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+								self.sendChatMessage("<img src=\"https://cdn.frankerfacez.com/emote/" + Std.string(emoteData[0].id) + "/2\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">",isDanmaku);
+							};
+						})(emoteData);
+						listEl.appendChild(imgEl);
+					}
+					if(emotes.length < 50) {
+						if(popoutState != null) {
+							popoutState.ffz.hasMore = false;
+						}
+					}
+				} catch( _g ) {
+					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3655, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+				}
+			}
+		};
+		xhr.onerror = function() {
+			if(loadingEl != null) {
+				loadingEl.style.display = "none";
+			}
+			var popoutState = _gthis.chatPopoutWindow.emoteState;
+			if(popoutState != null) {
+				popoutState.ffz.isLoading = false;
+			}
+		};
+		xhr.send();
+	}
+	,load7tvEmotesForPopout: function(page,appendMode) {
+		if(appendMode == null) {
+			appendMode = false;
+		}
+		if(page == null) {
+			page = 1;
+		}
+		var _gthis = this;
+		if(this.chatPopoutWindow == null || this.chatPopoutWindow.closed) {
+			return;
+		}
+		var listEl = this.chatPopoutWindow.document.getElementById("seventv-list");
+		if(listEl == null) {
+			return;
+		}
+		var loadingEl = this.chatPopoutWindow.document.getElementById("seventv-loading");
+		if(loadingEl != null) {
+			loadingEl.style.display = "block";
+		}
+		if(!appendMode) {
+			listEl.innerHTML = "";
+			var popoutState = this.chatPopoutWindow.emoteState;
+			if(popoutState != null) {
+				popoutState.seventv.currentPage = 1;
+				popoutState.seventv.hasMore = true;
+			}
+		}
+		var xhr = new XMLHttpRequest();
+		xhr.open("POST","https://7tv.io/v3/gql",true);
+		xhr.setRequestHeader("Content-Type","application/json");
+		var self = this;
+		xhr.onload = function() {
+			if(loadingEl != null) {
+				loadingEl.style.display = "none";
+			}
+			var popoutState = _gthis.chatPopoutWindow.emoteState;
+			if(popoutState != null) {
+				popoutState.seventv.isLoading = false;
+			}
+			if(xhr.status == 200) {
+				try {
+					var response = JSON.parse(xhr.responseText);
+					var emotes = response.data.emotes.items;
+					if(emotes.length == 0) {
+						if(popoutState != null) {
+							popoutState.seventv.hasMore = false;
+						}
+						return;
+					}
+					var _g = 0;
+					while(_g < emotes.length) {
+						var emoteData = [emotes[_g]];
+						++_g;
+						var bestFile = [null];
+						var _g1 = 0;
+						var _g2 = js_Boot.__cast(emoteData[0].host.files , Array);
+						while(_g1 < _g2.length) {
+							var file = _g2[_g1];
+							++_g1;
+							if(file.name == "2x.webp" || bestFile[0] == null && file.name == "1x.webp") {
+								bestFile[0] = file;
+							}
+						}
+						if(bestFile[0] != null) {
+							var imgEl = _gthis.chatPopoutWindow.document.createElement("img");
+							imgEl.className = "emote";
+							imgEl.src = "" + Std.string(emoteData[0].host.url) + "/" + Std.string(bestFile[0].name);
+							imgEl.title = emoteData[0].name;
+							imgEl.onclick = (function(bestFile,emoteData) {
+								return function() {
+									var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+									self.sendChatMessage("<img src=\"" + Std.string(emoteData[0].host.url) + "/" + Std.string(bestFile[0].name) + "\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">",isDanmaku);
+								};
+							})(bestFile,emoteData);
+							listEl.appendChild(imgEl);
+						}
+					}
+					if(emotes.length < 50) {
+						if(popoutState != null) {
+							popoutState.seventv.hasMore = false;
+						}
+					}
+				} catch( _g ) {
+					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3754, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+				}
+			}
+		};
+		xhr.onerror = function() {
+			if(loadingEl != null) {
+				loadingEl.style.display = "none";
+			}
+			var popoutState = _gthis.chatPopoutWindow.emoteState;
+			if(popoutState != null) {
+				popoutState.seventv.isLoading = false;
+			}
+		};
+		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "sort: Sort, $" + "limit: Int, $" + "filter: EmoteSearchFilter) { emotes(query: $" + "query, page: $" + "page, sort: $" + "sort, limit: $" + "limit, filter: $" + "filter) { count items { id name host { url files { name format width height } } } } }\", \"variables\": {\"query\": \"\", \"limit\": 50, \"page\": " + page + ", \"sort\": {\"value\": \"popularity\", \"order\": \"DESCENDING\"}, \"filter\": {\"exact_match\": false, \"case_sensitive\": false, \"ignore_tags\": true, \"category\": \"TOP\"}}}");
+	}
+	,searchFFZEmotesForPopout: function(query) {
 		var _gthis = this;
 		if(this.chatPopoutWindow == null || this.chatPopoutWindow.closed) {
 			return;
@@ -5463,8 +5732,9 @@ client_Main.prototype = {
 			loadingEl.style.display = "block";
 		}
 		listEl.innerHTML = "";
+		var apiUrl = query.length > 0 ? "https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=count-desc&per_page=50&q=" + query : "https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=1&per_page=50";
 		var xhr = new XMLHttpRequest();
-		xhr.open("GET","https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=1&per_page=30",true);
+		xhr.open("GET",apiUrl,true);
 		var self = this;
 		xhr.onload = function() {
 			if(loadingEl != null) {
@@ -5484,13 +5754,14 @@ client_Main.prototype = {
 						imgEl.title = emoteData[0].name;
 						imgEl.onclick = (function(emoteData) {
 							return function() {
-								self.emoteMessage("<img src=\"https://cdn.frankerfacez.com/emote/" + Std.string(emoteData[0].id) + "/2\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">");
+								var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+								self.sendChatMessage("<img src=\"https://cdn.frankerfacez.com/emote/" + Std.string(emoteData[0].id) + "/2\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">",isDanmaku);
 							};
 						})(emoteData);
 						listEl.appendChild(imgEl);
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3532, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3813, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
 				}
 			}
 		};
@@ -5501,7 +5772,13 @@ client_Main.prototype = {
 		};
 		xhr.send();
 	}
-	,load7tvEmotesForPopout: function() {
+	,loadMoreFFZEmotesForPopout: function(page) {
+		this.loadFfzEmotesForPopout(page,true);
+	}
+	,loadMore7TVEmotesForPopout: function(page) {
+		this.load7tvEmotesForPopout(page,true);
+	}
+	,search7TVEmotesForPopout: function(query) {
 		var _gthis = this;
 		if(this.chatPopoutWindow == null || this.chatPopoutWindow.closed) {
 			return;
@@ -5515,6 +5792,7 @@ client_Main.prototype = {
 			loadingEl.style.display = "block";
 		}
 		listEl.innerHTML = "";
+		var searchQuery = query.length > 0 ? query : "";
 		var xhr = new XMLHttpRequest();
 		xhr.open("POST","https://7tv.io/v3/gql",true);
 		xhr.setRequestHeader("Content-Type","application/json");
@@ -5548,14 +5826,15 @@ client_Main.prototype = {
 							imgEl.title = emoteData[0].name;
 							imgEl.onclick = (function(bestFile,emoteData) {
 								return function() {
-									self.emoteMessage("<img src=\"" + Std.string(emoteData[0].host.url) + "/" + Std.string(bestFile[0].name) + "\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">");
+									var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
+									self.sendChatMessage("<img src=\"" + Std.string(emoteData[0].host.url) + "/" + Std.string(bestFile[0].name) + "\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">",isDanmaku);
 								};
 							})(bestFile,emoteData);
 							listEl.appendChild(imgEl);
 						}
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3594, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3885, className : "client.Main", methodName : "search7TVEmotesForPopout"});
 				}
 			}
 		};
@@ -5564,7 +5843,7 @@ client_Main.prototype = {
 				loadingEl.style.display = "none";
 			}
 		};
-		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "sort: Sort, $" + "limit: Int, $" + "filter: EmoteSearchFilter) { emotes(query: $" + "query, page: $" + "page, sort: $" + "sort, limit: $" + "limit, filter: $" + "filter) { count items { id name host { url files { name format width height } } } } }\", \"variables\": {\"query\": \"\", \"limit\": 30, \"page\": 1, \"sort\": {\"value\": \"popularity\", \"order\": \"DESCENDING\"}, \"filter\": {\"exact_match\": false, \"case_sensitive\": false, \"ignore_tags\": true, \"category\": \"TOP\"}}}");
+		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "sort: Sort, $" + "limit: Int, $" + "filter: EmoteSearchFilter) { emotes(query: $" + "query, page: $" + "page, sort: $" + "sort, limit: $" + "limit, filter: $" + "filter) { count items { id name host { url files { name format width height } } } } }\", \"variables\": {\"query\": \"" + searchQuery + "\", \"limit\": 50, \"page\": 1, \"sort\": {\"value\": \"popularity\", \"order\": \"DESCENDING\"}, \"filter\": {\"exact_match\": false, \"case_sensitive\": false, \"ignore_tags\": true, \"category\": \"TOP\"}}}");
 	}
 	,getAllowedFileTypes: function() {
 		return this.config.allowedFileTypes;
