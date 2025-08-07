@@ -1042,11 +1042,17 @@ footer#footer {
   border-top: .063rem solid;
   border-color: var(--border);
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
 }
 
 #chatbox>*:not(:first-child) {
-  margin-left: .5rem;
+  margin-top: .5rem;
+}
+
+.emote-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
 }
 
 #chatbox button ion-icon {
@@ -1054,8 +1060,7 @@ footer#footer {
 }
 
 #chatline {
-  flex-grow: 2;
-  width: 2rem;
+  width: 100%;
 }
 
 /* Emotes */
@@ -1283,6 +1288,7 @@ footer#footer {
   flex-grow: 2;
   width: 2rem;
 }
+
 
 /*
  * End chat
