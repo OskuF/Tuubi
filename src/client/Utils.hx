@@ -1,5 +1,6 @@
 package client;
 
+import client.Main.getEl;
 import haxe.io.Mime;
 import js.Browser.document;
 import js.Browser.navigator;
@@ -218,14 +219,53 @@ class Utils {
 	}
 
 	public static function togglePseudoFullscreen():Bool {
-		return document.body.classList.toggle("pseudo-fullscreen");
+		final isActive = document.body.classList.toggle("pseudo-fullscreen");
+		if (isActive) {
+			addScrollDetection();
+		} else {
+			removeScrollDetection();
+		}
+		return isActive;
 	}
 
 	public static function enterPseudoFullscreen():Void {
 		document.body.classList.add("pseudo-fullscreen");
+		addScrollDetection();
 	}
 
 	public static function exitPseudoFullscreen():Void {
 		document.body.classList.remove("pseudo-fullscreen");
+		// Remove scroll detection when exiting pseudo-fullscreen
+		removeScrollDetection();
+	}
+
+	static var scrollListener:js.html.Event -> Void = null;
+
+	static function updateScrollState():Void {
+		final videoElement = getEl("#video");
+		final isScrolledToTop = videoElement.scrollTop == 0;
+		if (isScrolledToTop) {
+			document.body.classList.add("scrolled-to-top");
+		} else {
+			document.body.classList.remove("scrolled-to-top");
+		}
+	}
+
+	public static function addScrollDetection():Void {
+		if (scrollListener != null) return; // Already added
+		final videoElement = getEl("#video");
+		scrollListener = e -> updateScrollState();
+		videoElement.addEventListener("scroll", scrollListener);
+		// Check initial state
+		updateScrollState();
+	}
+
+	public static function removeScrollDetection():Void {
+		if (scrollListener == null) return; // Not added
+		final videoElement = getEl("#video");
+		videoElement.removeEventListener("scroll", scrollListener);
+		scrollListener = null;
+		// Remove class when scroll detection is disabled
+		document.body.classList.remove("scrolled-to-top");
 	}
 }

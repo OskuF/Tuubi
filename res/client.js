@@ -6629,7 +6629,40 @@ client_Utils.createAudioContext = function() {
 	return new ctx();
 };
 client_Utils.togglePseudoFullscreen = function() {
-	return window.document.body.classList.toggle("pseudo-fullscreen");
+	var isActive = window.document.body.classList.toggle("pseudo-fullscreen");
+	if(isActive) {
+		client_Utils.addScrollDetection();
+	} else {
+		client_Utils.removeScrollDetection();
+	}
+	return isActive;
+};
+client_Utils.updateScrollState = function() {
+	var isScrolledToTop = window.document.querySelector("#video").scrollTop == 0;
+	if(isScrolledToTop) {
+		window.document.body.classList.add("scrolled-to-top");
+	} else {
+		window.document.body.classList.remove("scrolled-to-top");
+	}
+};
+client_Utils.addScrollDetection = function() {
+	if(client_Utils.scrollListener != null) {
+		return;
+	}
+	var videoElement = window.document.querySelector("#video");
+	client_Utils.scrollListener = function(e) {
+		client_Utils.updateScrollState();
+	};
+	videoElement.addEventListener("scroll",client_Utils.scrollListener);
+	client_Utils.updateScrollState();
+};
+client_Utils.removeScrollDetection = function() {
+	if(client_Utils.scrollListener == null) {
+		return;
+	}
+	window.document.querySelector("#video").removeEventListener("scroll",client_Utils.scrollListener);
+	client_Utils.scrollListener = null;
+	window.document.body.classList.remove("scrolled-to-top");
 };
 var client_YoutubeCrawler = function() { };
 client_YoutubeCrawler.__name__ = true;

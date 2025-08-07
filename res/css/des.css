@@ -543,6 +543,16 @@ body.pseudo-fullscreen #ytapiplayer {
   height: 98vh;
 }
 
+/* Hide video controls only when pseudo-fullscreen AND scrolled to top */
+body.pseudo-fullscreen.scrolled-to-top .video-info .controls {
+  display: none;
+}
+
+/* Also hide title when scrolled to top for cleaner experience */
+body.pseudo-fullscreen.scrolled-to-top .video-info header {
+  display: none;
+}
+
 /* Hide scrollbars in pseudo-fullscreen while preserving scroll functionality */
 body.pseudo-fullscreen #video {
   scrollbar-width: none; /* Firefox */
