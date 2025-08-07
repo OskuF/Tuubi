@@ -396,7 +396,6 @@ header h4 {
   position: relative;
   display: flex;
   flex-wrap: nowrap;
-  margin-bottom: 1.5rem;
 }
 
 .controls span {
@@ -1775,6 +1774,35 @@ html {
 #tts-btn:not(.active) {
   color: var(--danmaku-off) !important;
   opacity: 0.6;
+}
+
+/* Pseudo-fullscreen button styling - replace annoying glow with subtle background */
+body.pseudo-fullscreen #toggledanmaku.active {
+  color: var(--danmaku-on) !important;
+  background-color: rgba(209, 209, 209, 0.15) !important;
+  border-radius: 0.5rem;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+body.pseudo-fullscreen #toggledanmaku:not(.active) {
+  color: var(--danmaku-off) !important;
+  opacity: 0.6;
+  background-color: transparent !important;
+}
+
+body.pseudo-fullscreen #tts-btn.active {
+  color: var(--danmaku-on) !important;
+  background-color: rgba(209, 209, 209, 0.15) !important;
+  border-radius: 0.5rem;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+body.pseudo-fullscreen #tts-btn:not(.active) {
+  color: var(--danmaku-off) !important;
+  opacity: 0.6;
+  background-color: transparent !important;
 }
 
 /* TTS volume slider container */
