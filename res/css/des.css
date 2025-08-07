@@ -828,6 +828,12 @@ footer#footer {
   padding-bottom: 1rem;
 }
 
+/* Chat popout button styling */
+#chatpopout.active {
+  background-color: rgba(0, 122, 255, .3) !important;
+  border-color: rgba(0, 122, 255, .5) !important;
+}
+
 /* Users online */
 
 #userlist-wrap {

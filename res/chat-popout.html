@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SyncTube Chat</title>
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <script type="module" src="https://cdn.jsdelivr.net/npm/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule="" src="https://cdn.jsdelivr.net/npm/ionicons@7.4.0/dist/ionicons/ionicons.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #ffffff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: #2d2d2d;
+      padding: 8px 12px;
+      border-bottom: 1px solid #404040;
+      display: flex;
+      justify-content: between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .chat-title {
+      font-size: 14px;
+      font-weight: bold;
+      flex: 1;
+    }
+
+    .close-btn {
+      background: #ff4444;
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .close-btn:hover {
+      background: #ff6666;
+    }
+
+    #messagebuffer {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column-reverse;
+      background: #1a1a1a;
+    }
+
+    #chatbox {
+      display: flex;
+      padding: 8px;
+      background: #2d2d2d;
+      border-top: 1px solid #404040;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    #chatline {
+      flex: 1;
+      background: #404040;
+      border: 1px solid #555;
+      color: #ffffff;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    #chatline:focus {
+      outline: none;
+      border-color: #007acc;
+    }
+
+    #chatbox button {
+      background: #404040;
+      border: 1px solid #555;
+      color: #ffffff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #chatbox button:hover {
+      background: #555;
+    }
+
+    #danmaku-label {
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    #send-as-danmaku {
+      margin-right: 4px;
+    }
+
+    .message {
+      padding: 4px 0;
+      border-bottom: 1px solid #2d2d2d;
+      word-wrap: break-word;
+    }
+
+    .message:last-child {
+      border-bottom: none;
+    }
+
+    .message .username {
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    .message.server {
+      color: #888;
+      font-style: italic;
+    }
+
+    .emote-panels {
+      background: #2d2d2d;
+      border-top: 1px solid #404040;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .emote-panel {
+      padding: 8px;
+    }
+
+    .emote-search {
+      width: 100%;
+      background: #404040;
+      border: 1px solid #555;
+      color: white;
+      padding: 6px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .emote-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+      gap: 4px;
+    }
+
+    .emote {
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .emote:hover {
+      background: #404040;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #2d2d2d;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="chat-header">
+    <div class="chat-title">External Chat</div>
+    <button class="close-btn" onclick="window.close()">×</button>
+  </div>
+
+  <div id="messagebuffer"></div>
+
+  <div class="emote-panels">
+    <div id="smiles-wrap" class="emote-panel" style="display: none;">
+      <input id="smiles-search" class="emote-search" type="text" placeholder="Search emotes...">
+      <div id="smiles-list" class="emote-grid"></div>
+      <div id="smiles-loading" style="display: none; text-align: center; padding: 10px;">
+        <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+      </div>
+    </div>
+    <div id="ffz-wrap" class="emote-panel" style="display: none;">
+      <input id="ffz-search" class="emote-search" type="text" placeholder="Search FrankerFaceZ emotes...">
+      <div id="ffz-list" class="emote-grid"></div>
+      <div id="ffz-loading" style="display: none; text-align: center; padding: 10px;">
+        <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+      </div>
+    </div>
+    <div id="seventv-wrap" class="emote-panel" style="display: none;">
+      <input id="seventv-search" class="emote-search" type="text" placeholder="Search 7TV emotes...">
+      <div id="seventv-list" class="emote-grid"></div>
+      <div id="seventv-loading" style="display: none; text-align: center; padding: 10px;">
+        <ion-icon name="refresh" class="spin"></ion-icon> Loading...
+      </div>
+    </div>
+  </div>
+
+  <div id="chatbox">
+    <input id="chatline" type="text" placeholder="Type a message...">
+    <label id="danmaku-label" title="Send as danmaku comment">
+      <input id="send-as-danmaku" type="checkbox">
+      <span>Danmaku</span>
+    </label>
+    <button id="smilesbtn" title="Emotes">
+      <ion-icon name="happy"></ion-icon>
+    </button>
+    <button id="ffzbtn" title="FrankerFaceZ Emotes">
+      <svg class="ffz-logo" xmlns="http://www.w3.org/2000/svg" width="20" height="15" viewBox="0 0 40 30">
+        <path
+          d="M20.7465 5.48825L21.9799 3.33745L22.646 2.20024L21.4125 0.0494437V0H14.8259L17.2928 4.3016L17.9836 5.48825H20.7465Z"
+          fill="#FFFFFF" />
+        <path
+          d="M7.15395 19.9258L14.5546 7.02104L15.4673 5.43884L13.0004 1.13724L12.3097 0.0247596H1.8995L0.666057 2.17556L0 3.31276L1.23344 5.46356V5.51301H9.12745L2.96025 16.267L2.09685 17.7998L3.33029 19.9506V20H7.15395"
+          fill="#FFFFFF" />
+        <path
+          d="M17.4655 19.9257H21.2398L26.1736 11.3225L27.037 9.83924L25.8036 7.68844V7.63899H22.0046L19.5377 11.9406L19.365 12.262L16.8981 7.96038L16.7255 7.63899L14.2586 11.9406L13.5679 13.1272L17.2682 19.5796L17.4655 19.9257Z"
+          fill="#FFFFFF" />
+      </svg>
+    </button>
+    <button id="seventvbtn" title="7TV Emotes">
+      <svg class="seventv-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 27 20" width="20" height="15">
+        <g fill="#FFFFFF">
+          <path
+            d="M20.7465 5.48825L21.9799 3.33745L22.646 2.20024L21.4125 0.0494437V0H14.8259L17.2928 4.3016L17.9836 5.48825H20.7465Z" />
+          <path
+            d="M7.15395 19.9258L14.5546 7.02104L15.4673 5.43884L13.0004 1.13724L12.3097 0.0247596H1.8995L0.666057 2.17556L0 3.31276L1.23344 5.46356V5.51301H9.12745L2.96025 16.267L2.09685 17.7998L3.33029 19.9506V20H7.15395" />
+          <path
+            d="M17.4655 19.9257H21.2398L26.1736 11.3225L27.037 9.83924L25.8036 7.68844V7.63899H22.0046L19.5377 11.9406L19.365 12.262L16.8981 7.96038L16.7255 7.63899L14.2586 11.9406L13.5679 13.1272L17.2682 19.5796L17.4655 19.9257Z" />
+        </g>
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    // This will be populated by the parent window
+    window.parentMain = null;
+    window.chatPopout = true;
+
+    // Debug connection status
+    function debugConnection() {
+      console.log('=== Popout Connection Debug ===');
+      console.log('window.parentMain:', window.parentMain);
+      console.log('window.opener:', window.opener);
+      console.log('window.opener.closed:', window.opener ? window.opener.closed : 'N/A');
+
+      if (window.parentMain) {
+        console.log('parentMain.sendChatMessage exists:', typeof window.parentMain.sendChatMessage === 'function');
+      }
+
+      if (window.opener && !window.opener.closed) {
+        console.log('window.opener.Main exists:', !!window.opener.Main);
+        console.log('window.opener.Main.instance exists:', !!(window.opener.Main && window.opener.Main.instance));
+      }
+    }
+
+    // Try to establish connection with parent
+    function establishParentConnection() {
+      console.log('Attempting to establish parent connection...');
+
+      // Method 1: Use the parentMain that should be set by parent
+      if (window.parentMain && typeof window.parentMain.sendChatMessage === 'function') {
+        console.log('✓ Connection established via parentMain');
+        console.log('parentMain type:', typeof window.parentMain);
+        console.log('sendChatMessage type:', typeof window.parentMain.sendChatMessage);
+        return true;
+      }
+
+      // Method 2: Try to use window.opener directly
+      if (window.opener && !window.opener.closed) {
+        try {
+          // Try to access the Main instance through the opener
+          if (window.opener.Main && window.opener.Main.instance) {
+            const mainInstance = window.opener.Main.instance;
+            console.log('Found Main.instance:', mainInstance);
+            console.log('sendChatMessage exists:', typeof mainInstance.sendChatMessage);
+
+            if (typeof mainInstance.sendChatMessage === 'function') {
+              window.parentMain = mainInstance;
+              console.log('✓ Connection established via window.opener.Main.instance');
+              return true;
+            } else {
+              console.log('✗ sendChatMessage is not a function on Main.instance');
+            }
+          } else {
+            console.log('✗ window.opener.Main.instance not found');
+          }
+        } catch (e) {
+          console.log('✗ Failed to access window.opener.Main:', e);
+        }
+      }
+
+      // Method 3: Try to get the instance directly from opener window
+      if (window.opener && !window.opener.closed) {
+        try {
+          // Look for any global variables that might contain the Main instance
+          console.log('Checking opener window for Main references...');
+          console.log('opener keys:', Object.keys(window.opener).filter(k => k.includes('Main') || k.includes('main')));
+
+          // Try to find the instance in various ways
+          const possibleMains = [
+            window.opener.Main?.instance,
+            window.opener.main,
+            window.opener._mainInstance,
+            window.opener.synctube?.main
+          ];
+
+          for (const candidate of possibleMains) {
+            if (candidate && typeof candidate.sendChatMessage === 'function') {
+              window.parentMain = candidate;
+              console.log('✓ Connection established via alternative method');
+              return true;
+            }
+          }
+        } catch (e) {
+          console.log('✗ Alternative method failed:', e);
+        }
+      }
+
+      console.log('✗ Failed to establish parent connection');
+      return false;
+    }
+
+    // Initialize basic chat functionality for popout
+    function initializePopoutChat() {
+      const chatline = document.getElementById('chatline');
+      const smilesbtn = document.getElementById('smilesbtn');
+      const ffzbtn = document.getElementById('ffzbtn');
+      const seventvbtn = document.getElementById('seventvbtn');
+
+      // Handle enter key for sending messages
+      if (chatline) {
+        chatline.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const message = this.value.trim();
+            if (message) {
+              // Try to establish/re-establish connection if needed
+              if (!establishParentConnection()) {
+                debugConnection();
+                alert('Error: Cannot send message - connection to main window lost\n\nPlease close this popout window and open it again.');
+                return;
+              }
+
+              try {
+                const isDanmaku = document.getElementById('send-as-danmaku').checked;
+                console.log('Sending message from popout:', message, 'isDanmaku:', isDanmaku);
+                window.parentMain.sendChatMessage(message, isDanmaku);
+                this.value = '';
+                console.log('✓ Message sent successfully');
+              } catch (error) {
+                console.error('Error sending message:', error);
+                debugConnection();
+                alert('Error sending message: ' + error.message);
+              }
+            }
+          }
+        });
+      }
+
+      // Handle emote buttons
+      if (smilesbtn) {
+        smilesbtn.addEventListener('click', function () {
+          toggleEmotePanel('smiles-wrap');
+        });
+      }
+
+      if (ffzbtn) {
+        ffzbtn.addEventListener('click', function () {
+          toggleEmotePanel('ffz-wrap');
+        });
+      }
+
+      if (seventvbtn) {
+        seventvbtn.addEventListener('click', function () {
+          toggleEmotePanel('seventv-wrap');
+        });
+      }
+    }
+
+    function toggleEmotePanel(panelId) {
+      const panels = document.querySelector('.emote-panels');
+      const panel = document.getElementById(panelId);
+      const allPanels = panels.querySelectorAll('.emote-panel');
+
+      allPanels.forEach(p => {
+        if (p.id !== panelId) {
+          p.style.display = 'none';
+        }
+      });
+
+      if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        panels.style.display = 'block';
+        if (window.parentMain) {
+          window.parentMain.loadEmotesForPopout(panelId);
+        }
+      } else {
+        panel.style.display = 'none';
+        panels.style.display = 'none';
+      }
+    }
+
+    function addMessage(messageHtml) {
+      const messagebuffer = document.getElementById('messagebuffer');
+      if (messagebuffer) {
+        messagebuffer.insertAdjacentHTML('afterbegin', messageHtml);
+        // Keep only the last 200 messages
+        while (messagebuffer.children.length > 200) {
+          messagebuffer.removeChild(messagebuffer.lastChild);
+        }
+      }
+    }
+
+    // Handle window closing
+    window.addEventListener('beforeunload', function () {
+      if (window.parentMain && window.parentMain.onPopoutClosed) {
+        window.parentMain.onPopoutClosed();
+      }
+    });
+
+    // Initialize when loaded
+    document.addEventListener('DOMContentLoaded', function () {
+      console.log('Popout DOMContentLoaded');
+
+      // Give the parent window a moment to set up the connection
+      setTimeout(function () {
+        debugConnection();
+
+        // Try to establish connection
+        if (!establishParentConnection()) {
+          console.log('Initial connection failed, will retry on first interaction');
+        }
+
+        initializePopoutChat();
+      }, 100);
+    });
+
+    // Also try on window load as fallback
+    window.addEventListener('load', function () {
+      console.log('Popout window loaded');
+
+      // Another attempt to establish connection
+      setTimeout(function () {
+        debugConnection();
+        establishParentConnection();
+      }, 200);
+    });
+  </script>
+</body>
+
+</html>

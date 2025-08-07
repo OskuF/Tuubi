@@ -107,6 +107,9 @@ class Main {
 		haxe.Log.trace = Utils.nativeTrace;
 		player = new Player(this);
 		host = Browser.location.hostname;
+		
+		// Expose Main class to global window for popout access
+		(cast window).Main = Main;
 		if (host == "") host = "localhost";
 
 		final defaults:ClientSettings = {
@@ -2591,6 +2594,11 @@ class Main {
 			showScrollToChatEndBtn();
 		}
 
+		// Send message to popout window if open
+		if (chatPopoutWindow != null && !chatPopoutWindow.closed) {
+			chatPopoutWindow.addMessage(userDiv.outerHTML);
+		}
+
 		// Speak the message if TTS is enabled
 		speakText(text);
 
@@ -3276,6 +3284,321 @@ class Main {
 
 	function escapeRegExp(regex:String):String {
 		return ~/([.*+?^${}()|[\]\\])/g.replace(regex, "\\$1");
+	}
+
+	// Chat popout functionality
+	var chatPopoutWindow:Dynamic = null;
+
+	public function openChatPopout():Void {
+		if (chatPopoutWindow != null && !chatPopoutWindow.closed) {
+			chatPopoutWindow.focus();
+			return;
+		}
+
+		final popoutUrl = "chat-popout.html";
+		final popoutFeatures = "width=400,height=600,scrollbars=yes,resizable=yes,status=no,toolbar=no,menubar=no";
+		
+		chatPopoutWindow = window.open(popoutUrl, "synctube_chat", popoutFeatures);
+		
+		if (chatPopoutWindow != null) {
+			final self = this;
+			
+			// Set up multiple methods to establish the connection
+			
+			// Method 1: Set parentMain immediately (may work in some browsers)
+			try {
+				// Create a wrapper object to ensure method binding
+				chatPopoutWindow.parentMain = {
+					sendChatMessage: function(message:String, isDanmaku:Bool) {
+						return self.sendChatMessage(message, isDanmaku);
+					},
+					loadEmotesForPopout: function(panelType:String) {
+						return self.loadEmotesForPopout(panelType);
+					},
+					onPopoutClosed: function() {
+						return self.onPopoutClosed();
+					},
+					emoteMessage: function(emoteHtml:String) {
+						return self.emoteMessage(emoteHtml);
+					}
+				};
+				trace("Set parentMain immediately with wrapper");
+			} catch (e:Dynamic) {
+				trace("Failed to set parentMain immediately: " + e);
+			}
+			
+			// Method 2: Use load event
+			chatPopoutWindow.addEventListener("load", function() {
+				try {
+					// Create a wrapper object to ensure method binding
+					chatPopoutWindow.parentMain = {
+						sendChatMessage: function(message:String, isDanmaku:Bool) {
+							return self.sendChatMessage(message, isDanmaku);
+						},
+						loadEmotesForPopout: function(panelType:String) {
+							return self.loadEmotesForPopout(panelType);
+						},
+						onPopoutClosed: function() {
+							return self.onPopoutClosed();
+						},
+						emoteMessage: function(emoteHtml:String) {
+							return self.emoteMessage(emoteHtml);
+						}
+					};
+					self.syncChatToPopout();
+					trace("Set parentMain on load event with wrapper");
+				} catch (e:Dynamic) {
+					trace("Failed to set parentMain on load: " + e);
+				}
+			});
+			
+			// Method 3: Use polling to ensure connection is established
+			var pollAttempts = 0;
+			function pollForConnection():Void {
+				pollAttempts++;
+				if (chatPopoutWindow == null || chatPopoutWindow.closed) {
+					trace("Popout window closed during polling");
+					return;
+				}
+				
+				try {
+					// Check if the popout window is ready
+					if (chatPopoutWindow.document && chatPopoutWindow.document.readyState == "complete") {
+						// Create a wrapper object to ensure method binding
+						chatPopoutWindow.parentMain = {
+							sendChatMessage: function(message:String, isDanmaku:Bool) {
+								return self.sendChatMessage(message, isDanmaku);
+							},
+							loadEmotesForPopout: function(panelType:String) {
+								return self.loadEmotesForPopout(panelType);
+							},
+							onPopoutClosed: function() {
+								return self.onPopoutClosed();
+							},
+							emoteMessage: function(emoteHtml:String) {
+								return self.emoteMessage(emoteHtml);
+							}
+						};
+						self.syncChatToPopout();
+						trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper");
+						return;
+					}
+				} catch (e:Dynamic) {
+					trace("Polling attempt " + pollAttempts + " failed: " + e);
+				}
+				
+				// Retry up to 20 times (2 seconds)
+				if (pollAttempts < 20) {
+					Timer.delay(pollForConnection, 100);
+				} else {
+					trace("Failed to establish connection after " + pollAttempts + " attempts");
+				}
+			}
+			
+			// Start polling after a short delay
+			Timer.delay(pollForConnection, 50);
+			
+			// Update button state
+			getEl("#chatpopout").classList.add("active");
+		}
+	}
+
+	public function onPopoutClosed():Void {
+		chatPopoutWindow = null;
+		getEl("#chatpopout").classList.remove("active");
+	}
+
+	function syncChatToPopout():Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+		
+		// Copy existing messages to popout
+		final messages = msgBuf.children;
+		for (i in 0...messages.length) {
+			final msg = messages[messages.length - 1 - i]; // Reverse order since popout uses column-reverse
+			if (msg != null) {
+				chatPopoutWindow.addMessage(msg.outerHTML);
+			}
+		}
+	}
+
+	public function sendChatMessage(message:String, isDanmaku:Bool):Void {
+		if (isDanmaku) {
+			sendDanmakuComment(message);
+		} else {
+			send({
+				type: Message,
+				message: {
+					clientName: personal.name,
+					text: message
+				}
+			});
+		}
+	}
+
+	public function loadEmotesForPopout(panelType:String):Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+
+		switch (panelType) {
+			case "smiles-wrap":
+				loadAppEmotesForPopout();
+			case "ffz-wrap":
+				loadFfzEmotesForPopout();
+			case "seventv-wrap":
+				load7tvEmotesForPopout();
+		}
+	}
+
+	function loadAppEmotesForPopout():Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+
+		final listEl = chatPopoutWindow.document.getElementById("smiles-list");
+		if (listEl == null) return;
+		
+		listEl.innerHTML = "";
+
+		// Use the same app emotes from config
+		for (emote in allAppEmotes) {
+			final isVideoExt = emote.image.endsWith("mp4") || emote.image.endsWith("webm");
+			final tag = isVideoExt ? "video" : "img";
+			final el = chatPopoutWindow.document.createElement(tag);
+			el.className = "emote";
+			el.title = emote.name;
+
+			// Set the actual src attribute for display
+			if (isVideoExt) {
+				final videoEl:Dynamic = el;
+				videoEl.src = emote.image;
+				videoEl.autoplay = true;
+				videoEl.loop = true;
+				videoEl.muted = true;
+			} else {
+				final imgEl:Dynamic = el;
+				imgEl.src = emote.image;
+			}
+
+			// Add click handler for emote insertion
+			final self = this;
+			el.onclick = function() {
+				final emoteHtml = isVideoExt 
+					? '<video src="${emote.image}" title="${emote.name}" autoplay loop muted class="emote-inline">'
+					: '<img src="${emote.image}" title="${emote.name}" class="emote-inline">';
+				self.emoteMessage(emoteHtml);
+			};
+
+			listEl.appendChild(el);
+		}
+	}
+
+	function loadFfzEmotesForPopout():Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+
+		final listEl = chatPopoutWindow.document.getElementById("ffz-list");
+		if (listEl == null) return;
+		
+		// Show loading indicator
+		final loadingEl = chatPopoutWindow.document.getElementById("ffz-loading");
+		if (loadingEl != null) loadingEl.style.display = "block";
+		
+		listEl.innerHTML = "";
+
+		// Fetch FFZ emotes
+		final apiUrl = "https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=1&per_page=30";
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("GET", apiUrl, true);
+		final self = this;
+		xhr.onload = () -> {
+			if (loadingEl != null) loadingEl.style.display = "none";
+			
+			if (xhr.status == 200) {
+				try {
+					final response = Json.parse(xhr.responseText);
+					final emotes:Array<Dynamic> = response.emoticons;
+					
+					for (emoteData in emotes) {
+						final imgEl = chatPopoutWindow.document.createElement("img");
+						imgEl.className = "emote";
+						imgEl.src = 'https://cdn.frankerfacez.com/emote/${emoteData.id}/2';
+						imgEl.title = emoteData.name;
+						
+						// Add click handler
+						imgEl.onclick = function() {
+							final emoteHtml = '<img src="https://cdn.frankerfacez.com/emote/${emoteData.id}/2" title="${emoteData.name}" class="emote-inline">';
+							self.emoteMessage(emoteHtml);
+						};
+						
+						listEl.appendChild(imgEl);
+					}
+				} catch (e:Dynamic) {
+					trace("Error parsing FFZ emotes: " + e);
+				}
+			}
+		};
+		xhr.onerror = () -> {
+			if (loadingEl != null) loadingEl.style.display = "none";
+		};
+		xhr.send();
+	}
+
+	function load7tvEmotesForPopout():Void {
+		if (chatPopoutWindow == null || chatPopoutWindow.closed) return;
+
+		final listEl = chatPopoutWindow.document.getElementById("seventv-list");
+		if (listEl == null) return;
+		
+		// Show loading indicator
+		final loadingEl = chatPopoutWindow.document.getElementById("seventv-loading");
+		if (loadingEl != null) loadingEl.style.display = "block";
+		
+		listEl.innerHTML = "";
+
+		// 7TV GraphQL query
+		final graphqlQuery = '{"query":"query SearchEmotes($$query: String!, $$page: Int, $$sort: Sort, $$limit: Int, $$filter: EmoteSearchFilter) { emotes(query: $$query, page: $$page, sort: $$sort, limit: $$limit, filter: $$filter) { count items { id name host { url files { name format width height } } } } }", "variables": {"query": "", "limit": 30, "page": 1, "sort": {"value": "popularity", "order": "DESCENDING"}, "filter": {"exact_match": false, "case_sensitive": false, "ignore_tags": true, "category": "TOP"}}}';
+		
+		final xhr = new js.html.XMLHttpRequest();
+		xhr.open("POST", "https://7tv.io/v3/gql", true);
+		xhr.setRequestHeader("Content-Type", "application/json");
+		final self = this;
+		xhr.onload = () -> {
+			if (loadingEl != null) loadingEl.style.display = "none";
+			
+			if (xhr.status == 200) {
+				try {
+					final response = Json.parse(xhr.responseText);
+					final emotes:Array<Dynamic> = response.data.emotes.items;
+					
+					for (emoteData in emotes) {
+						// Find the best file (prefer webp 2x, fallback to 1x)
+						var bestFile:Dynamic = null;
+						for (file in cast(emoteData.host.files, Array<Dynamic>)) {
+							if (file.name == "2x.webp" || (bestFile == null && file.name == "1x.webp")) {
+								bestFile = file;
+							}
+						}
+						
+						if (bestFile != null) {
+							final imgEl = chatPopoutWindow.document.createElement("img");
+							imgEl.className = "emote";
+							imgEl.src = '${emoteData.host.url}/${bestFile.name}';
+							imgEl.title = emoteData.name;
+							
+							// Add click handler
+							imgEl.onclick = function() {
+								final emoteHtml = '<img src="${emoteData.host.url}/${bestFile.name}" title="${emoteData.name}" class="emote-inline">';
+								self.emoteMessage(emoteHtml);
+							};
+							
+							listEl.appendChild(imgEl);
+						}
+					}
+				} catch (e:Dynamic) {
+					trace("Error parsing 7TV emotes: " + e);
+				}
+			}
+		};
+		xhr.onerror = () -> {
+			if (loadingEl != null) loadingEl.style.display = "none";
+		};
+		xhr.send(graphqlQuery);
 	}
 
 	@:generic

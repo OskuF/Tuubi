@@ -127,6 +127,10 @@ class Buttons {
 		getEl("#clearchatbtn").onclick = e -> {
 			if (main.isAdmin()) main.send({type: ClearChat});
 		}
+
+		getEl("#chatpopout").onclick = e -> {
+			main.openChatPopout();
+		}
 		final userList = getEl("#userlist");
 		userList.onclick = e -> {
 			if (!main.isAdmin()) return;
