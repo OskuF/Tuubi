@@ -2,6 +2,7 @@ package client;
 
 import Client.ClientData;
 import Types.Config;
+import Types.DanmakuAnimations;
 import Types.Emote;
 import Types.GetTimeEvent;
 import Types.Permission;
@@ -1020,36 +1021,11 @@ class Main {
 		return personal.name;
 	}
 
-	// Animation types for danmaku emotes with their respective class names
-	private final danmakuEmoteAnimations:Array<String> = [
-		"danmaku-emote-glow",
-		"danmaku-emote-shake",
-		"danmaku-emote-spin",
-		"danmaku-emote-pulse",
-		"danmaku-emote-bounce",
-		"danmaku-emote-rainbow",
-		"danmaku-emote-flip",
-		"danmaku-emote-hover",
-		"danmaku-emote-heartbeat",
-		"danmaku-emote-wobble",
-		"danmaku-emote-blur",
-		"danmaku-emote-glitch",
-		"danmaku-emote-swing",
-		"danmaku-emote-trampoline",
-		"danmaku-emote-neon",
-		"danmaku-emote-fade"
-	];
-
 	/**
 	 * Gets a random animation class for danmaku emotes
 	 */
 	private function getRandomEmoteAnimation():String {
-		// 20% chance of no animation
-		if (Math.random() < 0.2) return "";
-
-		// Select a random animation from the list
-		final index = Math.floor(Math.random() * danmakuEmoteAnimations.length);
-		return danmakuEmoteAnimations[index];
+		return DanmakuAnimations.getRandomAnimation();
 	}
 
 	// Danmaku (scrolling comments) functionality
@@ -2436,12 +2412,16 @@ class Main {
 	}
 
 	// Sends an emote message to all users in the chat
-	public function emoteMessage(html:String):Void {
-		// Check if the danmaku checkbox is checked
+	public function emoteMessage(html:String, ?isDanmaku:Bool):Void {
+		// Check if the danmaku flag is provided, otherwise check checkbox
 		var sendAsDanmaku = false;
-		final danmakuCheckbox:InputElement = getEl("#send-as-danmaku");
-		if (danmakuCheckbox != null) {
-			sendAsDanmaku = danmakuCheckbox.checked;
+		if (isDanmaku != null) {
+			sendAsDanmaku = isDanmaku;
+		} else {
+			final danmakuCheckbox:InputElement = getEl("#send-as-danmaku");
+			if (danmakuCheckbox != null) {
+				sendAsDanmaku = danmakuCheckbox.checked;
+			}
 		}
 
 		// If sending as danmaku and danmaku is enabled, send as danmaku instead of regular emote
@@ -2449,7 +2429,7 @@ class Main {
 			// Pre-select an animation class using the same logic as the server
 			// This ensures all clients will use the same animation
 			final random = Math.random();
-			final animationClass = random < 0.2 ? "" : danmakuEmoteAnimations[Math.floor(Math.random() * danmakuEmoteAnimations.length)];
+			final animationClass = DanmakuAnimations.getRandomAnimation();
 
 			// Pre-select a lane to ensure consistent positioning across clients
 			final playerEl = getEl("#ytapiplayer");
@@ -3321,8 +3301,11 @@ class Main {
 					onPopoutClosed: function() {
 						return self.onPopoutClosed();
 					},
-					emoteMessage: function(emoteHtml:String) {
-						return self.emoteMessage(emoteHtml);
+					emoteMessage: function(emoteHtml:String, ?isDanmaku:Bool) {
+						return self.emoteMessage(emoteHtml, isDanmaku);
+					},
+					getDanmakuRandomAnimation: function():String {
+						return self.getRandomEmoteAnimation();
 					}
 				};
 				trace("Set parentMain immediately with wrapper");
@@ -3353,8 +3336,11 @@ class Main {
 						onPopoutClosed: function() {
 							return self.onPopoutClosed();
 						},
-						emoteMessage: function(emoteHtml:String) {
-							return self.emoteMessage(emoteHtml);
+						emoteMessage: function(emoteHtml:String, ?isDanmaku:Bool) {
+							return self.emoteMessage(emoteHtml, isDanmaku);
+						},
+						getDanmakuRandomAnimation: function():String {
+							return self.getRandomEmoteAnimation();
 						}
 					};
 					self.syncChatToPopout();
@@ -3396,8 +3382,11 @@ class Main {
 							onPopoutClosed: function() {
 								return self.onPopoutClosed();
 							},
-							emoteMessage: function(emoteHtml:String) {
-								return self.emoteMessage(emoteHtml);
+							emoteMessage: function(emoteHtml:String, ?isDanmaku:Bool) {
+								return self.emoteMessage(emoteHtml, isDanmaku);
+							},
+							getDanmakuRandomAnimation: function():String {
+								return self.getRandomEmoteAnimation();
 							}
 						};
 						self.syncChatToPopout();
@@ -3517,11 +3506,7 @@ class Main {
 				final emoteHtml = isVideoExt 
 					? '<video src="${emote.image}" title="${emote.name}" autoplay loop muted class="emote-inline">'
 					: '<img src="${emote.image}" title="${emote.name}" class="emote-inline">';
-				if (isDanmaku) {
-					self.sendChatMessage(emoteHtml, true);
-				} else {
-					self.emoteMessage(emoteHtml);
-				}
+				self.emoteMessage(emoteHtml, isDanmaku);
 			};
 
 			listEl.appendChild(el);
@@ -3571,11 +3556,7 @@ class Main {
 				final emoteHtml = isVideoExt 
 					? '<video src="${emote.image}" title="${emote.name}" autoplay loop muted class="emote-inline">'
 					: '<img src="${emote.image}" title="${emote.name}" class="emote-inline">';
-				if (isDanmaku) {
-					self.sendChatMessage(emoteHtml, true);
-				} else {
-					self.emoteMessage(emoteHtml);
-				}
+				self.emoteMessage(emoteHtml, isDanmaku);
 			};
 
 			listEl.appendChild(el);
@@ -3640,11 +3621,7 @@ class Main {
 						imgEl.onclick = function() {
 							final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 							final emoteHtml = '<img src="https://cdn.frankerfacez.com/emote/${emoteData.id}/2" title="${emoteData.name}" class="emote-inline">';
-							if (isDanmaku) {
-					self.sendChatMessage(emoteHtml, true);
-				} else {
-					self.emoteMessage(emoteHtml);
-				}
+							self.emoteMessage(emoteHtml, isDanmaku);
 						};
 						
 						listEl.appendChild(imgEl);
@@ -3769,11 +3746,7 @@ class Main {
 							imgEl.onclick = function() {
 								final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 								final emoteHtml = '<img src="${emoteData.host.url}/${bestFile.name}" title="${emoteData.name}" class="emote-inline">';
-								if (isDanmaku) {
-					self.sendChatMessage(emoteHtml, true);
-				} else {
-					self.emoteMessage(emoteHtml);
-				}
+								self.emoteMessage(emoteHtml, isDanmaku);
 							};
 							
 							listEl.appendChild(imgEl);
@@ -3868,11 +3841,7 @@ class Main {
 						imgEl.onclick = function() {
 							final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 							final emoteHtml = '<img src="https://cdn.frankerfacez.com/emote/${emoteData.id}/2" title="${emoteData.name}" class="emote-inline">';
-							if (isDanmaku) {
-					self.sendChatMessage(emoteHtml, true);
-				} else {
-					self.emoteMessage(emoteHtml);
-				}
+							self.emoteMessage(emoteHtml, isDanmaku);
 						};
 						
 						listEl.appendChild(imgEl);
@@ -3943,11 +3912,7 @@ class Main {
 							imgEl.onclick = function() {
 								final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 								final emoteHtml = '<img src="${emoteData.host.url}/${bestFile.name}" title="${emoteData.name}" class="emote-inline">';
-								if (isDanmaku) {
-					self.sendChatMessage(emoteHtml, true);
-				} else {
-					self.emoteMessage(emoteHtml);
-				}
+								self.emoteMessage(emoteHtml, isDanmaku);
 							};
 							
 							listEl.appendChild(imgEl);

@@ -368,3 +368,33 @@ typedef DanmakuMessageEvent = {
 	?animationClass:String,
 	?lane:Int
 }
+
+class DanmakuAnimations {
+	public static final ANIMATIONS:Array<String> = [
+		"danmaku-emote-glow",
+		"danmaku-emote-shake",
+		"danmaku-emote-spin",
+		"danmaku-emote-pulse",
+		"danmaku-emote-bounce",
+		"danmaku-emote-rainbow",
+		"danmaku-emote-flip",
+		"danmaku-emote-hover",
+		"danmaku-emote-heartbeat",
+		"danmaku-emote-wobble",
+		"danmaku-emote-blur",
+		"danmaku-emote-glitch",
+		"danmaku-emote-swing",
+		"danmaku-emote-trampoline",
+		"danmaku-emote-neon",
+		"danmaku-emote-fade"
+	];
+
+	public static function getRandomAnimation():String {
+		// 20% chance of no animation
+		if (Math.random() < 0.2) return "";
+		
+		// Select a random animation from the list
+		final index = Math.floor(Math.random() * ANIMATIONS.length);
+		return ANIMATIONS[index];
+	}
+}

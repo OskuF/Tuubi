@@ -506,6 +506,15 @@ _$Types_VideoItemTools.__name__ = true;
 _$Types_VideoItemTools.withUrl = function(item,url) {
 	return { url : url, title : item.title, author : item.author, duration : item.duration, subs : item.subs, voiceOverTrack : item.voiceOverTrack, isTemp : item.isTemp, doCache : item.doCache, playerType : item.playerType};
 };
+var DanmakuAnimations = function() { };
+DanmakuAnimations.__name__ = true;
+DanmakuAnimations.getRandomAnimation = function() {
+	if(Math.random() < 0.2) {
+		return "";
+	}
+	var index = Math.floor(Math.random() * DanmakuAnimations.ANIMATIONS.length);
+	return DanmakuAnimations.ANIMATIONS[index];
+};
 var VideoList = function() {
 	this.items = [];
 	this.pos = 0;
@@ -2494,7 +2503,6 @@ var client_Main = function() {
 	this.DANMAKU_LANES = 12;
 	this.danmakuLanes = [];
 	this.isDanmakuEnabled = true;
-	this.danmakuEmoteAnimations = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
 	this.isRandomVideoOperation = false;
 	this.currentRandomVideoAttemptCount = 0;
 	this.currentRandomVideoQuery = "";
@@ -3290,6 +3298,9 @@ client_Main.prototype = {
 			listEl.appendChild(el);
 		}
 	}
+	,getRandomEmoteAnimation: function() {
+		return DanmakuAnimations.getRandomAnimation();
+	}
 	,toggleDanmaku: function() {
 		this.isDanmakuEnabled = !this.isDanmakuEnabled;
 		this.danmakuContainer = window.document.querySelector("#danmaku-container");
@@ -3530,17 +3541,17 @@ client_Main.prototype = {
 					query = "" + yearStr + monthStr + dayStr;
 				}
 				isDateFormat = true;
-				haxe_Log.trace("Generated obscure search query (date format " + selectedOption.value + "): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1335, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (date format " + selectedOption.value + "): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1311, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			case "nospace":
 				var randomNumber = Math.floor(Math.random() * 9999) + 1;
 				query = "" + selectedOption.value + StringTools.lpad(randomNumber == null ? "null" : "" + randomNumber,"0",4);
-				haxe_Log.trace("Generated obscure search query (no-space): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1312, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (no-space): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1288, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			case "spaced":
 				var randomNumber = Math.floor(Math.random() * 9999) + 1;
 				query = "" + selectedOption.value + " " + StringTools.lpad(randomNumber == null ? "null" : "" + randomNumber,"0",4);
-				haxe_Log.trace("Generated obscure search query (spaced): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1305, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (spaced): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1281, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			}
 		} else {
@@ -3556,26 +3567,26 @@ client_Main.prototype = {
 				}
 			}
 			query = selectedWords.join(" ");
-			haxe_Log.trace("Generated keyword search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1351, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Generated keyword search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1327, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		}
 		if(!isDateFormat) {
 			var year = new Date().getFullYear() - (Math.floor(Math.random() * 15) + 1);
 			var month = Math.floor(Math.random() * 12) + 1;
 			var day = Math.floor(Math.random() * 28) + 1;
 			query += " before:" + year + "-" + (month < 10 ? "0" + month : "" + month) + "-" + (day < 10 ? "0" + day : "" + day);
-			haxe_Log.trace("Final search query with date: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1365, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Final search query with date: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1341, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		} else {
-			haxe_Log.trace("Final search query (date format, no before filter): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1367, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Final search query (date format, no before filter): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1343, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		}
 		return query;
 	}
 	,addRandomYoutubeVideo: function() {
 		var _gthis = this;
-		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" pressed random video button | Starting search...",{ fileName : "src/client/Main.hx", lineNumber : 1374, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" pressed random video button | Starting search...",{ fileName : "src/client/Main.hx", lineNumber : 1350, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 		this.isRandomVideoOperation = true;
 		window.setTimeout(function() {
 			if(_gthis.isRandomVideoOperation) {
-				haxe_Log.trace("Random video operation timeout, clearing flag",{ fileName : "src/client/Main.hx", lineNumber : 1382, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+				haxe_Log.trace("Random video operation timeout, clearing flag",{ fileName : "src/client/Main.hx", lineNumber : 1358, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 				_gthis.isRandomVideoOperation = false;
 			}
 		},10000);
@@ -3595,11 +3606,11 @@ client_Main.prototype = {
 		}
 		var query = this.generateRandomSearchQuery();
 		new Date(new Date().getTime());
-		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" | Generated query: \"" + query + "\" | Initiating search...",{ fileName : "src/client/Main.hx", lineNumber : 1403, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" | Generated query: \"" + query + "\" | Initiating search...",{ fileName : "src/client/Main.hx", lineNumber : 1379, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 		var randomApiKey = this.getRandomVideoApiKey();
 		this.player.searchYoutubeVideos(query,20,function(videoIds) {
 			if(videoIds.length == 0) {
-				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1409, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1385, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 				if(attemptCount < 2) {
 					_gthis.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 				} else {
@@ -3626,7 +3637,7 @@ client_Main.prototype = {
 	,tryNextVideoFromList: function(videoIds,index,query,attemptCount) {
 		var _gthis = this;
 		if(index >= videoIds.length) {
-			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1441, className : "client.Main", methodName : "tryNextVideoFromList"});
+			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1417, className : "client.Main", methodName : "tryNextVideoFromList"});
 			if(attemptCount < 2) {
 				this.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 			} else {
@@ -3636,19 +3647,19 @@ client_Main.prototype = {
 		}
 		var videoId = videoIds[index];
 		var youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
-		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1453, className : "client.Main", methodName : "tryNextVideoFromList"});
+		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1429, className : "client.Main", methodName : "tryNextVideoFromList"});
 		this.checkVideoEmbeddability(videoId,function(isEmbeddable,title) {
 			if(isEmbeddable) {
 				_gthis.currentRandomVideoSearch = videoIds;
 				_gthis.currentRandomVideoIndex = index + 1;
 				_gthis.currentRandomVideoQuery = query;
 				_gthis.currentRandomVideoAttemptCount = attemptCount;
-				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1465, className : "client.Main", methodName : "tryNextVideoFromList"});
+				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1441, className : "client.Main", methodName : "tryNextVideoFromList"});
 				_gthis.addVideo(youtubeUrl,true,true,false,function() {
 					_gthis.serverMessage("Added random video from search: \"" + query + "\"");
 				});
 			} else {
-				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1472, className : "client.Main", methodName : "tryNextVideoFromList"});
+				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1448, className : "client.Main", methodName : "tryNextVideoFromList"});
 				_gthis.tryNextVideoFromList(videoIds,index + 1,query,attemptCount);
 			}
 		});
@@ -3657,7 +3668,7 @@ client_Main.prototype = {
 		var _gthis = this;
 		var apiKey = this.getRandomVideoApiKey();
 		if(apiKey == null || apiKey == "") {
-			haxe_Log.trace("No YouTube API key available for random video embeddability check",{ fileName : "src/client/Main.hx", lineNumber : 1481, className : "client.Main", methodName : "checkVideoEmbeddability"});
+			haxe_Log.trace("No YouTube API key available for random video embeddability check",{ fileName : "src/client/Main.hx", lineNumber : 1457, className : "client.Main", methodName : "checkVideoEmbeddability"});
 			callback(true,"Unknown");
 			return;
 		}
@@ -3671,12 +3682,12 @@ client_Main.prototype = {
 					var tmp = json.error.message;
 					var errorMessage = tmp != null ? tmp : "Unknown error";
 					if(errorCode == 403) {
-						haxe_Log.trace("Random video API quota exhausted: " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1501, className : "client.Main", methodName : "checkVideoEmbeddability"});
+						haxe_Log.trace("Random video API quota exhausted: " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1477, className : "client.Main", methodName : "checkVideoEmbeddability"});
 						_gthis.serverMessage("Random video API quota exhausted. Try again later.",false);
 						callback(false,"API Quota Exhausted");
 						return;
 					} else {
-						haxe_Log.trace("Random video API error " + errorCode + ": " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1506, className : "client.Main", methodName : "checkVideoEmbeddability"});
+						haxe_Log.trace("Random video API error " + errorCode + ": " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1482, className : "client.Main", methodName : "checkVideoEmbeddability"});
 						_gthis.serverMessage("Random video API error. Using fallback.",false);
 						callback(true,"API Error");
 						return;
@@ -3685,7 +3696,7 @@ client_Main.prototype = {
 				var tmp = json.items;
 				var items = tmp != null ? tmp : [];
 				if(items.length == 0) {
-					haxe_Log.trace("Video " + videoId + " not found",{ fileName : "src/client/Main.hx", lineNumber : 1516, className : "client.Main", methodName : "checkVideoEmbeddability"});
+					haxe_Log.trace("Video " + videoId + " not found",{ fileName : "src/client/Main.hx", lineNumber : 1492, className : "client.Main", methodName : "checkVideoEmbeddability"});
 					callback(false,"Not Found");
 					return;
 				}
@@ -3700,16 +3711,16 @@ client_Main.prototype = {
 				var tmp = item.contentDetails;
 				var tmp3 = item.contentDetails;
 				var isActuallyEmbeddable = _gthis.checkComprehensiveEmbeddability(videoId,title,tmp1 != null ? tmp1 : true,tmp2 != null ? tmp2 : "public",tmp != null ? tmp.regionRestriction : null,tmp3 != null ? tmp3.contentRating : null);
-				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1533, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1509, className : "client.Main", methodName : "checkVideoEmbeddability"});
 				callback(isActuallyEmbeddable,title);
 			} catch( _g ) {
 				var _g1 = haxe_Exception.caught(_g).unwrap();
-				haxe_Log.trace("Error parsing embeddability response for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1536, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				haxe_Log.trace("Error parsing embeddability response for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1512, className : "client.Main", methodName : "checkVideoEmbeddability"});
 				callback(true,"Parse Error");
 			}
 		};
 		http.onError = function(error) {
-			haxe_Log.trace("Error checking embeddability for " + videoId + ": " + error,{ fileName : "src/client/Main.hx", lineNumber : 1542, className : "client.Main", methodName : "checkVideoEmbeddability"});
+			haxe_Log.trace("Error checking embeddability for " + videoId + ": " + error,{ fileName : "src/client/Main.hx", lineNumber : 1518, className : "client.Main", methodName : "checkVideoEmbeddability"});
 			callback(true,"API Error");
 		};
 		http.request();
@@ -3717,23 +3728,23 @@ client_Main.prototype = {
 	,checkComprehensiveEmbeddability: function(videoId,title,embeddable,privacyStatus,regionRestriction,contentRating) {
 		if(!this.config.strictEmbeddingChecks) {
 			if(!embeddable) {
-				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1560, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1536, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
-			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1563, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1539, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return true;
 		}
 		if(!embeddable) {
-			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1569, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1545, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
 		if(privacyStatus != "public") {
-			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1575, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1551, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
 		if(!this.config.allowAgeRestrictedVideos && contentRating != null) {
 			if(Reflect.fields(contentRating).length > 0) {
-				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1583, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1559, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 		}
@@ -3745,7 +3756,7 @@ client_Main.prototype = {
 			var _g1 = 0;
 			while(_g1 < blockedDynamic.length) _g.push(Std.string(blockedDynamic[_g1++]));
 			if(_g.indexOf(userRegion) != -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1596, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1572, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 			var tmp = regionRestriction.allowed;
@@ -3754,11 +3765,11 @@ client_Main.prototype = {
 			var _g1 = 0;
 			while(_g1 < allowedDynamic.length) _g.push(Std.string(allowedDynamic[_g1++]));
 			if(_g.length > 0 && _g.indexOf(userRegion) == -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1604, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1580, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 		}
-		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1609, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1585, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 		return true;
 	}
 	,handleRandomVideoPlaybackError: function(errorCode) {
@@ -3804,7 +3815,7 @@ client_Main.prototype = {
 		var popularQueries = ["music","funny animals","video games","travel vlog","cooking tutorial","science explained","beautiful nature","guitar cover","dance performance","documentary short","art tutorial","tech review"];
 		var query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
 		var fallbackTime = new Date(new Date().getTime());
-		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1665, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
+		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1641, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
 		var randomApiKey = this.getRandomVideoApiKey();
 		this.player.searchYoutubeVideos(query,10,function(videoIds) {
 			if(videoIds.length == 0) {
@@ -3893,7 +3904,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1788, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1764, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -4118,7 +4129,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2090, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2066, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -4539,15 +4550,19 @@ client_Main.prototype = {
 		this.scrollChatToEnd();
 		return div;
 	}
-	,emoteMessage: function(html) {
+	,emoteMessage: function(html,isDanmaku) {
 		var sendAsDanmaku = false;
-		var danmakuCheckbox = window.document.querySelector("#send-as-danmaku");
-		if(danmakuCheckbox != null) {
-			sendAsDanmaku = danmakuCheckbox.checked;
+		if(isDanmaku != null) {
+			sendAsDanmaku = isDanmaku;
+		} else {
+			var danmakuCheckbox = window.document.querySelector("#send-as-danmaku");
+			if(danmakuCheckbox != null) {
+				sendAsDanmaku = danmakuCheckbox.checked;
+			}
 		}
 		if(sendAsDanmaku && this.isDanmakuEnabled) {
-			var random = Math.random();
-			var animationClass = random < 0.2 ? "" : this.danmakuEmoteAnimations[Math.floor(Math.random() * this.danmakuEmoteAnimations.length)];
+			Math.random();
+			var animationClass = DanmakuAnimations.getRandomAnimation();
 			window.document.querySelector("#ytapiplayer").getBoundingClientRect();
 			var bestLane = Math.floor(Math.random() * this.DANMAKU_LANES);
 			this.send({ type : "DanmakuMessage", danmakuMessage : { clientName : "", text : html, color : "#FFFFFF", isHtml : true, animationClass : animationClass, lane : bestLane}});
@@ -5309,12 +5324,14 @@ client_Main.prototype = {
 					self.loadMore7TVEmotesForPopout(page);
 				}, onPopoutClosed : function() {
 					self.onPopoutClosed();
-				}, emoteMessage : function(emoteHtml) {
-					self.emoteMessage(emoteHtml);
+				}, emoteMessage : function(emoteHtml,isDanmaku) {
+					self.emoteMessage(emoteHtml,isDanmaku);
+				}, getDanmakuRandomAnimation : function() {
+					return self.getRandomEmoteAnimation();
 				}};
-				haxe_Log.trace("Set parentMain immediately with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3328, className : "client.Main", methodName : "openChatPopout"});
+				haxe_Log.trace("Set parentMain immediately with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3311, className : "client.Main", methodName : "openChatPopout"});
 			} catch( _g ) {
-				haxe_Log.trace("Failed to set parentMain immediately: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3330, className : "client.Main", methodName : "openChatPopout"});
+				haxe_Log.trace("Failed to set parentMain immediately: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3313, className : "client.Main", methodName : "openChatPopout"});
 			}
 			this.chatPopoutWindow.addEventListener("load",function() {
 				try {
@@ -5330,13 +5347,15 @@ client_Main.prototype = {
 						self.loadMore7TVEmotesForPopout(page);
 					}, onPopoutClosed : function() {
 						self.onPopoutClosed();
-					}, emoteMessage : function(emoteHtml) {
-						self.emoteMessage(emoteHtml);
+					}, emoteMessage : function(emoteHtml,isDanmaku) {
+						self.emoteMessage(emoteHtml,isDanmaku);
+					}, getDanmakuRandomAnimation : function() {
+						return self.getRandomEmoteAnimation();
 					}};
 					self.syncChatToPopout();
-					haxe_Log.trace("Set parentMain on load event with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3361, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Set parentMain on load event with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3347, className : "client.Main", methodName : "openChatPopout"});
 				} catch( _g ) {
-					haxe_Log.trace("Failed to set parentMain on load: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3363, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Failed to set parentMain on load: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3349, className : "client.Main", methodName : "openChatPopout"});
 				}
 			});
 			var pollAttempts = 0;
@@ -5344,7 +5363,7 @@ client_Main.prototype = {
 			pollForConnection = function() {
 				pollAttempts += 1;
 				if(_gthis.chatPopoutWindow == null || _gthis.chatPopoutWindow.closed) {
-					haxe_Log.trace("Popout window closed during polling",{ fileName : "src/client/Main.hx", lineNumber : 3372, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Popout window closed during polling",{ fileName : "src/client/Main.hx", lineNumber : 3358, className : "client.Main", methodName : "openChatPopout"});
 					return;
 				}
 				try {
@@ -5361,21 +5380,23 @@ client_Main.prototype = {
 							self.loadMore7TVEmotesForPopout(page);
 						}, onPopoutClosed : function() {
 							self.onPopoutClosed();
-						}, emoteMessage : function(emoteHtml) {
-							self.emoteMessage(emoteHtml);
+						}, emoteMessage : function(emoteHtml,isDanmaku) {
+							self.emoteMessage(emoteHtml,isDanmaku);
+						}, getDanmakuRandomAnimation : function() {
+							return self.getRandomEmoteAnimation();
 						}};
 						self.syncChatToPopout();
-						haxe_Log.trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3404, className : "client.Main", methodName : "openChatPopout"});
+						haxe_Log.trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3393, className : "client.Main", methodName : "openChatPopout"});
 						return;
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Polling attempt " + pollAttempts + " failed: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3408, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Polling attempt " + pollAttempts + " failed: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3397, className : "client.Main", methodName : "openChatPopout"});
 				}
 				if(pollAttempts < 20) {
 					haxe_Timer.delay(pollForConnection,100);
 				} else {
-					haxe_Log.trace("Failed to establish connection after " + pollAttempts + " attempts",{ fileName : "src/client/Main.hx", lineNumber : 3415, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Failed to establish connection after " + pollAttempts + " attempts",{ fileName : "src/client/Main.hx", lineNumber : 3404, className : "client.Main", methodName : "openChatPopout"});
 				}
 			};
 			haxe_Timer.delay(pollForConnection,50);
@@ -5470,12 +5491,7 @@ client_Main.prototype = {
 			el.onclick = (function(self,isVideoExt,emote) {
 				return function() {
 					var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
-					var emoteHtml = isVideoExt[0] ? "<video src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" autoplay loop muted class=\"emote-inline\">" : "<img src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" class=\"emote-inline\">";
-					if(isDanmaku) {
-						self[0].sendChatMessage(emoteHtml,true);
-					} else {
-						self[0].emoteMessage(emoteHtml);
-					}
+					self[0].emoteMessage(isVideoExt[0] ? "<video src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" autoplay loop muted class=\"emote-inline\">" : "<img src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" class=\"emote-inline\">",isDanmaku);
 				};
 			})([this],isVideoExt,emote);
 			listEl.appendChild(el);
@@ -5525,12 +5541,7 @@ client_Main.prototype = {
 			el.onclick = (function(self,isVideoExt,emote) {
 				return function() {
 					var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
-					var emoteHtml = isVideoExt[0] ? "<video src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" autoplay loop muted class=\"emote-inline\">" : "<img src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" class=\"emote-inline\">";
-					if(isDanmaku) {
-						self[0].sendChatMessage(emoteHtml,true);
-					} else {
-						self[0].emoteMessage(emoteHtml);
-					}
+					self[0].emoteMessage(isVideoExt[0] ? "<video src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" autoplay loop muted class=\"emote-inline\">" : "<img src=\"" + emote[0].image + "\" title=\"" + emote[0].name + "\" class=\"emote-inline\">",isDanmaku);
 				};
 			})([this],isVideoExt,emote);
 			listEl.appendChild(el);
@@ -5595,12 +5606,7 @@ client_Main.prototype = {
 						imgEl.onclick = (function(emoteData) {
 							return function() {
 								var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
-								var emoteHtml = "<img src=\"https://cdn.frankerfacez.com/emote/" + Std.string(emoteData[0].id) + "/2\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">";
-								if(isDanmaku) {
-									self.sendChatMessage(emoteHtml,true);
-								} else {
-									self.emoteMessage(emoteHtml);
-								}
+								self.emoteMessage("<img src=\"https://cdn.frankerfacez.com/emote/" + Std.string(emoteData[0].id) + "/2\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">",isDanmaku);
 							};
 						})(emoteData);
 						listEl.appendChild(imgEl);
@@ -5615,17 +5621,17 @@ client_Main.prototype = {
 							_gthis.chatPopoutWindow.onEmotesLoaded("ffz",popoutState != null && popoutState.ffz.hasMore);
 						}
 					} catch( _g ) {
-						haxe_Log.trace("Error calling FFZ emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3667, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+						haxe_Log.trace("Error calling FFZ emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3644, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3671, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3648, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					try {
 						if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
 							_gthis.chatPopoutWindow.onEmoteLoadError("ffz",_g1);
 						}
 					} catch( _g1 ) {
-						haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3678, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+						haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3655, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					}
 				}
 			}
@@ -5643,7 +5649,7 @@ client_Main.prototype = {
 					_gthis.chatPopoutWindow.onEmoteLoadError("ffz","Network error");
 				}
 			} catch( _g ) {
-				haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3697, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+				haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3674, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 			}
 		};
 		xhr.send();
@@ -5719,12 +5725,7 @@ client_Main.prototype = {
 							imgEl.onclick = (function(bestFile,emoteData) {
 								return function() {
 									var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
-									var emoteHtml = "<img src=\"" + Std.string(emoteData[0].host.url) + "/" + Std.string(bestFile[0].name) + "\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">";
-									if(isDanmaku) {
-										self.sendChatMessage(emoteHtml,true);
-									} else {
-										self.emoteMessage(emoteHtml);
-									}
+									self.emoteMessage("<img src=\"" + Std.string(emoteData[0].host.url) + "/" + Std.string(bestFile[0].name) + "\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">",isDanmaku);
 								};
 							})(bestFile,emoteData);
 							listEl.appendChild(imgEl);
@@ -5740,17 +5741,17 @@ client_Main.prototype = {
 							_gthis.chatPopoutWindow.onEmotesLoaded("seventv",popoutState != null && popoutState.seventv.hasMore);
 						}
 					} catch( _g ) {
-						haxe_Log.trace("Error calling 7TV emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3797, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+						haxe_Log.trace("Error calling 7TV emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3770, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3801, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3774, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					try {
 						if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
 							_gthis.chatPopoutWindow.onEmoteLoadError("seventv",_g1);
 						}
 					} catch( _g1 ) {
-						haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3808, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+						haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3781, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					}
 				}
 			}
@@ -5768,7 +5769,7 @@ client_Main.prototype = {
 					_gthis.chatPopoutWindow.onEmoteLoadError("seventv","Network error");
 				}
 			} catch( _g ) {
-				haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3827, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+				haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3800, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 			}
 		};
 		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "sort: Sort, $" + "limit: Int, $" + "filter: EmoteSearchFilter) { emotes(query: $" + "query, page: $" + "page, sort: $" + "sort, limit: $" + "limit, filter: $" + "filter) { count items { id name host { url files { name format width height } } } } }\", \"variables\": {\"query\": \"\", \"limit\": 50, \"page\": " + page + ", \"sort\": {\"value\": \"popularity\", \"order\": \"DESCENDING\"}, \"filter\": {\"exact_match\": false, \"case_sensitive\": false, \"ignore_tags\": true, \"category\": \"TOP\"}}}");
@@ -5810,18 +5811,13 @@ client_Main.prototype = {
 						imgEl.onclick = (function(emoteData) {
 							return function() {
 								var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
-								var emoteHtml = "<img src=\"https://cdn.frankerfacez.com/emote/" + Std.string(emoteData[0].id) + "/2\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">";
-								if(isDanmaku) {
-									self.sendChatMessage(emoteHtml,true);
-								} else {
-									self.emoteMessage(emoteHtml);
-								}
+								self.emoteMessage("<img src=\"https://cdn.frankerfacez.com/emote/" + Std.string(emoteData[0].id) + "/2\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">",isDanmaku);
 							};
 						})(emoteData);
 						listEl.appendChild(imgEl);
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3881, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
+					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3850, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
 				}
 			}
 		};
@@ -5887,19 +5883,14 @@ client_Main.prototype = {
 							imgEl.onclick = (function(bestFile,emoteData) {
 								return function() {
 									var isDanmaku = _gthis.chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
-									var emoteHtml = "<img src=\"" + Std.string(emoteData[0].host.url) + "/" + Std.string(bestFile[0].name) + "\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">";
-									if(isDanmaku) {
-										self.sendChatMessage(emoteHtml,true);
-									} else {
-										self.emoteMessage(emoteHtml);
-									}
+									self.emoteMessage("<img src=\"" + Std.string(emoteData[0].host.url) + "/" + Std.string(bestFile[0].name) + "\" title=\"" + Std.string(emoteData[0].name) + "\" class=\"emote-inline\">",isDanmaku);
 								};
 							})(bestFile,emoteData);
 							listEl.appendChild(imgEl);
 						}
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3957, className : "client.Main", methodName : "search7TVEmotesForPopout"});
+					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3922, className : "client.Main", methodName : "search7TVEmotesForPopout"});
 				}
 			}
 		};
@@ -9823,6 +9814,7 @@ if(ArrayBuffer.prototype.slice == null) {
 Lang.langs = new haxe_ds_StringMap();
 Lang.ids = ["en","ru"];
 Lang.lang = HxOverrides.substr($global.navigator.language,0,2).toLowerCase();
+DanmakuAnimations.ANIMATIONS = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
 client_Drawing.isDrawingUIVisible = false;
 client_Drawing.isDrawingEnabled = false;
 client_Drawing.isDrawing = false;
