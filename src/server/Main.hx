@@ -2,6 +2,7 @@ package server;
 
 import Client.ClientData;
 import Types.Config;
+import Types.DanmakuAnimations;
 import Types.FlashbackItem;
 import Types.Message;
 import Types.Permission;
@@ -665,31 +666,21 @@ class Main {
 			case DanmakuMessage:
 				if (!checkPermission(client, WriteChatPerm)) return;
 
-				// Always generate an animation class for HTML content if one isn't provided
-				if (data.danmakuMessage.isHtml == true) {
-					if (data.danmakuMessage.animationClass == null
-						|| data.danmakuMessage.animationClass == "") {
-						// Generate a random value between 0 and 1
-						final random = Math.random();
-						// 20% chance of no animation (empty string)
-						if (random < 0.2) {
-							data.danmakuMessage.animationClass = "";
-						} else {
-							// Select from available animation classes - same as in client's getRandomEmoteAnimation function
-							final animations = [
-								"danmaku-emote-glow", "danmaku-emote-shake",
-								"danmaku-emote-spin", "danmaku-emote-pulse",
-								"danmaku-emote-bounce", "danmaku-emote-rainbow",
-								"danmaku-emote-flip", "danmaku-emote-hover",
-								"danmaku-emote-heartbeat", "danmaku-emote-wobble",
-								"danmaku-emote-blur", "danmaku-emote-glitch",
-								"danmaku-emote-swing", "danmaku-emote-trampoline",
-								"danmaku-emote-neon", "danmaku-emote-fade"
-							];
-							final index = Math.floor(Math.random() * animations.length);
-							data.danmakuMessage.animationClass = animations[index];
-						}
-					}
+				// Always generate animation class and lane for all danmaku messages on server
+				// This ensures perfect synchronization across all clients
+				
+				// Generate animation class if not provided or for HTML content
+				if (data.danmakuMessage.animationClass == null
+					|| data.danmakuMessage.animationClass == ""
+					|| data.danmakuMessage.isHtml == true) {
+					// Use centralized animation generation from Types.hx
+					data.danmakuMessage.animationClass = DanmakuAnimations.getRandomAnimation();
+				}
+
+				// Always generate lane assignment on server for consistent positioning
+				if (data.danmakuMessage.lane == null) {
+					// Generate random lane (same as client's DANMAKU_LANES constant: 12)
+					data.danmakuMessage.lane = Math.floor(Math.random() * 12);
 				}
 
 				data.danmakuMessage.clientName = client.name;

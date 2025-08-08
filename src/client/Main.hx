@@ -1816,15 +1816,9 @@ class Main {
 				final playerRect = playerEl.getBoundingClientRect();
 				final laneHeight = Math.floor(playerRect.height / DANMAKU_LANES);
 
-				// Use the lane provided by the sender, or find the best lane if not provided
-				var bestLane = 0;
-				if (data.danmakuMessage.lane != null) {
-					// Use the pre-selected lane from the server for consistent positioning
-					bestLane = data.danmakuMessage.lane;
-				} else {
-					// Use random lane selection like emotes for better distribution
-					bestLane = Math.floor(Math.random() * DANMAKU_LANES);
-				}
+				// Always use server-provided lane for perfect synchronization
+				var bestLane = data.danmakuMessage.lane ?? 0;
+				// Server now always provides lane assignment, no client-side fallback needed
 
 				// Create the comment element
 				final comment = document.createElement("div");
@@ -2426,29 +2420,16 @@ class Main {
 
 		// If sending as danmaku and danmaku is enabled, send as danmaku instead of regular emote
 		if (sendAsDanmaku && isDanmakuEnabled) {
-			// Pre-select an animation class using the same logic as the server
-			// This ensures all clients will use the same animation
-			final random = Math.random();
-			final animationClass = DanmakuAnimations.getRandomAnimation();
-
-			// Pre-select a lane to ensure consistent positioning across clients
-			final playerEl = getEl("#ytapiplayer");
-			final playerRect = playerEl.getBoundingClientRect();
-			final laneHeight = Math.floor(playerRect.height / DANMAKU_LANES);
-
-			// Calculate the lane at random to ensure consistent placement
-			final bestLane = Math.floor(Math.random() * DANMAKU_LANES);
-
-			// Send the HTML directly as danmaku with isHtml flag, pre-selected animation class, and lane
+			// Let server handle all random generation for perfect synchronization
+			// Server will generate animation class and lane to ensure all clients see identical results
 			send({
 				type: DanmakuMessage,
 				danmakuMessage: {
 					clientName: "", // Server will fill this in
 					text: html,
 					color: "#FFFFFF",
-					isHtml: true,
-					animationClass: animationClass,
-					lane: bestLane
+					isHtml: true
+					// No animationClass or lane - let server generate these for sync
 				}
 			});
 		} else {
