@@ -3517,7 +3517,11 @@ class Main {
 				final emoteHtml = isVideoExt 
 					? '<video src="${emote.image}" title="${emote.name}" autoplay loop muted class="emote-inline">'
 					: '<img src="${emote.image}" title="${emote.name}" class="emote-inline">';
-				self.sendChatMessage(emoteHtml, isDanmaku);
+				if (isDanmaku) {
+					self.sendChatMessage(emoteHtml, true);
+				} else {
+					self.emoteMessage(emoteHtml);
+				}
 			};
 
 			listEl.appendChild(el);
@@ -3567,7 +3571,11 @@ class Main {
 				final emoteHtml = isVideoExt 
 					? '<video src="${emote.image}" title="${emote.name}" autoplay loop muted class="emote-inline">'
 					: '<img src="${emote.image}" title="${emote.name}" class="emote-inline">';
-				self.sendChatMessage(emoteHtml, isDanmaku);
+				if (isDanmaku) {
+					self.sendChatMessage(emoteHtml, true);
+				} else {
+					self.emoteMessage(emoteHtml);
+				}
 			};
 
 			listEl.appendChild(el);
@@ -3632,7 +3640,11 @@ class Main {
 						imgEl.onclick = function() {
 							final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 							final emoteHtml = '<img src="https://cdn.frankerfacez.com/emote/${emoteData.id}/2" title="${emoteData.name}" class="emote-inline">';
-							self.sendChatMessage(emoteHtml, isDanmaku);
+							if (isDanmaku) {
+					self.sendChatMessage(emoteHtml, true);
+				} else {
+					self.emoteMessage(emoteHtml);
+				}
 						};
 						
 						listEl.appendChild(imgEl);
@@ -3757,7 +3769,11 @@ class Main {
 							imgEl.onclick = function() {
 								final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 								final emoteHtml = '<img src="${emoteData.host.url}/${bestFile.name}" title="${emoteData.name}" class="emote-inline">';
-								self.sendChatMessage(emoteHtml, isDanmaku);
+								if (isDanmaku) {
+					self.sendChatMessage(emoteHtml, true);
+				} else {
+					self.emoteMessage(emoteHtml);
+				}
 							};
 							
 							listEl.appendChild(imgEl);
@@ -3852,7 +3868,11 @@ class Main {
 						imgEl.onclick = function() {
 							final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 							final emoteHtml = '<img src="https://cdn.frankerfacez.com/emote/${emoteData.id}/2" title="${emoteData.name}" class="emote-inline">';
-							self.sendChatMessage(emoteHtml, isDanmaku);
+							if (isDanmaku) {
+					self.sendChatMessage(emoteHtml, true);
+				} else {
+					self.emoteMessage(emoteHtml);
+				}
 						};
 						
 						listEl.appendChild(imgEl);
@@ -3923,7 +3943,11 @@ class Main {
 							imgEl.onclick = function() {
 								final isDanmaku = chatPopoutWindow.document.getElementById("send-as-danmaku").checked;
 								final emoteHtml = '<img src="${emoteData.host.url}/${bestFile.name}" title="${emoteData.name}" class="emote-inline">';
-								self.sendChatMessage(emoteHtml, isDanmaku);
+								if (isDanmaku) {
+					self.sendChatMessage(emoteHtml, true);
+				} else {
+					self.emoteMessage(emoteHtml);
+				}
 							};
 							
 							listEl.appendChild(imgEl);
