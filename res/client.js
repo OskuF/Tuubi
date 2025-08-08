@@ -2912,7 +2912,7 @@ client_Main.prototype = {
 									imgEl.title = emote[0].name;
 									imgEl.onclick = (function(emoteUrl,emote) {
 										return function(e) {
-											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"height: 128px; width: auto;\" />");
+											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" class=\"emote-inline\" />");
 										};
 									})(emoteUrl,emote);
 									listEl.appendChild(imgEl);
@@ -3160,7 +3160,7 @@ client_Main.prototype = {
 									imgEl.title = emote[0].name;
 									imgEl.onclick = (function(emoteUrl,emote) {
 										return function(e) {
-											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" style=\"height: 128px; width: auto;\" />");
+											_gthis.emoteMessage("<img src=\"" + emoteUrl[0] + "\" alt=\"" + Std.string(emote[0].name) + "\" title=\"" + Std.string(emote[0].name) + "\" class=\"emote-inline\" />");
 										};
 									})(emoteUrl,emote);
 									listEl.appendChild(imgEl);
@@ -4441,7 +4441,7 @@ client_Main.prototype = {
 			var tmp = el.dataset.src;
 			var emoteUrl = tmp != null ? tmp : el.src;
 			if(emoteUrl != null) {
-				_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emoteName + "\" title=\"" + emoteName + "\" style=\"height: 128px; width: auto;\" />");
+				_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emoteName + "\" title=\"" + emoteName + "\" class=\"emote-inline\" />");
 			}
 		};
 		smilesList.textContent = "";
@@ -4912,7 +4912,7 @@ client_Main.prototype = {
 						if(emote != null) {
 							var emoteUrl = _gthis.getBestEmoteUrl(emote);
 							if(emoteUrl != null) {
-								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"height: 128px; width: auto;\" />");
+								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" class=\"emote-inline\" />");
 							} else {
 								_gthis.serverMessage("Error loading emote: No URL available");
 							}
@@ -4949,7 +4949,7 @@ client_Main.prototype = {
 						if(emote != null) {
 							var emoteUrl = _gthis.getBest7tvEmoteUrl(emote);
 							if(emoteUrl != null) {
-								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" style=\"height: 128px; width: auto;\" />");
+								_gthis.emoteMessage("<img src=\"" + emoteUrl + "\" alt=\"" + emote.name + "\" title=\"" + emote.name + "\" class=\"emote-inline\" />");
 							} else {
 								_gthis.serverMessage("Error loading 7TV emote: No URL available");
 							}

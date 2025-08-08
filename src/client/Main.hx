@@ -531,7 +531,7 @@ class Main {
 									// Add click handler to post emote directly to chat
 									imgEl.onclick = e -> {
 										// Create emote HTML to display in chat
-										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="height: 128px; width: auto;" />';
+										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" class="emote-inline" />';
 
 										// Send emote to all users in chat
 										emoteMessage(emoteHtml);
@@ -861,7 +861,7 @@ class Main {
 									imgEl.title = emote.name;
 
 									imgEl.onclick = e -> {
-										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="height: 128px; width: auto;" />';
+										final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" class="emote-inline" />';
 										emoteMessage(emoteHtml);
 									};
 
@@ -2332,7 +2332,7 @@ class Main {
 
 			if (emoteUrl != null) {
 				// Create emote HTML with consistent sizing
-				final emoteHtml = '<img src="${emoteUrl}" alt="${emoteName}" title="${emoteName}" style="height: 128px; width: auto;" />';
+				final emoteHtml = '<img src="${emoteUrl}" alt="${emoteName}" title="${emoteName}" class="emote-inline" />';
 				// Use emoteMessage function for danmaku support and consistent behavior
 				emoteMessage(emoteHtml);
 			}
@@ -2874,7 +2874,7 @@ class Main {
 							final emoteUrl = getBestEmoteUrl(emote);
 
 							if (emoteUrl != null) {
-								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="height: 128px; width: auto;" />';
+								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" class="emote-inline" />';
 								// Use the new emoteMessage function to broadcast to all users
 								emoteMessage(emoteHtml);
 							} else {
@@ -2915,7 +2915,7 @@ class Main {
 							final emoteUrl = getBest7tvEmoteUrl(emote);
 
 							if (emoteUrl != null) {
-								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" style="height: 128px; width: auto;" />';
+								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" class="emote-inline" />';
 								// Use the emoteMessage function to broadcast to all users
 								emoteMessage(emoteHtml);
 							} else {

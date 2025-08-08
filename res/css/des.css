@@ -1787,6 +1787,13 @@ html {
   opacity: 0.6;
 }
 
+/* Emote styling for consistent sizing across main chat and external popout */
+.emote-inline {
+  height: 128px;
+  width: auto;
+  vertical-align: middle;
+}
+
 /* Pseudo-fullscreen button styling - replace annoying glow with subtle background */
 body.pseudo-fullscreen #toggledanmaku.active {
   color: var(--danmaku-on) !important;
