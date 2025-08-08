@@ -599,18 +599,34 @@ class Main {
 	 * Gets the best quality URL for an emote, preferring animated versions if available
 	 */
 	function getBestEmoteUrl(emote:Dynamic):Null<String> {
+		if (emote == null) return null;
+		
 		// First try to get animated version
 		if (emote.animated != null) {
 			// Try to get the highest resolution
 			final animatedUrl = emote.animated[4] ?? emote.animated[2] ?? emote.animated[1];
-			if (animatedUrl != null) {
-				return animatedUrl;
+			if (animatedUrl != null && Std.string(animatedUrl).length > 0) {
+				return Std.string(animatedUrl);
 			}
 		}
 
 		// Fall back to static version if no animated version exists
+		// FrankerFaceZ API uses "urls" object with string keys
 		if (emote.urls != null) {
-			return emote.urls[4] ?? emote.urls[2] ?? emote.urls[1];
+			final urls = emote.urls;
+			final url4x = Reflect.field(urls, "4");
+			final url2x = Reflect.field(urls, "2");
+			final url1x = Reflect.field(urls, "1");
+			
+			if (url4x != null && Std.string(url4x).length > 0) {
+				return Std.string(url4x);
+			}
+			if (url2x != null && Std.string(url2x).length > 0) {
+				return Std.string(url2x);
+			}
+			if (url1x != null && Std.string(url1x).length > 0) {
+				return Std.string(url1x);
+			}
 		}
 
 		return null;
@@ -924,35 +940,66 @@ class Main {
 	}
 
 	function getBest7tvEmoteUrl(emote:Dynamic):Null<String> {
-		// 7TV emotes from GraphQL have host.url and host.files structure
-		if (emote.host != null && emote.host.url != null && emote.host.files != null) {
-			final baseUrl = emote.host.url;
-			final files = emote.host.files;
+		if (emote == null) return null;
+		
+		// 7TV API structure: emotes[].data.host contains the file info
+		var hostData = null;
+		if (emote.data != null && emote.data.host != null) {
+			hostData = emote.data.host;
+		} else if (emote.host != null) {
+			hostData = emote.host;
+		}
+		
+		if (hostData != null && hostData.url != null && hostData.files != null) {
+			final baseUrl = Std.string(hostData.url);
+			final files = hostData.files;
 
-			// Try to get the highest quality size (4x for crisp downscaling)
-			if (files.length > 0) {
-				// Look for 4x size first for best quality, then fallback to lower resolutions
-				for (file in cast(files, Array<Dynamic>)) {
-					if (file.name != null && Std.string(file.name).indexOf("4x") != -1) {
-						return "https:" + baseUrl + "/" + file.name;
+			// Ensure files is an array and has content
+			if (Std.isOfType(files, Array) && files.length > 0) {
+				try {
+					// Look for 4x webp/avif files first for best quality
+					for (file in cast(files, Array<Dynamic>)) {
+						if (file != null && file.name != null) {
+							final fileName = Std.string(file.name);
+							if (fileName.indexOf("4x") != -1 && (fileName.indexOf(".webp") != -1 || fileName.indexOf(".avif") != -1)) {
+								return "https:" + baseUrl + "/" + fileName;
+							}
+						}
 					}
-				}
-				// Fallback to 3x if 4x not available
-				for (file in cast(files, Array<Dynamic>)) {
-					if (file.name != null && Std.string(file.name).indexOf("3x") != -1) {
-						return "https:" + baseUrl + "/" + file.name;
+					// Fallback to 3x webp/avif
+					for (file in cast(files, Array<Dynamic>)) {
+						if (file != null && file.name != null) {
+							final fileName = Std.string(file.name);
+							if (fileName.indexOf("3x") != -1 && (fileName.indexOf(".webp") != -1 || fileName.indexOf(".avif") != -1)) {
+								return "https:" + baseUrl + "/" + fileName;
+							}
+						}
 					}
-				}
-				// Fallback to 2x if 3x not available
-				for (file in cast(files, Array<Dynamic>)) {
-					if (file.name != null && Std.string(file.name).indexOf("2x") != -1) {
-						return "https:" + baseUrl + "/" + file.name;
+					// Fallback to 2x webp/avif
+					for (file in cast(files, Array<Dynamic>)) {
+						if (file != null && file.name != null) {
+							final fileName = Std.string(file.name);
+							if (fileName.indexOf("2x") != -1 && (fileName.indexOf(".webp") != -1 || fileName.indexOf(".avif") != -1)) {
+								return "https:" + baseUrl + "/" + fileName;
+							}
+						}
 					}
-				}
-				// Final fallback to first available (1x)
-				final firstFile = files[0];
-				if (firstFile.name != null) {
-					return "https:" + baseUrl + "/" + firstFile.name;
+					// Final fallback to first webp or avif file
+					for (file in cast(files, Array<Dynamic>)) {
+						if (file != null && file.name != null) {
+							final fileName = Std.string(file.name);
+							if (fileName.indexOf(".webp") != -1 || fileName.indexOf(".avif") != -1) {
+								return "https:" + baseUrl + "/" + fileName;
+							}
+						}
+					}
+					// Last resort: first available file
+					final firstFile = files[0];
+					if (firstFile != null && firstFile.name != null) {
+						return "https:" + baseUrl + "/" + Std.string(firstFile.name);
+					}
+				} catch (e:Dynamic) {
+					trace('Error processing 7TV files: $e');
 				}
 			}
 		}
@@ -2046,7 +2093,7 @@ class Main {
 				setLeaderButton(isLeader());
 				// Update command autocomplete with new leader status
 				if (chatInputHandler != null) {
-					chatInputHandler.updateLeaderStatus(isLeader());
+					chatInputHandler.updateLeaderStatus(canPerformAdminAction());
 				}
 				if (isLeader()) player.onSetTime();
 
@@ -2255,6 +2302,11 @@ class Main {
 		final adminMenu = getEl("#adminMenu");
 		if (isAdmin()) adminMenu.style.display = "";
 		else adminMenu.style.display = "none";
+		
+		// Update command autocomplete with current admin status
+		if (chatInputHandler != null) {
+			chatInputHandler.updateLeaderStatus(canPerformAdminAction());
+		}
 	}
 
 	public function guestLogin(name:String):Void {
@@ -2762,6 +2814,21 @@ class Main {
 		}
 	}
 
+	/**
+	 * Check if a username exists in the current client list
+	 */
+	function isValidUsername(username:String):Bool {
+		if (username == null || username.trim().length == 0) return false;
+		return clients.find(client -> client.name == username) != null;
+	}
+
+	/**
+	 * Check if current user has permission to perform admin actions
+	 */
+	function canPerformAdminAction():Bool {
+		return personal.isLeader || personal.isAdmin;
+	}
+
 	/* Returns `true` if text should not be sent to chat */
 	public function handleCommands(command:String):Bool {
 		if (!command.startsWith("/")) return false;
@@ -2774,8 +2841,16 @@ class Main {
 				showChatHintList();
 				return true;
 			case "ban":
+				if (!canPerformAdminAction()) {
+					serverMessage("You need leader or admin permissions to ban users.");
+					return true;
+				}
 				mergeRedundantArgs(args, 0, 2);
 				final name = args[0];
+				if (!isValidUsername(name)) {
+					serverMessage('User "$name" not found.');
+					return true;
+				}
 				final time = parseSimpleDate(args[1]);
 				if (time < 0) return true;
 				send({
@@ -2787,8 +2862,16 @@ class Main {
 				});
 				return true;
 			case "unban", "removeBan":
+				if (!canPerformAdminAction()) {
+					serverMessage("You need leader or admin permissions to unban users.");
+					return true;
+				}
 				mergeRedundantArgs(args, 0, 1);
 				final name = args[0];
+				if (name == null || name.trim().length == 0) {
+					serverMessage("Please specify a username to unban.");
+					return true;
+				}
 				send({
 					type: BanClient,
 					banClient: {
@@ -2798,8 +2881,20 @@ class Main {
 				});
 				return true;
 			case "kick":
+				if (!canPerformAdminAction()) {
+					serverMessage("You need leader or admin permissions to kick users.");
+					return true;
+				}
 				mergeRedundantArgs(args, 0, 1);
 				final name = args[0];
+				if (!isValidUsername(name)) {
+					serverMessage('User "$name" not found.');
+					return true;
+				}
+				if (name == personal.name) {
+					serverMessage("You cannot kick yourself.");
+					return true;
+				}
 				send({
 					type: KickClient,
 					kickClient: {
@@ -2819,23 +2914,40 @@ class Main {
 			case "random":
 				fetchRandomEmote();
 				return true;
+			case "randomffz":
+				fetchRandomFfzEmote();
+				return true;
 			case "random7tv":
 				fetchRandom7tvEmote();
 				return true;
 			case "volume":
-				var v = Std.parseFloat(args[0]);
-				if (Math.isNaN(v)) v = 1;
-				v = v.clamp(0, 3);
-				final wasNotFull = player.getVolume() < 1;
-				player.setVolume(v.clamp(0, 1));
-
-				if (player.getPlayerType() != RawType) return true;
-				if (wasNotFull && v > 1) {
-					serverMessage("Volume was not maxed yet to be boosted, you can send command again.");
+				if (args.length == 0) {
+					serverMessage("Usage: /volume <level> (0.0 to 3.0)");
 					return true;
 				}
-				final rawPlayer = @:privateAccess player.rawPlayer;
-				rawPlayer.boostVolume(v);
+				var v = Std.parseFloat(args[0]);
+				if (Math.isNaN(v) || v < 0) {
+					serverMessage("Invalid volume level. Use a number between 0.0 and 3.0");
+					return true;
+				}
+				v = v.clamp(0, 3);
+				
+				try {
+					final wasNotFull = player.getVolume() < 1;
+					player.setVolume(v.clamp(0, 1));
+
+					if (player.getPlayerType() != RawType) return true;
+					if (wasNotFull && v > 1) {
+						serverMessage("Volume was not maxed yet to be boosted, you can send command again.");
+						return true;
+					}
+					final rawPlayer = @:privateAccess player.rawPlayer;
+					if (rawPlayer != null) {
+						rawPlayer.boostVolume(v);
+					}
+				} catch (e:Dynamic) {
+					serverMessage("Error setting volume: " + e);
+				}
 				return true;
 			case "dump":
 				send({type: Dump});
@@ -2844,8 +2956,11 @@ class Main {
 				var seconds = settings.defaultSkipSeconds;
 				if (args.length > 0) {
 					var parsed = Std.parseFloat(args[0]);
-					if (!Math.isNaN(parsed)) {
+					if (!Math.isNaN(parsed) && parsed > 0 && parsed <= 3600) { // Max 1 hour skip
 						seconds = parsed;
+					} else if (args[0] != null && args[0].length > 0) {
+						serverMessage("Invalid skip time. Use a number of seconds (max 3600).");
+						return true;
 					}
 				}
 				send({
@@ -2869,122 +2984,220 @@ class Main {
 	}
 
 	function fetchRandomEmote():Void {
+		if (allAppEmotes.length == 0) {
+			serverMessage('No local emotes available');
+			return;
+		}
+		
+		try {
+			// Pick a random emote from the local emotes
+			final randomIndex = Math.floor(Math.random() * allAppEmotes.length);
+			final emote = allAppEmotes[randomIndex];
+
+			if (emote != null && emote.name != null && emote.image != null) {
+				// Check if it's a video emote
+				final isVideoExt = emote.image.endsWith("mp4") || emote.image.endsWith("webm");
+				final tag = isVideoExt ? "video" : "img";
+				
+				final emoteHtml = if (isVideoExt) {
+					'<video src="${emote.image}" title="${emote.name}" autoplay loop muted class="emote-inline">';
+				} else {
+					'<img src="${emote.image}" title="${emote.name}" class="emote-inline">';
+				}
+				
+				// Use the emoteMessage function to broadcast to all users
+				emoteMessage(emoteHtml);
+			} else {
+				serverMessage('Error: Invalid local emote data');
+			}
+		} catch (e:Dynamic) {
+			serverMessage('Error loading local emote: ${e}');
+		}
+	}
+
+	function fetchRandomFfzEmote():Void {
 		final xhr = new js.html.XMLHttpRequest();
+		xhr.timeout = 10000; // 10 second timeout
 		xhr.open("GET", "https://api.frankerfacez.com/v1/emotes?sensitive=false&sort=created-desc&page=1&per_page=20", true);
+		
 		xhr.onload = () -> {
 			if (xhr.status == 200) {
 				try {
 					final data = haxe.Json.parse(xhr.responseText);
-					if (data.emoticons != null && data.emoticons.length > 0) {
+					if (data == null) {
+						serverMessage('Error: Invalid response from FrankerFaceZ');
+						return;
+					}
+					
+					if (data.emoticons != null && Std.isOfType(data.emoticons, Array) && data.emoticons.length > 0) {
 						// Pick a random emote from the response
 						final randomIndex = Math.floor(Math.random() * data.emoticons.length);
 						final emote = data.emoticons[randomIndex];
 
-						if (emote != null) {
+						if (emote != null && emote.name != null) {
 							final emoteUrl = getBestEmoteUrl(emote);
 
-							if (emoteUrl != null) {
-								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" class="emote-inline" />';
+							if (emoteUrl != null && emoteUrl.length > 0) {
+								final safeName = Std.string(emote.name);
+								final emoteHtml = '<img src="${emoteUrl}" alt="${safeName}" title="${safeName}" class="emote-inline" />';
 								// Use the new emoteMessage function to broadcast to all users
 								emoteMessage(emoteHtml);
 							} else {
 								serverMessage('Error loading emote: No URL available');
 							}
 						} else {
-							serverMessage('Error loading emote data');
+							serverMessage('Error: Invalid emote data received');
 						}
 					} else {
-						serverMessage('No emotes found');
+						serverMessage('No emotes found in response');
 					}
-				} catch (e) {
+				} catch (e:Dynamic) {
 					serverMessage('Error parsing emote data: ${e}');
 				}
 			} else {
-				serverMessage('Error fetching emotes: ${xhr.status}');
+				serverMessage('Error fetching emotes (HTTP ${xhr.status})');
 			}
 		};
+		
 		xhr.onerror = () -> {
-			serverMessage('Network error while fetching emotes');
+			serverMessage('Network error while fetching FrankerFaceZ emotes');
 		};
+		
+		xhr.ontimeout = () -> {
+			serverMessage('Timeout while fetching FrankerFaceZ emotes');
+		};
+		
 		xhr.send();
 	}
 
 	function fetchRandom7tvEmote():Void {
 		final xhr = new js.html.XMLHttpRequest();
+		xhr.timeout = 10000; // 10 second timeout
 		xhr.open("GET", "https://7tv.io/v3/emote-sets/global", true);
+		
 		xhr.onload = () -> {
 			if (xhr.status == 200) {
 				try {
 					final data = haxe.Json.parse(xhr.responseText);
-					if (data.emotes != null && data.emotes.length > 0) {
+					if (data == null) {
+						serverMessage('Error: Invalid response from 7TV');
+						return;
+					}
+					
+					if (data.emotes != null && Std.isOfType(data.emotes, Array) && data.emotes.length > 0) {
 						// Pick a random emote from the response
 						final randomIndex = Math.floor(Math.random() * data.emotes.length);
 						final emote = data.emotes[randomIndex];
 
-						if (emote != null) {
+						if (emote != null && emote.name != null) {
 							final emoteUrl = getBest7tvEmoteUrl(emote);
 
-							if (emoteUrl != null) {
-								final emoteHtml = '<img src="${emoteUrl}" alt="${emote.name}" title="${emote.name}" class="emote-inline" />';
+							if (emoteUrl != null && emoteUrl.length > 0) {
+								final safeName = Std.string(emote.name);
+								final emoteHtml = '<img src="${emoteUrl}" alt="${safeName}" title="${safeName}" class="emote-inline" />';
 								// Use the emoteMessage function to broadcast to all users
 								emoteMessage(emoteHtml);
 							} else {
 								serverMessage('Error loading 7TV emote: No URL available');
 							}
 						} else {
-							serverMessage('Error loading 7TV emote data');
+							serverMessage('Error: Invalid 7TV emote data received');
 						}
 					} else {
-						serverMessage('No 7TV emotes found');
+						serverMessage('No 7TV emotes found in response');
 					}
-				} catch (e) {
+				} catch (e:Dynamic) {
 					serverMessage('Error parsing 7TV emote data: ${e}');
 				}
 			} else {
-				serverMessage('Error fetching 7TV emotes: ${xhr.status}');
+				serverMessage('Error fetching 7TV emotes (HTTP ${xhr.status})');
 			}
 		};
+		
 		xhr.onerror = () -> {
 			serverMessage('Network error while fetching 7TV emotes');
 		};
+		
+		xhr.ontimeout = () -> {
+			serverMessage('Timeout while fetching 7TV emotes');
+		};
+		
 		xhr.send();
 	}
 
 	final matchSimpleDate = ~/^-?([0-9]+d)?([0-9]+h)?([0-9]+m)?([0-9]+s?)?$/;
 
 	function parseSimpleDate(text:Null<String>):Int {
-		if (text == null) return 0;
+		if (text == null || text.trim().length == 0) return 0;
 		if (!matchSimpleDate.match(text)) return 0;
+		
 		final matches:Array<String> = [];
 		final length = Utils.matchedNum(matchSimpleDate);
+		
+		// Bounds check for length
+		if (length <= 0 || length > 10) return 0; // Reasonable upper limit
+		
 		for (i in 1...length) {
 			final group = matchSimpleDate.matched(i);
 			if (group == null) continue;
 			matches.push(group);
 		}
+		
 		var seconds = 0;
+		final maxSeconds = 365 * 24 * 60 * 60; // One year limit to prevent overflow
+		
 		for (block in matches) {
-			seconds += parseSimpleDateBlock(block);
+			final blockSeconds = parseSimpleDateBlock(block);
+			if (blockSeconds < 0 || blockSeconds > maxSeconds) {
+				// Skip invalid blocks that are too large
+				continue;
+			}
+			seconds += blockSeconds;
+			
+			// Prevent overflow
+			if (seconds > maxSeconds) {
+				seconds = maxSeconds;
+				break;
+			}
 		}
+		
 		if (text.startsWith("-")) seconds = -seconds;
 		return seconds;
 	}
 
 	function parseSimpleDateBlock(block:String):Int {
+		if (block == null || block.length == 0) return 0;
+		
 		inline function time():Int {
-			return Std.parseInt(block.substr(0, block.length - 1));
+			if (block.length <= 1) return 0;
+			final parsed = Std.parseInt(block.substr(0, block.length - 1));
+			return parsed == null ? 0 : parsed;
 		}
+		
 		if (block.endsWith("s")) return time();
 		else if (block.endsWith("m")) return time() * 60;
 		else if (block.endsWith("h")) return time() * 60 * 60;
 		else if (block.endsWith("d")) return time() * 60 * 60 * 24;
-		return Std.parseInt(block);
+		
+		final parsed = Std.parseInt(block);
+		return parsed == null ? 0 : parsed;
 	}
 
 	function mergeRedundantArgs(args:Array<String>, pos:Int, newLength:Int):Void {
+		if (args == null || pos < 0 || newLength < 1 || pos >= args.length) return;
+		
 		final count = args.length - (newLength - 1);
 		if (count < 2) return;
-		args.insert(pos, args.splice(pos, count).join(" "));
+		
+		// Ensure pos + count doesn't exceed array bounds
+		final actualCount = Std.int(Math.min(count, args.length - pos));
+		if (actualCount < 1) return;
+		
+		try {
+			args.insert(pos, args.splice(pos, actualCount).join(" "));
+		} catch (e:Dynamic) {
+			// Silently fail if array manipulation fails
+		}
 	}
 
 	public function blinkTabWithTitle(title:String):Void {
@@ -3336,6 +3549,17 @@ class Main {
 					},
 					getDanmakuRandomAnimation: function():String {
 						return self.getRandomEmoteAnimation();
+					},
+					handleCommands: function(commandText:String):Bool {
+						return self.handleCommands(commandText);
+					},
+					isLeader: function():Bool {
+						return self.personal.isLeader || self.personal.isAdmin;
+					},
+					getAvailableCommands: function() {
+						final canPerformAdmin = self.canPerformAdminAction();
+						final filteredCommands = Commands.getFilteredCommands("", canPerformAdmin);
+						return filteredCommands;
 					}
 				};
 				trace("Set parentMain immediately with wrapper");
@@ -3371,6 +3595,17 @@ class Main {
 						},
 						getDanmakuRandomAnimation: function():String {
 							return self.getRandomEmoteAnimation();
+						},
+						handleCommands: function(commandText:String):Bool {
+							return self.handleCommands(commandText);
+						},
+						isLeader: function():Bool {
+							return self.personal.isLeader || self.personal.isAdmin;
+						},
+						getAvailableCommands: function() {
+							final canPerformAdmin = self.canPerformAdminAction();
+							final filteredCommands = Commands.getFilteredCommands("", canPerformAdmin);
+							return filteredCommands;
 						}
 					};
 					self.syncChatToPopout();
@@ -3417,6 +3652,17 @@ class Main {
 							},
 							getDanmakuRandomAnimation: function():String {
 								return self.getRandomEmoteAnimation();
+							},
+							handleCommands: function(commandText:String):Bool {
+								return self.handleCommands(commandText);
+							},
+							isLeader: function():Bool {
+								return self.personal.isLeader || self.personal.isAdmin;
+							},
+							getAvailableCommands: function() {
+								final canPerformAdmin = self.canPerformAdminAction();
+								final filteredCommands = Commands.getFilteredCommands("", canPerformAdmin);
+								return filteredCommands;
 							}
 						};
 						self.syncChatToPopout();

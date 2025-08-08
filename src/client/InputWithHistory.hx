@@ -37,8 +37,8 @@ class InputWithHistory {
 		
 		// Initialize command autocomplete if enabled
 		if (enableCommandAutocomplete) {
-			final isLeader = Main.instance != null ? Main.instance.isLeader() : false;
-			commandAutocomplete = new CommandAutocomplete(element, isLeader);
+			final canPerformAdmin = Main.instance != null ? (Main.instance.isLeader() || Main.instance.isAdmin()) : false;
+			commandAutocomplete = new CommandAutocomplete(element, canPerformAdmin);
 		}
 	}
 

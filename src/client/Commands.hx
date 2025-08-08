@@ -65,8 +65,14 @@ class Commands {
 		},
 		{
 			name: "random",
-			description: "Get random FrankerFaceZ emote",
+			description: "Get random SyncTube emote",
 			usage: "/random",
+			requiresLeader: false
+		},
+		{
+			name: "randomffz",
+			description: "Get random FrankerFaceZ emote",
+			usage: "/randomffz",
 			requiresLeader: false
 		},
 		{

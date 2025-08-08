@@ -504,22 +504,23 @@
     window.parentMain = null;
     window.chatPopout = true;
 
-    // Command handling system (copied from main chat)
-    window.availableCommands = [
-      { name: "help", description: "Show list of available commands", usage: "/help", requiresLeader: false },
-      { name: "ban", description: "Ban a user for specified time", usage: "/ban <username> <time>", requiresLeader: true },
-      { name: "unban", description: "Remove ban from a user", usage: "/unban <username>", requiresLeader: true },
-      { name: "kick", description: "Kick a user from the room", usage: "/kick <username>", requiresLeader: true },
-      { name: "clear", description: "Clear chat messages", usage: "/clear", requiresLeader: true },
-      { name: "flashback", description: "Show flashback", usage: "/flashback", requiresLeader: false },
-      { name: "fb", description: "Show flashback (short for flashback)", usage: "/fb", requiresLeader: false },
-      { name: "ad", description: "Skip current ad", usage: "/ad", requiresLeader: false },
-      { name: "random", description: "Get random FrankerFaceZ emote", usage: "/random", requiresLeader: false },
-      { name: "random7tv", description: "Get random 7TV emote", usage: "/random7tv", requiresLeader: false },
-      { name: "volume", description: "Set volume level (0.0 to 3.0)", usage: "/volume <level>", requiresLeader: false },
-      { name: "dump", description: "Dump current state information", usage: "/dump", requiresLeader: true },
-      { name: "skip", description: "Skip forward by seconds", usage: "/skip [seconds]", requiresLeader: false }
-    ];
+    // Commands are now loaded dynamically from parent window
+    window.availableCommands = [];
+    
+    // Function to load commands from parent window
+    function loadAvailableCommands() {
+      if (window.parentMain && window.parentMain.getAvailableCommands) {
+        try {
+          window.availableCommands = window.parentMain.getAvailableCommands();
+          console.log('Loaded', window.availableCommands.length, 'commands from parent');
+          console.log('Commands:', window.availableCommands.map(cmd => cmd.name + (cmd.requiresLeader ? ' (admin)' : '')));
+        } catch (e) {
+          console.error('Failed to load commands from parent:', e);
+        }
+      } else {
+        console.log('parentMain or getAvailableCommands not available');
+      }
+    }
 
     // Current autocomplete state
     window.commandAutocomplete = {
@@ -678,15 +679,12 @@
     }
 
     function getFilteredCommands(filter) {
-      const isLeader = window.parentMain && window.parentMain.isLeader && window.parentMain.isLeader();
+      // Load fresh commands from parent (already permission-filtered)
+      loadAvailableCommands();
+      
       let filtered = window.availableCommands.slice();
       
-      // Filter by leader permission if not leader
-      if (!isLeader) {
-        filtered = filtered.filter(cmd => !cmd.requiresLeader);
-      }
-      
-      // Filter by name match
+      // Only filter by name match (permissions already filtered by parent)
       if (filter.length > 0) {
         const filterLower = filter.toLowerCase();
         filtered = filtered.filter(cmd => cmd.name.toLowerCase().includes(filterLower));
@@ -899,11 +897,11 @@
     }
 
     function showCommandHelp() {
-      const isLeader = window.parentMain && window.parentMain.isLeader && window.parentMain.isLeader();
-      const availableCommands = window.availableCommands.filter(cmd => !cmd.requiresLeader || isLeader);
+      // Load fresh commands from parent (ensures up-to-date permissions)
+      loadAvailableCommands();
       
       let helpText = '<div style="color: #888; font-style: italic;">Available commands:</div>';
-      availableCommands.forEach(cmd => {
+      window.availableCommands.forEach(cmd => {
         const color = cmd.requiresLeader ? '#ffb800' : '#ffffff';
         helpText += `<div style="color: ${color}; margin: 2px 0;"><strong>${cmd.usage}</strong> - ${cmd.description}</div>`;
       });
@@ -920,6 +918,9 @@
 
     // Initialize basic chat functionality for popout
     function initializePopoutChat() {
+      // Load commands from parent window
+      loadAvailableCommands();
+      
       const chatline = document.getElementById('chatline');
       const smilesbtn = document.getElementById('smilesbtn');
       const ffzbtn = document.getElementById('ffzbtn');
