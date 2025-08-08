@@ -3937,7 +3937,12 @@ client_Main.prototype = {
 				return;
 			}
 			var playerRect = window.document.querySelector("#ytapiplayer").getBoundingClientRect();
-			var laneHeight = Math.floor(playerRect.height / this.DANMAKU_LANES);
+			var effectiveHeight = playerRect.height;
+			if(window.document.body.classList.contains("pseudo-fullscreen")) {
+				var viewportHeight = window.innerHeight;
+				effectiveHeight = Math.min(playerRect.height,viewportHeight - 64);
+			}
+			var laneHeight = Math.floor(effectiveHeight / this.DANMAKU_LANES);
 			var tmp = data.danmakuMessage.lane;
 			var bestLane = tmp != null ? tmp : 0;
 			var comment = window.document.createElement("div");
@@ -3952,7 +3957,15 @@ client_Main.prototype = {
 				comment.textContent = data.danmakuMessage.text;
 			}
 			comment.style.color = data.danmakuMessage.color;
-			comment.style.top = bestLane * laneHeight + laneHeight / 2 + "px";
+			var topPosition = bestLane * laneHeight + laneHeight / 2;
+			if(window.document.body.classList.contains("pseudo-fullscreen")) {
+				var isEmote = comment.classList.contains("danmaku-emote-container");
+				if(isEmote) {
+					var maxTopPosition = window.innerHeight - 64;
+					topPosition = Math.min(topPosition,maxTopPosition);
+				}
+			}
+			comment.style.top = topPosition + "px";
 			this.danmakuLanes[bestLane] = new Date().getTime() | 0;
 			if(data.danmakuMessage.animationClass != null && data.danmakuMessage.animationClass.length > 0) {
 				comment.classList.add(data.danmakuMessage.animationClass);
@@ -4125,7 +4138,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2060, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2085, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -5321,9 +5334,9 @@ client_Main.prototype = {
 				}, getDanmakuRandomAnimation : function() {
 					return self.getRandomEmoteAnimation();
 				}};
-				haxe_Log.trace("Set parentMain immediately with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3292, className : "client.Main", methodName : "openChatPopout"});
+				haxe_Log.trace("Set parentMain immediately with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3317, className : "client.Main", methodName : "openChatPopout"});
 			} catch( _g ) {
-				haxe_Log.trace("Failed to set parentMain immediately: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3294, className : "client.Main", methodName : "openChatPopout"});
+				haxe_Log.trace("Failed to set parentMain immediately: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3319, className : "client.Main", methodName : "openChatPopout"});
 			}
 			this.chatPopoutWindow.addEventListener("load",function() {
 				try {
@@ -5345,9 +5358,9 @@ client_Main.prototype = {
 						return self.getRandomEmoteAnimation();
 					}};
 					self.syncChatToPopout();
-					haxe_Log.trace("Set parentMain on load event with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3328, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Set parentMain on load event with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3353, className : "client.Main", methodName : "openChatPopout"});
 				} catch( _g ) {
-					haxe_Log.trace("Failed to set parentMain on load: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3330, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Failed to set parentMain on load: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3355, className : "client.Main", methodName : "openChatPopout"});
 				}
 			});
 			var pollAttempts = 0;
@@ -5355,7 +5368,7 @@ client_Main.prototype = {
 			pollForConnection = function() {
 				pollAttempts += 1;
 				if(_gthis.chatPopoutWindow == null || _gthis.chatPopoutWindow.closed) {
-					haxe_Log.trace("Popout window closed during polling",{ fileName : "src/client/Main.hx", lineNumber : 3339, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Popout window closed during polling",{ fileName : "src/client/Main.hx", lineNumber : 3364, className : "client.Main", methodName : "openChatPopout"});
 					return;
 				}
 				try {
@@ -5378,17 +5391,17 @@ client_Main.prototype = {
 							return self.getRandomEmoteAnimation();
 						}};
 						self.syncChatToPopout();
-						haxe_Log.trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3374, className : "client.Main", methodName : "openChatPopout"});
+						haxe_Log.trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3399, className : "client.Main", methodName : "openChatPopout"});
 						return;
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Polling attempt " + pollAttempts + " failed: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3378, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Polling attempt " + pollAttempts + " failed: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3403, className : "client.Main", methodName : "openChatPopout"});
 				}
 				if(pollAttempts < 20) {
 					haxe_Timer.delay(pollForConnection,100);
 				} else {
-					haxe_Log.trace("Failed to establish connection after " + pollAttempts + " attempts",{ fileName : "src/client/Main.hx", lineNumber : 3385, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Failed to establish connection after " + pollAttempts + " attempts",{ fileName : "src/client/Main.hx", lineNumber : 3410, className : "client.Main", methodName : "openChatPopout"});
 				}
 			};
 			haxe_Timer.delay(pollForConnection,50);
@@ -5613,17 +5626,17 @@ client_Main.prototype = {
 							_gthis.chatPopoutWindow.onEmotesLoaded("ffz",popoutState != null && popoutState.ffz.hasMore);
 						}
 					} catch( _g ) {
-						haxe_Log.trace("Error calling FFZ emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3625, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+						haxe_Log.trace("Error calling FFZ emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3650, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3629, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3654, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					try {
 						if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
 							_gthis.chatPopoutWindow.onEmoteLoadError("ffz",_g1);
 						}
 					} catch( _g1 ) {
-						haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3636, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+						haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3661, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					}
 				}
 			}
@@ -5641,7 +5654,7 @@ client_Main.prototype = {
 					_gthis.chatPopoutWindow.onEmoteLoadError("ffz","Network error");
 				}
 			} catch( _g ) {
-				haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3655, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+				haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3680, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 			}
 		};
 		xhr.send();
@@ -5733,17 +5746,17 @@ client_Main.prototype = {
 							_gthis.chatPopoutWindow.onEmotesLoaded("seventv",popoutState != null && popoutState.seventv.hasMore);
 						}
 					} catch( _g ) {
-						haxe_Log.trace("Error calling 7TV emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3751, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+						haxe_Log.trace("Error calling 7TV emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3776, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3755, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3780, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					try {
 						if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
 							_gthis.chatPopoutWindow.onEmoteLoadError("seventv",_g1);
 						}
 					} catch( _g1 ) {
-						haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3762, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+						haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3787, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					}
 				}
 			}
@@ -5761,7 +5774,7 @@ client_Main.prototype = {
 					_gthis.chatPopoutWindow.onEmoteLoadError("seventv","Network error");
 				}
 			} catch( _g ) {
-				haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3781, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+				haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3806, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 			}
 		};
 		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "sort: Sort, $" + "limit: Int, $" + "filter: EmoteSearchFilter) { emotes(query: $" + "query, page: $" + "page, sort: $" + "sort, limit: $" + "limit, filter: $" + "filter) { count items { id name host { url files { name format width height } } } } }\", \"variables\": {\"query\": \"\", \"limit\": 50, \"page\": " + page + ", \"sort\": {\"value\": \"popularity\", \"order\": \"DESCENDING\"}, \"filter\": {\"exact_match\": false, \"case_sensitive\": false, \"ignore_tags\": true, \"category\": \"TOP\"}}}");
@@ -5809,7 +5822,7 @@ client_Main.prototype = {
 						listEl.appendChild(imgEl);
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3831, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
+					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3856, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
 				}
 			}
 		};
@@ -5882,7 +5895,7 @@ client_Main.prototype = {
 						}
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3903, className : "client.Main", methodName : "search7TVEmotesForPopout"});
+					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3928, className : "client.Main", methodName : "search7TVEmotesForPopout"});
 				}
 			}
 		};

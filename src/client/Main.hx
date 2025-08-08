@@ -1814,7 +1814,18 @@ class Main {
 				// Create a danmaku comment with the received text and color
 				final playerEl = getEl("#ytapiplayer");
 				final playerRect = playerEl.getBoundingClientRect();
-				final laneHeight = Math.floor(playerRect.height / DANMAKU_LANES);
+				
+				// In pseudo fullscreen mode, ensure lanes stay within viewport bounds
+				var effectiveHeight = playerRect.height;
+				if (document.body.classList.contains("pseudo-fullscreen")) {
+					// Use viewport height to prevent lanes from going off-screen
+					// Reserve 64px (half emote height) at bottom to prevent emote overflow
+					final viewportHeight = window.innerHeight;
+					final emoteHalfHeight = 64; // Half of 128px emote height
+					effectiveHeight = Math.min(playerRect.height, viewportHeight - emoteHalfHeight);
+				}
+				
+				final laneHeight = Math.floor(effectiveHeight / DANMAKU_LANES);
 
 				// Always use server-provided lane for perfect synchronization
 				var bestLane = data.danmakuMessage.lane ?? 0;
@@ -1840,7 +1851,21 @@ class Main {
 				}
 
 				comment.style.color = data.danmakuMessage.color;
-				comment.style.top = (bestLane * laneHeight + laneHeight / 2) + "px";
+				
+				// Calculate initial position
+				var topPosition = bestLane * laneHeight + laneHeight / 2;
+				
+				// Additional safety check for emotes in pseudo fullscreen mode
+				if (document.body.classList.contains("pseudo-fullscreen")) {
+					final isEmote = comment.classList.contains("danmaku-emote-container");
+					if (isEmote) {
+						final emoteHalfHeight = 64; // Half of 128px emote height
+						final maxTopPosition = window.innerHeight - emoteHalfHeight;
+						topPosition = Math.min(topPosition, maxTopPosition);
+					}
+				}
+				
+				comment.style.top = topPosition + "px";
 
 				// Mark this lane as used now
 				danmakuLanes[bestLane] = Std.int(Date.now().getTime());
