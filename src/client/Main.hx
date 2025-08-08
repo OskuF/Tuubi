@@ -98,6 +98,8 @@ class Main {
 	var currentRandomVideoQuery = "";
 	var currentRandomVideoAttemptCount = 0;
 	public var isRandomVideoOperation = false;
+	
+	private var chatInputHandler:Null<InputWithHistory>;
 
 	static function main():Void {
 		new Main();
@@ -124,6 +126,7 @@ class Main {
 			isUserListHidden: true,
 			latestLinks: [],
 			latestSubs: [],
+			latestMessages: [],
 			hotkeysEnabled: true,
 			showHintList: true,
 			checkboxes: [],
@@ -2041,6 +2044,10 @@ class Main {
 				clients.setLeader(data.setLeader.clientName);
 				updateUserList();
 				setLeaderButton(isLeader());
+				// Update command autocomplete with new leader status
+				if (chatInputHandler != null) {
+					chatInputHandler.updateLeaderStatus(isLeader());
+				}
 				if (isLeader()) player.onSetTime();
 
 			case PlayItem:
@@ -2293,6 +2300,23 @@ class Main {
 		login.maxLength = config.maxLoginLength;
 		final form:InputElement = getEl("#chatline");
 		form.maxLength = config.maxMessageLength;
+
+		// Initialize chat input with command autocomplete
+		chatInputHandler = new InputWithHistory(form, settings.latestMessages ?? [], 20, value -> {
+			if (handleCommands(value)) {
+				return true; // Command was handled, don't send to chat
+			}
+			
+			// Send as regular message
+			send({
+				type: Message,
+				message: {
+					clientName: personal.name,
+					text: value
+				}
+			});
+			return true;
+		}, true); // Enable command autocomplete
 
 		filters.resize(0);
 		for (filter in config.filters) {

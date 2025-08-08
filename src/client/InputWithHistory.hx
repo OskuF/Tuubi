@@ -10,12 +10,15 @@ class InputWithHistory {
 	var historyId = -1;
 	var maxItems = 100;
 	var onEnterCallback:(value:String) -> Bool;
+	var commandAutocomplete:Null<CommandAutocomplete>;
+	var enableCommandAutocomplete:Bool = false;
 
 	public function new(
 		element:InputElement,
 		history:Null<Array<String>>,
 		maxItems:Int,
-		onEnter:(value:String) -> Bool
+		onEnter:(value:String) -> Bool,
+		enableCommandAutocomplete:Bool = false
 	) {
 		this.element = element;
 		if (history != null) {
@@ -25,14 +28,36 @@ class InputWithHistory {
 		}
 		this.maxItems = maxItems;
 		this.onEnterCallback = onEnter;
+		this.enableCommandAutocomplete = enableCommandAutocomplete;
 		init();
 	}
 
 	public function init():Void {
 		element.onkeydown = onKeyDown;
+		
+		// Initialize command autocomplete if enabled
+		if (enableCommandAutocomplete) {
+			final isLeader = Main.instance != null ? Main.instance.isLeader() : false;
+			commandAutocomplete = new CommandAutocomplete(element, isLeader);
+		}
 	}
 
 	function onKeyDown(e:KeyboardEvent):Void {
+		// Only interfere with keys if autocomplete is actually visible
+		if (commandAutocomplete != null && element.value.startsWith("/") && commandAutocomplete.isMenuVisible()) {
+			final keyCode = e.keyCode;
+			// Always block navigation keys when autocomplete is visible
+			if (keyCode == KeyCode.Up || keyCode == KeyCode.Down || keyCode == KeyCode.Escape) {
+				// Don't interfere with autocomplete navigation
+				return;
+			}
+			// Only block Enter if an item is selected in the autocomplete
+			if (keyCode == KeyCode.Return && commandAutocomplete.hasSelection()) {
+				// Let autocomplete handle the selection
+				return;
+			}
+		}
+		
 		switch (e.keyCode) {
 			case KeyCode.Up:
 				prevItem();
@@ -101,6 +126,25 @@ class InputWithHistory {
 	public static function pushIfNotLast<T>(a:Array<T>, v:T):Void {
 		if (a.length == 0 || a[0] != v) {
 			a.unshift(v);
+		}
+	}
+
+	/**
+	 * Update the leader status for command autocomplete
+	 */
+	public function updateLeaderStatus(isLeader:Bool):Void {
+		if (commandAutocomplete != null) {
+			commandAutocomplete.setLeaderStatus(isLeader);
+		}
+	}
+
+	/**
+	 * Destroy the autocomplete when no longer needed
+	 */
+	public function destroy():Void {
+		if (commandAutocomplete != null) {
+			commandAutocomplete.destroy();
+			commandAutocomplete = null;
 		}
 	}
 }

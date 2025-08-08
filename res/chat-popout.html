@@ -504,6 +504,31 @@
     window.parentMain = null;
     window.chatPopout = true;
 
+    // Command handling system (copied from main chat)
+    window.availableCommands = [
+      { name: "help", description: "Show list of available commands", usage: "/help", requiresLeader: false },
+      { name: "ban", description: "Ban a user for specified time", usage: "/ban <username> <time>", requiresLeader: true },
+      { name: "unban", description: "Remove ban from a user", usage: "/unban <username>", requiresLeader: true },
+      { name: "kick", description: "Kick a user from the room", usage: "/kick <username>", requiresLeader: true },
+      { name: "clear", description: "Clear chat messages", usage: "/clear", requiresLeader: true },
+      { name: "flashback", description: "Show flashback", usage: "/flashback", requiresLeader: false },
+      { name: "fb", description: "Show flashback (short for flashback)", usage: "/fb", requiresLeader: false },
+      { name: "ad", description: "Skip current ad", usage: "/ad", requiresLeader: false },
+      { name: "random", description: "Get random FrankerFaceZ emote", usage: "/random", requiresLeader: false },
+      { name: "random7tv", description: "Get random 7TV emote", usage: "/random7tv", requiresLeader: false },
+      { name: "volume", description: "Set volume level (0.0 to 3.0)", usage: "/volume <level>", requiresLeader: false },
+      { name: "dump", description: "Dump current state information", usage: "/dump", requiresLeader: true },
+      { name: "skip", description: "Skip forward by seconds", usage: "/skip [seconds]", requiresLeader: false }
+    ];
+
+    // Current autocomplete state
+    window.commandAutocomplete = {
+      visible: false,
+      selectedIndex: -1,
+      filteredCommands: [],
+      menuElement: null
+    };
+
     // Danmaku emote animations function (shared with main chat)
     window.getDanmakuRandomAnimation = function() {
       // This will be populated by the parent window or use fallback
@@ -629,6 +654,270 @@
       return false;
     }
 
+    // Command autocomplete functionality
+    function createAutocompleteMenu() {
+      if (window.commandAutocomplete.menuElement) return;
+      
+      const menu = document.createElement('div');
+      menu.className = 'command-autocomplete-menu';
+      menu.style.cssText = `
+        position: absolute;
+        background-color: #2d2d2d;
+        border: 1px solid #555;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        min-width: 300px;
+        display: none;
+      `;
+      
+      document.body.appendChild(menu);
+      window.commandAutocomplete.menuElement = menu;
+    }
+
+    function getFilteredCommands(filter) {
+      const isLeader = window.parentMain && window.parentMain.isLeader && window.parentMain.isLeader();
+      let filtered = window.availableCommands.slice();
+      
+      // Filter by leader permission if not leader
+      if (!isLeader) {
+        filtered = filtered.filter(cmd => !cmd.requiresLeader);
+      }
+      
+      // Filter by name match
+      if (filter.length > 0) {
+        const filterLower = filter.toLowerCase();
+        filtered = filtered.filter(cmd => cmd.name.toLowerCase().includes(filterLower));
+      }
+      
+      return filtered;
+    }
+
+    function showAutocompleteMenu(query) {
+      const filtered = getFilteredCommands(query);
+      
+      if (filtered.length === 0) {
+        hideAutocompleteMenu();
+        return;
+      }
+      
+      window.commandAutocomplete.filteredCommands = filtered;
+      window.commandAutocomplete.selectedIndex = -1;
+      
+      renderAutocompleteMenu();
+      positionAutocompleteMenu();
+      
+      window.commandAutocomplete.visible = true;
+      window.commandAutocomplete.menuElement.style.display = 'block';
+    }
+
+    function hideAutocompleteMenu() {
+      window.commandAutocomplete.visible = false;
+      window.commandAutocomplete.selectedIndex = -1;
+      if (window.commandAutocomplete.menuElement) {
+        window.commandAutocomplete.menuElement.style.display = 'none';
+      }
+    }
+
+    function renderAutocompleteMenu() {
+      const menu = window.commandAutocomplete.menuElement;
+      const commands = window.commandAutocomplete.filteredCommands;
+      menu.innerHTML = '';
+      
+      commands.forEach((command, index) => {
+        const item = document.createElement('div');
+        item.className = 'command-autocomplete-item';
+        item.style.cssText = `
+          padding: 8px 12px;
+          cursor: pointer;
+          border-bottom: 1px solid #404040;
+          color: #ffffff;
+        `;
+        
+        // Command name
+        const nameDiv = document.createElement('div');
+        nameDiv.style.cssText = `
+          font-weight: bold;
+          color: ${command.requiresLeader ? '#ffb800' : '#ffffff'};
+        `;
+        nameDiv.textContent = command.usage;
+        
+        // Description
+        const descDiv = document.createElement('div');
+        descDiv.style.cssText = `
+          font-size: 12px;
+          color: #bbb;
+          margin-top: 2px;
+        `;
+        descDiv.textContent = command.description;
+        
+        item.appendChild(nameDiv);
+        item.appendChild(descDiv);
+        
+        // Add leader requirement indicator
+        const isLeader = window.parentMain && window.parentMain.isLeader && window.parentMain.isLeader();
+        if (command.requiresLeader && !isLeader) {
+          const leaderIndicator = document.createElement('span');
+          leaderIndicator.style.cssText = `
+            color: #ff6666;
+            font-size: 11px;
+            font-style: italic;
+            margin-top: 2px;
+            display: block;
+          `;
+          leaderIndicator.textContent = 'Requires leader permission';
+          item.appendChild(leaderIndicator);
+        }
+        
+        // Add click handler
+        item.addEventListener('click', () => selectCommand(index));
+        
+        // Add hover effects
+        item.addEventListener('mouseenter', () => {
+          window.commandAutocomplete.selectedIndex = index;
+          updateAutocompleteSelection(false); // Don't scroll on mouse hover
+        });
+        
+        menu.appendChild(item);
+      });
+      
+      updateAutocompleteSelection();
+    }
+
+    function positionAutocompleteMenu() {
+      const chatline = document.getElementById('chatline');
+      const menu = window.commandAutocomplete.menuElement;
+      const inputRect = chatline.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      
+      // Calculate available space
+      const spaceBelow = viewportHeight - inputRect.bottom;
+      const spaceAbove = inputRect.top;
+      
+      // More realistic menu height estimation: ~50px per item + padding, max 200px
+      const commands = window.commandAutocomplete.filteredCommands;
+      const itemHeight = 50; // More realistic item height including padding/borders
+      const estimatedMenuHeight = Math.min(200, Math.max(60, commands.length * itemHeight + 16)); // +16 for container padding
+      
+      // Positioning logic: Position above if either:
+      // 1. Not enough space below AND enough space above, OR
+      // 2. Not enough space below AND more space above than below
+      const enoughSpaceBelow = spaceBelow >= estimatedMenuHeight;
+      const enoughSpaceAbove = spaceAbove >= estimatedMenuHeight;
+      
+      const shouldPositionAbove = !enoughSpaceBelow && (enoughSpaceAbove || spaceAbove > spaceBelow);
+      
+      if (shouldPositionAbove) {
+        // Position above the input
+        const topPosition = Math.max(5, inputRect.top - estimatedMenuHeight - 2); // Ensure at least 5px from viewport top
+        menu.style.top = topPosition + 'px';
+      } else {
+        // Position below the input
+        menu.style.top = (inputRect.bottom + 2) + 'px';
+      }
+      
+      menu.style.left = inputRect.left + 'px';
+    }
+
+    function updateAutocompleteSelection(shouldScroll = false) {
+      const items = window.commandAutocomplete.menuElement.querySelectorAll('.command-autocomplete-item');
+      items.forEach((item, index) => {
+        if (index === window.commandAutocomplete.selectedIndex) {
+          item.style.backgroundColor = '#404040';
+        } else {
+          item.style.backgroundColor = 'transparent';
+        }
+      });
+      
+      // Only scroll when explicitly requested (keyboard navigation, not mouse hover)
+      if (shouldScroll && window.commandAutocomplete.selectedIndex >= 0 && window.commandAutocomplete.selectedIndex < items.length) {
+        const selectedItem = items[window.commandAutocomplete.selectedIndex];
+        selectedItem.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function selectCommand(index) {
+      const commands = window.commandAutocomplete.filteredCommands;
+      if (index >= 0 && index < commands.length) {
+        const command = commands[index];
+        const chatline = document.getElementById('chatline');
+        
+        // Insert command into input
+        chatline.value = command.usage.split(' ')[0];
+        
+        // Position cursor at end
+        chatline.setSelectionRange(chatline.value.length, chatline.value.length);
+        chatline.focus();
+        
+        hideAutocompleteMenu();
+      }
+    }
+
+    function navigateAutocomplete(direction) {
+      const commands = window.commandAutocomplete.filteredCommands;
+      if (commands.length === 0) return;
+      
+      if (direction === 'up') {
+        window.commandAutocomplete.selectedIndex--;
+        if (window.commandAutocomplete.selectedIndex < 0) {
+          window.commandAutocomplete.selectedIndex = commands.length - 1;
+        }
+      } else if (direction === 'down') {
+        window.commandAutocomplete.selectedIndex++;
+        if (window.commandAutocomplete.selectedIndex >= commands.length) {
+          window.commandAutocomplete.selectedIndex = 0;
+        }
+      }
+      
+      updateAutocompleteSelection(true); // Scroll for keyboard navigation
+    }
+
+    // Command processing function
+    function processCommand(commandText) {
+      if (!commandText.startsWith('/')) return false;
+      
+      const args = commandText.trim().split(' ');
+      const command = args[0].substring(1).toLowerCase();
+      
+      // Commands that can be handled locally in popout
+      switch (command) {
+        case 'help':
+          showCommandHelp();
+          return true;
+        case 'clear':
+          clearPopoutChat();
+          return true;
+        default:
+          // Forward to parent window for processing
+          if (window.parentMain && window.parentMain.handleCommands) {
+            return window.parentMain.handleCommands(commandText);
+          }
+          return false;
+      }
+    }
+
+    function showCommandHelp() {
+      const isLeader = window.parentMain && window.parentMain.isLeader && window.parentMain.isLeader();
+      const availableCommands = window.availableCommands.filter(cmd => !cmd.requiresLeader || isLeader);
+      
+      let helpText = '<div style="color: #888; font-style: italic;">Available commands:</div>';
+      availableCommands.forEach(cmd => {
+        const color = cmd.requiresLeader ? '#ffb800' : '#ffffff';
+        helpText += `<div style="color: ${color}; margin: 2px 0;"><strong>${cmd.usage}</strong> - ${cmd.description}</div>`;
+      });
+      
+      addMessage(helpText);
+    }
+
+    function clearPopoutChat() {
+      const messagebuffer = document.getElementById('messagebuffer');
+      if (messagebuffer) {
+        messagebuffer.innerHTML = '';
+      }
+    }
+
     // Initialize basic chat functionality for popout
     function initializePopoutChat() {
       const chatline = document.getElementById('chatline');
@@ -638,11 +927,74 @@
 
       // Handle enter key for sending messages
       if (chatline) {
+        // Create autocomplete menu
+        createAutocompleteMenu();
+        
+        chatline.addEventListener('input', function(e) {
+          const value = this.value;
+          if (value.startsWith('/')) {
+            const query = value.substring(1);
+            showAutocompleteMenu(query);
+          } else {
+            hideAutocompleteMenu();
+          }
+        });
+        
         chatline.addEventListener('keydown', function (e) {
+          // Handle autocomplete navigation
+          if (window.commandAutocomplete.visible) {
+            switch (e.key) {
+              case 'ArrowUp':
+                e.preventDefault();
+                navigateAutocomplete('up');
+                return;
+              case 'ArrowDown':
+                e.preventDefault();
+                navigateAutocomplete('down');
+                return;
+              case 'Enter':
+                if (window.commandAutocomplete.selectedIndex >= 0) {
+                  e.preventDefault();
+                  selectCommand(window.commandAutocomplete.selectedIndex);
+                  return;
+                }
+                break;
+              case 'Escape':
+                e.preventDefault();
+                hideAutocompleteMenu();
+                return;
+            }
+          }
+          
           if (e.key === 'Enter') {
             e.preventDefault();
             const message = this.value.trim();
             if (message) {
+              // Check if it's a command
+              if (message.startsWith('/')) {
+                const commandHandled = processCommand(message);
+                if (commandHandled) {
+                  this.value = '';
+                  return;
+                }
+                
+                // If command wasn't handled locally, try to send to parent
+                if (!establishParentConnection()) {
+                  debugConnection();
+                  alert('Error: Cannot process command - connection to main window lost\n\nPlease close this popout window and open it again.');
+                  return;
+                }
+                
+                try {
+                  if (window.parentMain.handleCommands && window.parentMain.handleCommands(message)) {
+                    this.value = '';
+                    return;
+                  }
+                } catch (error) {
+                  console.error('Error processing command:', error);
+                }
+              }
+              
               // Try to establish/re-establish connection if needed
               if (!establishParentConnection()) {
                 debugConnection();
@@ -662,6 +1014,15 @@
                 alert('Error sending message: ' + error.message);
               }
             }
+          }
+        });
+        
+        // Hide autocomplete when clicking outside
+        document.addEventListener('click', function(e) {
+          if (window.commandAutocomplete.menuElement && 
+              !window.commandAutocomplete.menuElement.contains(e.target) && 
+              e.target !== chatline) {
+            hideAutocompleteMenu();
           }
         });
       }

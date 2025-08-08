@@ -1361,6 +1361,265 @@ client_Buttons.initPageFullscreen = function() {
 		}
 	};
 };
+var client_CommandAutocomplete = function(inputElement,isLeader,onCommandSelect) {
+	if(isLeader == null) {
+		isLeader = false;
+	}
+	this.isVisible = false;
+	this.selectedIndex = -1;
+	this.inputElement = inputElement;
+	this.isLeader = isLeader;
+	this.onCommandSelect = onCommandSelect;
+	this.commands = client_Commands.COMMANDS;
+	this.filteredCommands = [];
+	this.createMenuElement();
+	this.attachEventListeners();
+};
+client_CommandAutocomplete.__name__ = true;
+client_CommandAutocomplete.prototype = {
+	createMenuElement: function() {
+		this.menuElement = window.document.createElement("div");
+		this.menuElement.className = "command-autocomplete-menu";
+		this.menuElement.style.display = "none";
+		this.menuElement.style.position = "absolute";
+		this.menuElement.style.backgroundColor = "#2d2d2d";
+		this.menuElement.style.border = "1px solid #555";
+		this.menuElement.style.borderRadius = "4px";
+		this.menuElement.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.3)";
+		this.menuElement.style.maxHeight = "200px";
+		this.menuElement.style.overflowY = "auto";
+		this.menuElement.style.zIndex = "1000";
+		this.menuElement.style.minWidth = "300px";
+		this.inputElement.parentElement.insertBefore(this.menuElement,this.inputElement.nextSibling);
+	}
+	,attachEventListeners: function() {
+		var _gthis = this;
+		this.inputElement.addEventListener("input",$bind(this,this.onInputChange));
+		this.inputElement.addEventListener("keydown",$bind(this,this.onKeyDown));
+		window.document.addEventListener("click",function(e) {
+			if(!_gthis.menuElement.contains(e.target) && e.target != _gthis.inputElement) {
+				_gthis.hideMenu();
+			}
+		});
+	}
+	,onInputChange: function(e) {
+		var value = this.inputElement.value;
+		if(StringTools.startsWith(value,"/")) {
+			this.showMenu(value.substring(1));
+		} else {
+			this.hideMenu();
+		}
+	}
+	,onKeyDown: function(e) {
+		if(!this.isVisible) {
+			return;
+		}
+		var keyCode = e.keyCode;
+		if(keyCode == 38) {
+			e.preventDefault();
+			this.navigateUp();
+		} else if(keyCode == 40) {
+			e.preventDefault();
+			this.navigateDown();
+		} else if(keyCode == 13) {
+			if(this.selectedIndex >= 0 && this.selectedIndex < this.filteredCommands.length) {
+				e.preventDefault();
+				this.selectCommand(this.filteredCommands[this.selectedIndex]);
+			}
+		} else if(keyCode == 27) {
+			e.preventDefault();
+			this.hideMenu();
+		}
+	}
+	,showMenu: function(query) {
+		this.filteredCommands = client_Commands.getFilteredCommands(query,this.isLeader);
+		if(this.filteredCommands.length == 0) {
+			this.hideMenu();
+			return;
+		}
+		this.renderMenu();
+		this.positionMenu();
+		this.selectedIndex = -1;
+		this.isVisible = true;
+		this.menuElement.style.display = "block";
+	}
+	,hideMenu: function() {
+		this.isVisible = false;
+		this.selectedIndex = -1;
+		this.menuElement.style.display = "none";
+	}
+	,renderMenu: function() {
+		var _gthis = this;
+		this.menuElement.innerHTML = "";
+		var _g = 0;
+		var _g1 = this.filteredCommands.length;
+		while(_g < _g1) {
+			var i = _g++;
+			var command = this.filteredCommands[i];
+			var item = window.document.createElement("div");
+			item.className = "command-autocomplete-item";
+			item.style.padding = "8px 12px";
+			item.style.cursor = "pointer";
+			item.style.borderBottom = "1px solid #404040";
+			item.style.color = "#ffffff";
+			var nameDiv = window.document.createElement("div");
+			nameDiv.style.fontWeight = "bold";
+			nameDiv.style.color = command.requiresLeader ? "#ffb800" : "#ffffff";
+			nameDiv.textContent = command.usage;
+			var descDiv = window.document.createElement("div");
+			descDiv.style.fontSize = "12px";
+			descDiv.style.color = "#bbb";
+			descDiv.style.marginTop = "2px";
+			descDiv.textContent = command.description;
+			item.appendChild(nameDiv);
+			item.appendChild(descDiv);
+			if(command.requiresLeader && !this.isLeader) {
+				var leaderIndicator = window.document.createElement("span");
+				leaderIndicator.style.color = "#ff6666";
+				leaderIndicator.style.fontSize = "11px";
+				leaderIndicator.style.fontStyle = "italic";
+				leaderIndicator.style.marginTop = "2px";
+				leaderIndicator.style.display = "block";
+				leaderIndicator.textContent = "Requires leader permission";
+				item.appendChild(leaderIndicator);
+			}
+			var commandIndex = [i];
+			item.addEventListener("click",(function(commandIndex) {
+				return function(e) {
+					_gthis.selectCommand(_gthis.filteredCommands[commandIndex[0]]);
+				};
+			})(commandIndex));
+			item.addEventListener("mouseenter",(function(commandIndex) {
+				return function(e) {
+					_gthis.selectedIndex = commandIndex[0];
+					_gthis.updateSelection(false);
+				};
+			})(commandIndex));
+			this.menuElement.appendChild(item);
+		}
+		this.updateSelection();
+	}
+	,positionMenu: function() {
+		var inputRect = this.inputElement.getBoundingClientRect();
+		var parentRect = this.inputElement.parentElement.getBoundingClientRect();
+		var viewportHeight = window.innerHeight;
+		var spaceBelow = viewportHeight - inputRect.bottom;
+		var spaceAbove = inputRect.top;
+		var estimatedMenuHeight = Math.min(200,Math.max(60,this.filteredCommands.length * 50 + 16));
+		if(!(spaceBelow >= estimatedMenuHeight) && (spaceAbove >= estimatedMenuHeight || spaceAbove > spaceBelow)) {
+			var topPosition = Math.max(5,inputRect.top - estimatedMenuHeight - 2);
+			this.menuElement.style.top = topPosition - parentRect.top + "px";
+		} else {
+			this.menuElement.style.top = inputRect.bottom - parentRect.top + 2 + "px";
+		}
+		this.menuElement.style.left = inputRect.left - parentRect.left + "px";
+	}
+	,navigateUp: function() {
+		if(this.filteredCommands.length == 0) {
+			return;
+		}
+		this.selectedIndex--;
+		if(this.selectedIndex < 0) {
+			this.selectedIndex = this.filteredCommands.length - 1;
+		}
+		this.updateSelection(true);
+	}
+	,navigateDown: function() {
+		if(this.filteredCommands.length == 0) {
+			return;
+		}
+		this.selectedIndex++;
+		if(this.selectedIndex >= this.filteredCommands.length) {
+			this.selectedIndex = 0;
+		}
+		this.updateSelection(true);
+	}
+	,updateSelection: function(shouldScroll) {
+		if(shouldScroll == null) {
+			shouldScroll = false;
+		}
+		var items = this.menuElement.querySelectorAll(".command-autocomplete-item");
+		var _g = 0;
+		var _g1 = items.length;
+		while(_g < _g1) {
+			var i = _g++;
+			var item = items[i];
+			if(i == this.selectedIndex) {
+				item.style.backgroundColor = "#404040";
+			} else {
+				item.style.backgroundColor = "transparent";
+			}
+		}
+		if(shouldScroll && this.selectedIndex >= 0 && this.selectedIndex < items.length) {
+			items[this.selectedIndex].scrollIntoView();
+		}
+	}
+	,selectCommand: function(command) {
+		this.inputElement.value = command.usage.split(" ")[0];
+		this.inputElement.setSelectionRange(this.inputElement.value.length,this.inputElement.value.length);
+		if(this.onCommandSelect != null) {
+			this.onCommandSelect(command.name);
+		}
+		this.hideMenu();
+		this.inputElement.focus();
+	}
+	,setLeaderStatus: function(isLeader) {
+		this.isLeader = isLeader;
+		if(this.isVisible) {
+			var value = this.inputElement.value;
+			if(StringTools.startsWith(value,"/")) {
+				this.showMenu(value.substring(1));
+			}
+		}
+	}
+	,isMenuVisible: function() {
+		return this.isVisible;
+	}
+	,hasSelection: function() {
+		if(this.selectedIndex >= 0) {
+			return this.selectedIndex < this.filteredCommands.length;
+		} else {
+			return false;
+		}
+	}
+	,__class__: client_CommandAutocomplete
+};
+var client_Commands = function() { };
+client_Commands.__name__ = true;
+client_Commands.getFilteredCommands = function(filter,isLeader) {
+	if(isLeader == null) {
+		isLeader = false;
+	}
+	var filtered = client_Commands.COMMANDS.slice();
+	if(!isLeader) {
+		var _g = [];
+		var _g1 = 0;
+		var _g2 = filtered;
+		while(_g1 < _g2.length) {
+			var v = _g2[_g1];
+			++_g1;
+			if(!v.requiresLeader) {
+				_g.push(v);
+			}
+		}
+		filtered = _g;
+	}
+	if(filter.length > 0) {
+		var filterLower = filter.toLowerCase();
+		var _g = [];
+		var _g1 = 0;
+		var _g2 = filtered;
+		while(_g1 < _g2.length) {
+			var v = _g2[_g1];
+			++_g1;
+			if(v.name.toLowerCase().indexOf(filterLower) >= 0) {
+				_g.push(v);
+			}
+		}
+		filtered = _g;
+	}
+	return filtered;
+};
 var client_Drawing = function() { };
 client_Drawing.__name__ = true;
 client_Drawing.init = function(main) {
@@ -2278,7 +2537,11 @@ client_IPlayer.__isInterface__ = true;
 client_IPlayer.prototype = {
 	__class__: client_IPlayer
 };
-var client_InputWithHistory = function(element,history,maxItems,onEnter) {
+var client_InputWithHistory = function(element,history,maxItems,onEnter,enableCommandAutocomplete) {
+	if(enableCommandAutocomplete == null) {
+		enableCommandAutocomplete = false;
+	}
+	this.enableCommandAutocomplete = false;
 	this.maxItems = 100;
 	this.historyId = -1;
 	this.element = element;
@@ -2289,6 +2552,7 @@ var client_InputWithHistory = function(element,history,maxItems,onEnter) {
 	}
 	this.maxItems = maxItems;
 	this.onEnterCallback = onEnter;
+	this.enableCommandAutocomplete = enableCommandAutocomplete;
 	this.init();
 };
 client_InputWithHistory.__name__ = true;
@@ -2300,8 +2564,20 @@ client_InputWithHistory.pushIfNotLast = function(a,v) {
 client_InputWithHistory.prototype = {
 	init: function() {
 		this.element.onkeydown = $bind(this,this.onKeyDown);
+		if(this.enableCommandAutocomplete) {
+			this.commandAutocomplete = new client_CommandAutocomplete(this.element,client_Main.instance != null && (client_Main.instance.personal.group & 4) != 0);
+		}
 	}
 	,onKeyDown: function(e) {
+		if(this.commandAutocomplete != null && StringTools.startsWith(this.element.value,"/") && this.commandAutocomplete.isMenuVisible()) {
+			var keyCode = e.keyCode;
+			if(keyCode == 38 || keyCode == 40 || keyCode == 27) {
+				return;
+			}
+			if(keyCode == 13 && this.commandAutocomplete.hasSelection()) {
+				return;
+			}
+		}
 		switch(e.keyCode) {
 		case 13:
 			var value = StringTools.trim(this.element.value);
@@ -2356,6 +2632,11 @@ client_InputWithHistory.prototype = {
 		} else if(this.historyId > 0) {
 			this.historyId--;
 			this.element.value = this.history[this.historyId];
+		}
+	}
+	,updateLeaderStatus: function(isLeader) {
+		if(this.commandAutocomplete != null) {
+			this.commandAutocomplete.setLeaderStatus(isLeader);
 		}
 	}
 	,__class__: client_InputWithHistory
@@ -2550,7 +2831,7 @@ var client_Main = function() {
 	if(this.host == "") {
 		this.host = "localhost";
 	}
-	client_Settings.init({ version : 9, uuid : null, name : "", hash : "", chatSize : 300, synchThreshold : 2, isSwapped : false, isUserListHidden : true, latestLinks : [], latestSubs : [], hotkeysEnabled : true, showHintList : true, checkboxes : [], checkedCache : [], keywordMode : true, obscureMode : false, twitchChatEnabled : true, defaultSkipSeconds : 10.0},$bind(this,this.settingsPatcher));
+	client_Settings.init({ version : 9, uuid : null, name : "", hash : "", chatSize : 300, synchThreshold : 2, isSwapped : false, isUserListHidden : true, latestLinks : [], latestSubs : [], latestMessages : [], hotkeysEnabled : true, showHintList : true, checkboxes : [], checkedCache : [], keywordMode : true, obscureMode : false, twitchChatEnabled : true, defaultSkipSeconds : 10.0},$bind(this,this.settingsPatcher));
 	this.settings = client_Settings.read();
 	this.initListeners();
 	this.onTimeGet = new haxe_Timer(this.settings.synchThreshold * 1000);
@@ -3541,17 +3822,17 @@ client_Main.prototype = {
 					query = "" + yearStr + monthStr + dayStr;
 				}
 				isDateFormat = true;
-				haxe_Log.trace("Generated obscure search query (date format " + selectedOption.value + "): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1311, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (date format " + selectedOption.value + "): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1314, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			case "nospace":
 				var randomNumber = Math.floor(Math.random() * 9999) + 1;
 				query = "" + selectedOption.value + StringTools.lpad(randomNumber == null ? "null" : "" + randomNumber,"0",4);
-				haxe_Log.trace("Generated obscure search query (no-space): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1288, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (no-space): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1291, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			case "spaced":
 				var randomNumber = Math.floor(Math.random() * 9999) + 1;
 				query = "" + selectedOption.value + " " + StringTools.lpad(randomNumber == null ? "null" : "" + randomNumber,"0",4);
-				haxe_Log.trace("Generated obscure search query (spaced): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1281, className : "client.Main", methodName : "generateRandomSearchQuery"});
+				haxe_Log.trace("Generated obscure search query (spaced): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1284, className : "client.Main", methodName : "generateRandomSearchQuery"});
 				break;
 			}
 		} else {
@@ -3567,26 +3848,26 @@ client_Main.prototype = {
 				}
 			}
 			query = selectedWords.join(" ");
-			haxe_Log.trace("Generated keyword search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1327, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Generated keyword search query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1330, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		}
 		if(!isDateFormat) {
 			var year = new Date().getFullYear() - (Math.floor(Math.random() * 15) + 1);
 			var month = Math.floor(Math.random() * 12) + 1;
 			var day = Math.floor(Math.random() * 28) + 1;
 			query += " before:" + year + "-" + (month < 10 ? "0" + month : "" + month) + "-" + (day < 10 ? "0" + day : "" + day);
-			haxe_Log.trace("Final search query with date: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1341, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Final search query with date: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1344, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		} else {
-			haxe_Log.trace("Final search query (date format, no before filter): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1343, className : "client.Main", methodName : "generateRandomSearchQuery"});
+			haxe_Log.trace("Final search query (date format, no before filter): \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1346, className : "client.Main", methodName : "generateRandomSearchQuery"});
 		}
 		return query;
 	}
 	,addRandomYoutubeVideo: function() {
 		var _gthis = this;
-		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" pressed random video button | Starting search...",{ fileName : "src/client/Main.hx", lineNumber : 1350, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" pressed random video button | Starting search...",{ fileName : "src/client/Main.hx", lineNumber : 1353, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 		this.isRandomVideoOperation = true;
 		window.setTimeout(function() {
 			if(_gthis.isRandomVideoOperation) {
-				haxe_Log.trace("Random video operation timeout, clearing flag",{ fileName : "src/client/Main.hx", lineNumber : 1358, className : "client.Main", methodName : "addRandomYoutubeVideo"});
+				haxe_Log.trace("Random video operation timeout, clearing flag",{ fileName : "src/client/Main.hx", lineNumber : 1361, className : "client.Main", methodName : "addRandomYoutubeVideo"});
 				_gthis.isRandomVideoOperation = false;
 			}
 		},10000);
@@ -3606,11 +3887,11 @@ client_Main.prototype = {
 		}
 		var query = this.generateRandomSearchQuery();
 		new Date(new Date().getTime());
-		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" | Generated query: \"" + query + "\" | Initiating search...",{ fileName : "src/client/Main.hx", lineNumber : 1379, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+		haxe_Log.trace("[RANDOM VIDEO] User: \"" + this.personal.name + "\" | Generated query: \"" + query + "\" | Initiating search...",{ fileName : "src/client/Main.hx", lineNumber : 1382, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 		var randomApiKey = this.getRandomVideoApiKey();
 		this.player.searchYoutubeVideos(query,20,function(videoIds) {
 			if(videoIds.length == 0) {
-				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1385, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
+				haxe_Log.trace("No results found for query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1388, className : "client.Main", methodName : "addRandomYoutubeVideoWithRetry"});
 				if(attemptCount < 2) {
 					_gthis.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 				} else {
@@ -3637,7 +3918,7 @@ client_Main.prototype = {
 	,tryNextVideoFromList: function(videoIds,index,query,attemptCount) {
 		var _gthis = this;
 		if(index >= videoIds.length) {
-			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1417, className : "client.Main", methodName : "tryNextVideoFromList"});
+			haxe_Log.trace("No embeddable videos found in search results for: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1420, className : "client.Main", methodName : "tryNextVideoFromList"});
 			if(attemptCount < 2) {
 				this.addRandomYoutubeVideoWithRetry(attemptCount + 1);
 			} else {
@@ -3647,19 +3928,19 @@ client_Main.prototype = {
 		}
 		var videoId = videoIds[index];
 		var youtubeUrl = "https://www.youtube.com/watch?v=" + videoId;
-		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1429, className : "client.Main", methodName : "tryNextVideoFromList"});
+		haxe_Log.trace("Testing embeddability for video #" + (index + 1) + ": " + videoId,{ fileName : "src/client/Main.hx", lineNumber : 1432, className : "client.Main", methodName : "tryNextVideoFromList"});
 		this.checkVideoEmbeddability(videoId,function(isEmbeddable,title) {
 			if(isEmbeddable) {
 				_gthis.currentRandomVideoSearch = videoIds;
 				_gthis.currentRandomVideoIndex = index + 1;
 				_gthis.currentRandomVideoQuery = query;
 				_gthis.currentRandomVideoAttemptCount = attemptCount;
-				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1441, className : "client.Main", methodName : "tryNextVideoFromList"});
+				haxe_Log.trace("Found embeddable video: " + videoId + " (" + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1444, className : "client.Main", methodName : "tryNextVideoFromList"});
 				_gthis.addVideo(youtubeUrl,true,true,false,function() {
 					_gthis.serverMessage("Added random video from search: \"" + query + "\"");
 				});
 			} else {
-				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1448, className : "client.Main", methodName : "tryNextVideoFromList"});
+				haxe_Log.trace("Video " + videoId + " (" + title + ") is not embeddable, trying next...",{ fileName : "src/client/Main.hx", lineNumber : 1451, className : "client.Main", methodName : "tryNextVideoFromList"});
 				_gthis.tryNextVideoFromList(videoIds,index + 1,query,attemptCount);
 			}
 		});
@@ -3668,7 +3949,7 @@ client_Main.prototype = {
 		var _gthis = this;
 		var apiKey = this.getRandomVideoApiKey();
 		if(apiKey == null || apiKey == "") {
-			haxe_Log.trace("No YouTube API key available for random video embeddability check",{ fileName : "src/client/Main.hx", lineNumber : 1457, className : "client.Main", methodName : "checkVideoEmbeddability"});
+			haxe_Log.trace("No YouTube API key available for random video embeddability check",{ fileName : "src/client/Main.hx", lineNumber : 1460, className : "client.Main", methodName : "checkVideoEmbeddability"});
 			callback(true,"Unknown");
 			return;
 		}
@@ -3682,12 +3963,12 @@ client_Main.prototype = {
 					var tmp = json.error.message;
 					var errorMessage = tmp != null ? tmp : "Unknown error";
 					if(errorCode == 403) {
-						haxe_Log.trace("Random video API quota exhausted: " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1477, className : "client.Main", methodName : "checkVideoEmbeddability"});
+						haxe_Log.trace("Random video API quota exhausted: " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1480, className : "client.Main", methodName : "checkVideoEmbeddability"});
 						_gthis.serverMessage("Random video API quota exhausted. Try again later.",false);
 						callback(false,"API Quota Exhausted");
 						return;
 					} else {
-						haxe_Log.trace("Random video API error " + errorCode + ": " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1482, className : "client.Main", methodName : "checkVideoEmbeddability"});
+						haxe_Log.trace("Random video API error " + errorCode + ": " + errorMessage,{ fileName : "src/client/Main.hx", lineNumber : 1485, className : "client.Main", methodName : "checkVideoEmbeddability"});
 						_gthis.serverMessage("Random video API error. Using fallback.",false);
 						callback(true,"API Error");
 						return;
@@ -3696,7 +3977,7 @@ client_Main.prototype = {
 				var tmp = json.items;
 				var items = tmp != null ? tmp : [];
 				if(items.length == 0) {
-					haxe_Log.trace("Video " + videoId + " not found",{ fileName : "src/client/Main.hx", lineNumber : 1492, className : "client.Main", methodName : "checkVideoEmbeddability"});
+					haxe_Log.trace("Video " + videoId + " not found",{ fileName : "src/client/Main.hx", lineNumber : 1495, className : "client.Main", methodName : "checkVideoEmbeddability"});
 					callback(false,"Not Found");
 					return;
 				}
@@ -3711,16 +3992,16 @@ client_Main.prototype = {
 				var tmp = item.contentDetails;
 				var tmp3 = item.contentDetails;
 				var isActuallyEmbeddable = _gthis.checkComprehensiveEmbeddability(videoId,title,tmp1 != null ? tmp1 : true,tmp2 != null ? tmp2 : "public",tmp != null ? tmp.regionRestriction : null,tmp3 != null ? tmp3.contentRating : null);
-				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1509, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " comprehensive embeddability: " + (isActuallyEmbeddable == null ? "null" : "" + isActuallyEmbeddable) + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1512, className : "client.Main", methodName : "checkVideoEmbeddability"});
 				callback(isActuallyEmbeddable,title);
 			} catch( _g ) {
 				var _g1 = haxe_Exception.caught(_g).unwrap();
-				haxe_Log.trace("Error parsing embeddability response for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1512, className : "client.Main", methodName : "checkVideoEmbeddability"});
+				haxe_Log.trace("Error parsing embeddability response for " + videoId + ": " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 1515, className : "client.Main", methodName : "checkVideoEmbeddability"});
 				callback(true,"Parse Error");
 			}
 		};
 		http.onError = function(error) {
-			haxe_Log.trace("Error checking embeddability for " + videoId + ": " + error,{ fileName : "src/client/Main.hx", lineNumber : 1518, className : "client.Main", methodName : "checkVideoEmbeddability"});
+			haxe_Log.trace("Error checking embeddability for " + videoId + ": " + error,{ fileName : "src/client/Main.hx", lineNumber : 1521, className : "client.Main", methodName : "checkVideoEmbeddability"});
 			callback(true,"API Error");
 		};
 		http.request();
@@ -3728,23 +4009,23 @@ client_Main.prototype = {
 	,checkComprehensiveEmbeddability: function(videoId,title,embeddable,privacyStatus,regionRestriction,contentRating) {
 		if(!this.config.strictEmbeddingChecks) {
 			if(!embeddable) {
-				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1536, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: not embeddable (basic check only) (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1539, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
-			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1539, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " passed basic embeddability check (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1542, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return true;
 		}
 		if(!embeddable) {
-			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1545, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: not embeddable (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1548, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
 		if(privacyStatus != "public") {
-			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1551, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+			haxe_Log.trace("Video " + videoId + " rejected: privacy status is " + privacyStatus + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1554, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 			return false;
 		}
 		if(!this.config.allowAgeRestrictedVideos && contentRating != null) {
 			if(Reflect.fields(contentRating).length > 0) {
-				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1559, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: has content rating restrictions (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1562, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 		}
@@ -3756,7 +4037,7 @@ client_Main.prototype = {
 			var _g1 = 0;
 			while(_g1 < blockedDynamic.length) _g.push(Std.string(blockedDynamic[_g1++]));
 			if(_g.indexOf(userRegion) != -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1572, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: blocked in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1575, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 			var tmp = regionRestriction.allowed;
@@ -3765,11 +4046,11 @@ client_Main.prototype = {
 			var _g1 = 0;
 			while(_g1 < allowedDynamic.length) _g.push(Std.string(allowedDynamic[_g1++]));
 			if(_g.length > 0 && _g.indexOf(userRegion) == -1) {
-				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1580, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+				haxe_Log.trace("Video " + videoId + " rejected: not allowed in region " + userRegion + " (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1583, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 				return false;
 			}
 		}
-		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1585, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
+		haxe_Log.trace("Video " + videoId + " passed all embeddability checks (title: " + title + ")",{ fileName : "src/client/Main.hx", lineNumber : 1588, className : "client.Main", methodName : "checkComprehensiveEmbeddability"});
 		return true;
 	}
 	,handleRandomVideoPlaybackError: function(errorCode) {
@@ -3815,7 +4096,7 @@ client_Main.prototype = {
 		var popularQueries = ["music","funny animals","video games","travel vlog","cooking tutorial","science explained","beautiful nature","guitar cover","dance performance","documentary short","art tutorial","tech review"];
 		var query = popularQueries[Math.floor(Math.random() * popularQueries.length)];
 		var fallbackTime = new Date(new Date().getTime());
-		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1641, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
+		haxe_Log.trace("Fallback search at " + HxOverrides.dateStr(fallbackTime) + " for popular query: \"" + query + "\"",{ fileName : "src/client/Main.hx", lineNumber : 1644, className : "client.Main", methodName : "addRandomYoutubeVideoFallback"});
 		var randomApiKey = this.getRandomVideoApiKey();
 		this.player.searchYoutubeVideos(query,10,function(videoIds) {
 			if(videoIds.length == 0) {
@@ -3904,7 +4185,7 @@ client_Main.prototype = {
 		var data = JSON.parse(e.data);
 		if(this.config != null && this.config.isVerbose) {
 			var t = data.type;
-			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1764, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
+			haxe_Log.trace("Event: " + data.type,{ fileName : "src/client/Main.hx", lineNumber : 1767, className : "client.Main", methodName : "onMessage", customParams : [Reflect.field(data,t.charAt(0).toLowerCase() + HxOverrides.substr(t,1,null))]});
 		}
 		client_JsApi.fireEvents(data);
 		switch(data.type) {
@@ -4138,7 +4419,7 @@ client_Main.prototype = {
 			this.player.setTime(data.rewind.time + 0.5);
 			break;
 		case "SaveDrawing":
-			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2085, className : "client.Main", methodName : "onMessage"});
+			haxe_Log.trace("Drawing saved successfully",{ fileName : "src/client/Main.hx", lineNumber : 2092, className : "client.Main", methodName : "onMessage"});
 			break;
 		case "ServerMessage":
 			var id = data.serverMessage.textId;
@@ -4165,6 +4446,9 @@ client_Main.prototype = {
 			ClientTools.setLeader(this.clients,data.setLeader.clientName);
 			this.updateUserList();
 			this.setLeaderButton((this.personal.group & 4) != 0);
+			if(this.chatInputHandler != null) {
+				this.chatInputHandler.updateLeaderStatus((this.personal.group & 4) != 0);
+			}
 			if((this.personal.group & 4) != 0) {
 				this.player.onSetTime();
 			}
@@ -4431,7 +4715,16 @@ client_Main.prototype = {
 		}
 		this.pageTitle = config.channelName;
 		window.document.querySelector("#guestname").maxLength = config.maxLoginLength;
-		window.document.querySelector("#chatline").maxLength = config.maxMessageLength;
+		var form = window.document.querySelector("#chatline");
+		form.maxLength = config.maxMessageLength;
+		var tmp = this.settings.latestMessages;
+		this.chatInputHandler = new client_InputWithHistory(form,tmp != null ? tmp : [],20,function(value) {
+			if(_gthis.handleCommands(value)) {
+				return true;
+			}
+			_gthis.send({ type : "Message", message : { clientName : _gthis.personal.name, text : value}});
+			return true;
+		},true);
 		this.filters.length = 0;
 		var _g = 0;
 		var _g1 = config.filters;
@@ -5334,9 +5627,9 @@ client_Main.prototype = {
 				}, getDanmakuRandomAnimation : function() {
 					return self.getRandomEmoteAnimation();
 				}};
-				haxe_Log.trace("Set parentMain immediately with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3317, className : "client.Main", methodName : "openChatPopout"});
+				haxe_Log.trace("Set parentMain immediately with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3341, className : "client.Main", methodName : "openChatPopout"});
 			} catch( _g ) {
-				haxe_Log.trace("Failed to set parentMain immediately: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3319, className : "client.Main", methodName : "openChatPopout"});
+				haxe_Log.trace("Failed to set parentMain immediately: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3343, className : "client.Main", methodName : "openChatPopout"});
 			}
 			this.chatPopoutWindow.addEventListener("load",function() {
 				try {
@@ -5358,9 +5651,9 @@ client_Main.prototype = {
 						return self.getRandomEmoteAnimation();
 					}};
 					self.syncChatToPopout();
-					haxe_Log.trace("Set parentMain on load event with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3353, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Set parentMain on load event with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3377, className : "client.Main", methodName : "openChatPopout"});
 				} catch( _g ) {
-					haxe_Log.trace("Failed to set parentMain on load: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3355, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Failed to set parentMain on load: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3379, className : "client.Main", methodName : "openChatPopout"});
 				}
 			});
 			var pollAttempts = 0;
@@ -5368,7 +5661,7 @@ client_Main.prototype = {
 			pollForConnection = function() {
 				pollAttempts += 1;
 				if(_gthis.chatPopoutWindow == null || _gthis.chatPopoutWindow.closed) {
-					haxe_Log.trace("Popout window closed during polling",{ fileName : "src/client/Main.hx", lineNumber : 3364, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Popout window closed during polling",{ fileName : "src/client/Main.hx", lineNumber : 3388, className : "client.Main", methodName : "openChatPopout"});
 					return;
 				}
 				try {
@@ -5391,17 +5684,17 @@ client_Main.prototype = {
 							return self.getRandomEmoteAnimation();
 						}};
 						self.syncChatToPopout();
-						haxe_Log.trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3399, className : "client.Main", methodName : "openChatPopout"});
+						haxe_Log.trace("Set parentMain via polling attempt " + pollAttempts + " with wrapper",{ fileName : "src/client/Main.hx", lineNumber : 3423, className : "client.Main", methodName : "openChatPopout"});
 						return;
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Polling attempt " + pollAttempts + " failed: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3403, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Polling attempt " + pollAttempts + " failed: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3427, className : "client.Main", methodName : "openChatPopout"});
 				}
 				if(pollAttempts < 20) {
 					haxe_Timer.delay(pollForConnection,100);
 				} else {
-					haxe_Log.trace("Failed to establish connection after " + pollAttempts + " attempts",{ fileName : "src/client/Main.hx", lineNumber : 3410, className : "client.Main", methodName : "openChatPopout"});
+					haxe_Log.trace("Failed to establish connection after " + pollAttempts + " attempts",{ fileName : "src/client/Main.hx", lineNumber : 3434, className : "client.Main", methodName : "openChatPopout"});
 				}
 			};
 			haxe_Timer.delay(pollForConnection,50);
@@ -5626,17 +5919,17 @@ client_Main.prototype = {
 							_gthis.chatPopoutWindow.onEmotesLoaded("ffz",popoutState != null && popoutState.ffz.hasMore);
 						}
 					} catch( _g ) {
-						haxe_Log.trace("Error calling FFZ emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3650, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+						haxe_Log.trace("Error calling FFZ emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3674, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3654, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+					haxe_Log.trace("Error parsing FFZ emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3678, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					try {
 						if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
 							_gthis.chatPopoutWindow.onEmoteLoadError("ffz",_g1);
 						}
 					} catch( _g1 ) {
-						haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3661, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+						haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3685, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 					}
 				}
 			}
@@ -5654,7 +5947,7 @@ client_Main.prototype = {
 					_gthis.chatPopoutWindow.onEmoteLoadError("ffz","Network error");
 				}
 			} catch( _g ) {
-				haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3680, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
+				haxe_Log.trace("Error calling FFZ error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3704, className : "client.Main", methodName : "loadFfzEmotesForPopout"});
 			}
 		};
 		xhr.send();
@@ -5746,17 +6039,17 @@ client_Main.prototype = {
 							_gthis.chatPopoutWindow.onEmotesLoaded("seventv",popoutState != null && popoutState.seventv.hasMore);
 						}
 					} catch( _g ) {
-						haxe_Log.trace("Error calling 7TV emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3776, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+						haxe_Log.trace("Error calling 7TV emotes loaded callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3800, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					}
 				} catch( _g ) {
 					var _g1 = haxe_Exception.caught(_g).unwrap();
-					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3780, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+					haxe_Log.trace("Error parsing 7TV emotes: " + Std.string(_g1),{ fileName : "src/client/Main.hx", lineNumber : 3804, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					try {
 						if(_gthis.chatPopoutWindow.onEmoteLoadError != null) {
 							_gthis.chatPopoutWindow.onEmoteLoadError("seventv",_g1);
 						}
 					} catch( _g1 ) {
-						haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3787, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+						haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g1).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3811, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 					}
 				}
 			}
@@ -5774,7 +6067,7 @@ client_Main.prototype = {
 					_gthis.chatPopoutWindow.onEmoteLoadError("seventv","Network error");
 				}
 			} catch( _g ) {
-				haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3806, className : "client.Main", methodName : "load7tvEmotesForPopout"});
+				haxe_Log.trace("Error calling 7TV error callback: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3830, className : "client.Main", methodName : "load7tvEmotesForPopout"});
 			}
 		};
 		xhr.send("{\"query\":\"query SearchEmotes($" + "query: String!, $" + "page: Int, $" + "sort: Sort, $" + "limit: Int, $" + "filter: EmoteSearchFilter) { emotes(query: $" + "query, page: $" + "page, sort: $" + "sort, limit: $" + "limit, filter: $" + "filter) { count items { id name host { url files { name format width height } } } } }\", \"variables\": {\"query\": \"\", \"limit\": 50, \"page\": " + page + ", \"sort\": {\"value\": \"popularity\", \"order\": \"DESCENDING\"}, \"filter\": {\"exact_match\": false, \"case_sensitive\": false, \"ignore_tags\": true, \"category\": \"TOP\"}}}");
@@ -5822,7 +6115,7 @@ client_Main.prototype = {
 						listEl.appendChild(imgEl);
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3856, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
+					haxe_Log.trace("Error parsing FFZ search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3880, className : "client.Main", methodName : "searchFFZEmotesForPopout"});
 				}
 			}
 		};
@@ -5895,7 +6188,7 @@ client_Main.prototype = {
 						}
 					}
 				} catch( _g ) {
-					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3928, className : "client.Main", methodName : "search7TVEmotesForPopout"});
+					haxe_Log.trace("Error parsing 7TV search emotes: " + Std.string(haxe_Exception.caught(_g).unwrap()),{ fileName : "src/client/Main.hx", lineNumber : 3952, className : "client.Main", methodName : "search7TVEmotesForPopout"});
 				}
 			}
 		};
@@ -9820,6 +10113,7 @@ Lang.langs = new haxe_ds_StringMap();
 Lang.ids = ["en","ru"];
 Lang.lang = HxOverrides.substr($global.navigator.language,0,2).toLowerCase();
 DanmakuAnimations.ANIMATIONS = ["danmaku-emote-glow","danmaku-emote-shake","danmaku-emote-spin","danmaku-emote-pulse","danmaku-emote-bounce","danmaku-emote-rainbow","danmaku-emote-flip","danmaku-emote-hover","danmaku-emote-heartbeat","danmaku-emote-wobble","danmaku-emote-blur","danmaku-emote-glitch","danmaku-emote-swing","danmaku-emote-trampoline","danmaku-emote-neon","danmaku-emote-fade"];
+client_Commands.COMMANDS = [{ name : "help", description : "Show list of available commands", usage : "/help", requiresLeader : false},{ name : "ban", description : "Ban a user for specified time", usage : "/ban <username> <time>", requiresLeader : true},{ name : "unban", description : "Remove ban from a user", usage : "/unban <username>", requiresLeader : true},{ name : "removeBan", description : "Remove ban from a user (alias for unban)", usage : "/removeBan <username>", requiresLeader : true},{ name : "kick", description : "Kick a user from the room", usage : "/kick <username>", requiresLeader : true},{ name : "clear", description : "Clear chat messages", usage : "/clear", requiresLeader : true},{ name : "flashback", description : "Show flashback (alias: fb)", usage : "/flashback", requiresLeader : false},{ name : "fb", description : "Show flashback (short for flashback)", usage : "/fb", requiresLeader : false},{ name : "ad", description : "Skip current ad", usage : "/ad", requiresLeader : false},{ name : "random", description : "Get random FrankerFaceZ emote", usage : "/random", requiresLeader : false},{ name : "random7tv", description : "Get random 7TV emote", usage : "/random7tv", requiresLeader : false},{ name : "volume", description : "Set volume level (0.0 to 3.0)", usage : "/volume <level>", requiresLeader : false},{ name : "dump", description : "Dump current state information", usage : "/dump", requiresLeader : true},{ name : "skip", description : "Skip forward by seconds", usage : "/skip [seconds]", requiresLeader : false}];
 client_Drawing.isDrawingUIVisible = false;
 client_Drawing.isDrawingEnabled = false;
 client_Drawing.isDrawing = false;

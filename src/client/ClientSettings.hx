@@ -13,6 +13,7 @@ typedef ClientSettings = {
 	var isUserListHidden:Bool;
 	var latestLinks:Array<String>;
 	var latestSubs:Array<String>;
+	var latestMessages:Array<String>;
 	var hotkeysEnabled:Bool;
 	var showHintList:Bool;
 	var checkboxes:Array<{id:String, checked:Null<Bool>}>;
