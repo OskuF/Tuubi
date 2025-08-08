@@ -1846,14 +1846,8 @@ class Main {
 					// Use the pre-selected lane from the server for consistent positioning
 					bestLane = data.danmakuMessage.lane;
 				} else {
-					// For backwards compatibility, find the least recently used lane
-					var lowestTime = Date.now().getTime();
-					for (i in 0...danmakuLanes.length) {
-						if (danmakuLanes[i] < lowestTime) {
-							lowestTime = danmakuLanes[i];
-							bestLane = i;
-						}
-					}
+					// Use random lane selection like emotes for better distribution
+					bestLane = Math.floor(Math.random() * DANMAKU_LANES);
 				}
 
 				// Create the comment element
